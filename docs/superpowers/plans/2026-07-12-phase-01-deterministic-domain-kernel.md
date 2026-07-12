@@ -19,7 +19,7 @@
 - Vampirism uses actual non-overkill owner damage and is capped at 8% group max HP per stage and 25% per run; healing never exceeds max HP and never resurrects.
 - Boss player damage is applied before counterattack; boss HP 0 suppresses counterattack and prevents double-zero ambiguity.
 - Prototype daily XP cap is 150 and approximately 60% (90 XP) is allocated through stage 5; persistence and XP spending are outside this phase.
-- Party formulas are exact: HP/physical/magical add; agility is `max + floor(0.25 × min)`; defense is `max + floor(0.50 × min)`.
+- Party formulas are exact: HP/physical/magical add; agility is `max + floor(0.25 × min)`; defense is `max + floor(0.50 × min)`. Vitality checks remain self-owned because the approved daily companion snapshot has max HP and defense but no partner vitality field.
 - Cycle opens at 09:00 `Europe/Kyiv`, lasts 24 hours, and a run begun before reset has a 2-hour grace window.
 - DB, Telegram, items, rings as progression systems, generator, reminders, and production deployment are outside this phase.
 
@@ -37,13 +37,13 @@
 **Interfaces:**
 - Produces: `DungeonContentV1`, `StageV1`, `ChoiceV1`, `ResolverConfigV1`, `PartySnapshot`, `RunStateV1`, `ChoiceCommandV1`, `ResolutionV1`, and exact string-union enums used by every later task.
 
-- [ ] **Step 1: Keep the failing worktree baseline as evidence**
+- [x] **Step 1: Keep the failing worktree baseline as evidence**
 
 Run: `npm run verify`
 
 Expected historical RED: `deno fmt --check` reports the checkout files differ only by line endings under system `core.autocrlf=true`.
 
-- [ ] **Step 2: Enforce LF at repository level and verify the baseline**
+- [x] **Step 2: Enforce LF at repository level and verify the baseline**
 
 Create `.gitattributes`:
 
@@ -55,7 +55,7 @@ Run: `npx deno fmt deno.json package.json .github/workflows/ci.yml supabase/func
 
 Expected: 4 existing tests pass, format/lint/check exit 0, and `git diff` contains no content changes to the ten normalized files.
 
-- [ ] **Step 3: Write contract tests before the contracts**
+- [x] **Step 3: Write contract tests before the contracts**
 
 Create `tests/unit/contracts_test.ts` with compile-time fixtures and runtime assertions:
 
@@ -77,7 +77,7 @@ Run: `npx deno test tests/unit/contracts_test.ts`
 
 Expected: FAIL because both contract modules are missing.
 
-- [ ] **Step 4: Implement focused content and domain contracts**
+- [x] **Step 4: Implement focused content and domain contracts**
 
 Use these exact unions and field names:
 
@@ -98,7 +98,7 @@ Run: `npx deno test tests/unit/contracts_test.ts && npx deno check supabase/func
 
 Expected: PASS.
 
-- [ ] **Step 5: Expand verification scopes and commit**
+- [x] **Step 5: Expand verification scopes and commit**
 
 Set Deno tasks to format/lint `scripts`, `supabase/functions`, and all `tests`; type-check the contracts plus later registry entrypoint; run unit and property directories. Until later files exist, add only paths created in this task.
 
@@ -207,11 +207,11 @@ Test solo identity, teacher aggregation, partner aggregation, swapped-member sym
 const self = { maxHp: 40, physical: 12, magical: 8, agility: 12, vitality: 9, defense: 15, vampRateBps: 0, postHeal: 0 };
 const friend = { maxHp: 55, physical: 7, magical: 20, agility: 8, vitality: 11, defense: 8, vampRateBps: 0, postHeal: 0 };
 assertEquals(aggregateParty({ mode: "partner", self, companion: friend }).total, {
-  maxHp: 95, physical: 19, magical: 28, agility: 14, vitality: 20, defense: 19,
+  maxHp: 95, physical: 19, magical: 28, agility: 14, vitality: 9, defense: 19,
 });
 ```
 
-Property loop: for deterministic integers `a,b` in 0…100, assert additive totals, `agility = max + floor(min/4)`, `defense = max + floor(min/2)`, symmetry, and solo equality.
+Property loop: for deterministic integers `a,b` in 0…100, assert additive HP/physical/magical totals, `agility = max + floor(min/4)`, `defense = max + floor(min/2)`, symmetry for companion-owned fields, self-only vitality, and solo equality.
 
 Run: `npx deno test tests/unit/party_test.ts tests/property/party_invariants_test.ts`
 
@@ -362,7 +362,7 @@ Clamp XP output to `dailyXpCap - state.xp`; do not persist it. Before stage 10, 
 
 - [ ] **Step 4: Implement mini-boss and boss state transitions**
 
-Stage 5 uses the same one-choice resolver with counter threshold band `-1`, standard `0`, and neutral attrition. Stage 10 initializes `bossHp` once, resolves exchange 1, returns `nextExchange: 2` only when group HP remains positive, and never returns victory from exchange 1. Exchange 2 returns victory when boss HP reaches 0, defeated when group HP reaches 0, otherwise contained. Combat helper ordering suppresses counterattack after boss death.
+Stage 5 uses the same one-choice resolver with counter threshold band `-1`, standard `0`, and neutral attrition. Stage 10 exchange 1 is valid only from `state.exchange === null` and `state.bossHp === null`; it initializes the configured full `bossMaxHp`. The configured exchange-1 owner damage is lower than full boss HP, so a valid replay cannot win there. Reject a forged exchange-1 state carrying partial boss HP rather than silently clamping it. Return `nextExchange: 2` only when group HP remains positive. Exchange 2 returns victory when boss HP reaches 0, defeated when group HP reaches 0, otherwise contained. Combat helper ordering suppresses counterattack after boss death.
 
 Run: `npx deno test tests/unit/resolver_test.ts`
 
@@ -446,7 +446,7 @@ Commit: `feat: seal deterministic resolver replays`
 
 - [ ] **Step 1: Write failing normal-day and DST boundary tests**
 
-Use fixed UTC instants around Kyiv 09:00 in winter/summer and both DST transition weekends. Assert the local cycle date, exact UTC open/close timestamps, a true 24-hour local-cycle boundary even when UTC duration is 23/25 hours, and `graceEndsAt = closesAt + 2 hours`.
+Use fixed UTC instants around Kyiv 09:00 in winter/summer and both DST transition weekends. Assert the local cycle date, exact UTC open/close timestamps, consecutive local 09:00 boundaries whose UTC duration is 23/25 hours across DST, and `graceEndsAt = closesAt + 2 hours`.
 
 ```ts
 assertEquals(getCycleWindow(new Date("2026-01-15T07:30:00Z")).cycleId, "2026-01-15");
