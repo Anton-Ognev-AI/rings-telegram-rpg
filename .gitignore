@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+artifacts/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+.worktrees/
+*.log
+prototypes/concierge/session-log.csv
