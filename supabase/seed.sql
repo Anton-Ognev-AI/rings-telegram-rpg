@@ -45,3 +45,7 @@ insert into game.player_stats (
   '10000000-0000-4000-8000-000000000001', 5, 5, 5, 5, 5, 40
 )
 on conflict (player_id) do nothing;
+
+insert into game.xp_accounts (player_id) values
+  ('10000000-0000-4000-8000-000000000001')
+on conflict (player_id) do nothing;

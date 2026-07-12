@@ -182,11 +182,11 @@ game.xp_ledger(id uuid PK, player_id uuid, cycle_id date, delta integer,
 game.apply_xp_delta_v1(...) returns jsonb
 ```
 
-- [ ] Write RED pgTAP tests for append-only ledger, duplicate source idempotency, negative-balance rejection, exact cap 150, partial award at the cap edge, non-cap debit, and cached totals matching ledger sums.
-- [ ] Implement row-lock order: account first, then cycle cap row, then ledger insert/update totals. Avoid deadlocks by never reversing it.
-- [ ] Return requested/applied delta and whether the cap truncated it. Duplicate source returns the original applied delta with `cached=true`.
-- [ ] Revoke direct function execution from all API roles; only definer command functions may call it.
-- [ ] Run pgTAP and a 100-client direct internal-function race under owner-only test setup; prove one ledger row.
+- [x] Write RED pgTAP tests for append-only ledger, duplicate source idempotency, negative-balance rejection, exact cap 150, partial award at the cap edge, non-cap debit, and cached totals matching ledger sums.
+- [x] Implement row-lock order: account first, then cycle cap row, then ledger insert/update totals. Avoid deadlocks by never reversing it.
+- [x] Return requested/applied delta and whether the cap truncated it. Duplicate source returns the original applied delta with `cached=true`.
+- [x] Revoke direct function execution from all API roles; only definer command functions may call it.
+- [x] Run pgTAP and a 100-client resolver race that enters the internal XP function under owner-controlled local setup; prove one ledger row.
 
 ### Task 8: Version-pinned runs and snapshots
 
@@ -210,11 +210,11 @@ game.run_stage_results(run_id uuid, stage smallint, exchange smallint,
   created_at timestamptz, UNIQUE(run_id, stage, exchange))
 ```
 
-- [ ] Write RED tests for stage 1–10, exchange 0–2, HP bounds, monotonic nonnegative state version, immutable snapshots/results, one ordinary run per player/day, and at most one active run per player.
-- [ ] Use exchange `0` for ordinary stages so the uniqueness rule is a plain typed constraint.
-- [ ] Ensure terminal statuses require `finished_at`, while active runs forbid it.
-- [ ] Pin content/config/self/loadout hashes at run creation; later config/content changes cannot rewrite a run.
-- [ ] Run pgTAP and verify Phase 1 files are byte-identical to the Phase 1 checkpoint.
+- [x] Write RED tests for stage 1–10, exchange 0–2, HP bounds, monotonic nonnegative state version, immutable snapshots/results, one ordinary run per player/day, and at most one active run per player.
+- [x] Use exchange `0` for ordinary stages so the uniqueness rule is a plain typed constraint.
+- [x] Ensure terminal statuses require `finished_at`, while active runs forbid it.
+- [x] Pin content/config/self/loadout hashes at run creation; later config/content changes cannot rewrite a run.
+- [x] Run pgTAP and verify Phase 1 golden/property tests remain byte-behavior identical to the Phase 1 checkpoint.
 
 ### Task 9: Prepared actions, processed cache, outbox, and analytics
 
@@ -239,11 +239,11 @@ game.analytics_events(id uuid PK, event_name text, player_id uuid NULL,
   run_id uuid NULL, properties jsonb, occurred_at timestamptz)
 ```
 
-- [ ] Write RED tests for token/result/outbox uniqueness, immutable processed results, no raw callback token storage, valid hash lengths, expiry, nonnegative attempts, and analytics properties rejecting Telegram/username/message keys.
-- [ ] Implement immutable triggers for action cache and applied stage results.
-- [ ] Add `game.assert_prepared_resolution_v1(jsonb)` validating required status/HP/XP/stage/exchange/terminal fields and numeric bounds before storage.
-- [ ] Store only SHA-256 token material. Outbox payload contains render intent and internal IDs, not PII.
-- [ ] Prove no direct API-role access.
+- [x] Write RED tests for token/result/outbox uniqueness, immutable processed results, no raw callback token storage, valid hash lengths, expiry, nonnegative attempts, and analytics properties rejecting Telegram/username/message keys.
+- [x] Implement immutable triggers for action cache and applied stage results.
+- [x] Add `game.assert_prepared_resolution_v1(jsonb)` validating required status/HP/XP/stage/exchange/terminal fields and numeric bounds before storage.
+- [x] Store only SHA-256 token material. Outbox payload contains render intent and internal IDs, not PII.
+- [x] Prove no direct API-role access.
 
 ### Task 10: Service-only versioned RPCs and narrow TypeScript port
 
@@ -274,15 +274,15 @@ public.begin_identity_deletion_v1(player_id uuid, deletion_id uuid) returns json
 public.finalize_identity_deletion_v1(player_id uuid, deletion_id uuid) returns jsonb
 ```
 
-- [ ] Write RED tests: only `service_role` executes RPCs; `anon`/`authenticated` fail; direct tables stay denied; functions are `security definer` with exact safe search path.
-- [ ] Implement `start_run_v1`: validate active player/current schedulable day/validated content/active config, reject an existing active run, insert pinned run and snapshots atomically, and return canonical projection.
-- [ ] Implement `prepare_action_v1`: validate active player, actor ownership, current stage/exchange/version, unexpired token, context hash, and prepared resolution shape; insert idempotently only if every field matches.
-- [ ] Implement `resolve_choice_v1` in this order: lock token; return cached result before run stale checks; reject actor/context/expiry; reject conflicting update ID; lock run; validate active/version/stage/exchange; insert stage result; call XP delta; apply HP/boss/stage/terminal; increment state version once; insert one outbox logical key; cache canonical result; return `applied`.
-- [ ] Implement stale and rejected returns without run/ledger/outbox/result mutation. A stale token may be recorded only as an immutable diagnostic processed result if doing so cannot collide with a future valid effect; default implementation returns without persistence.
-- [ ] Implement `resume_v1` as a service projection with no table write.
-- [ ] Implement deletion begin/finalize idempotently; every gameplay RPC rejects `deletion_pending` players.
-- [ ] Grant `service_role` only these six RPCs. Revoke public execution explicitly after each creation.
-- [ ] Define a generic `DatabasePort.call<Result>(rpc, args)` and small wrappers; unit-test exact parameters and prove wrappers perform one RPC call with no direct SQL/table method.
+- [x] Write RED tests: only `service_role` executes RPCs; `anon`/`authenticated` fail; direct tables stay denied; functions are `security definer` with exact safe search path.
+- [x] Implement `start_run_v1`: validate active player/current schedulable day/validated content/active config, reject an existing active run, insert pinned run and snapshots atomically, and return canonical projection.
+- [x] Implement `prepare_action_v1`: validate active player, actor ownership, current stage/exchange/version, unexpired token, context hash, and prepared resolution shape; insert idempotently only if every field matches.
+- [x] Implement `resolve_choice_v1` in this order: lock token; reject actor/context mismatch; return cached result before expiry/run stale checks; reject conflicting update ID/expiry; lock run; validate active/version/stage/exchange; insert stage result; call XP delta when nonzero; apply HP/boss/stage/terminal; increment state version once; insert one outbox logical key; cache canonical result; return `applied`.
+- [x] Implement stale and rejected returns without run/ledger/outbox/result mutation. A stale token may be recorded only as an immutable diagnostic processed result if doing so cannot collide with a future valid effect; default implementation returns without persistence.
+- [x] Implement `resume_v1` as a service projection with no table write.
+- [x] Implement deletion begin/finalize idempotently; every gameplay RPC rejects `deletion_pending` players.
+- [x] Grant `service_role` only these six RPCs. Revoke public execution explicitly after each creation.
+- [x] Define a generic `DatabasePort.call<Result>(rpc, args)` and small wrappers; unit-test exact parameters and prove wrappers perform one RPC call with no direct SQL/table method.
 
 ### Task 11: Integration, concurrency, and lost-response proofs
 
@@ -294,15 +294,15 @@ public.finalize_identity_deletion_v1(player_id uuid, deletion_id uuid) returns j
 - Create: `tests/integration/reconciliation_test.ts`
 - Create: `scripts/db/reconcile.ts`
 
-- [ ] Build fixtures using only synthetic player/content/config data and RPC calls where production would use them.
-- [ ] Prove start/resume returns the same pinned content/config and state projection.
-- [ ] Send 100 concurrent copies of one token. Assert one `applied`, 99 logical `cached`, one state-version increment, one stage result, one ledger row, and one outbox row.
-- [ ] Race two different valid tokens bound to the same state version. Assert one `applied`, one `stale`, and exactly one effect set.
-- [ ] Prove cached-before-stale by applying once, advancing the run, then replaying the original token with another update ID; the original canonical result/hash returns with `cached` and no writes.
-- [ ] Simulate a lost HTTP response by committing through one client, discarding its return, reconnecting, and replaying; assert cached result and one effect set.
-- [ ] Tamper actor and context. Use a token from another run/choice/version to demonstrate that callback-side substitution cannot cross the token binding. Assert `rejected` and zero writes.
-- [ ] Reconcile every XP account/cycle cache against ledger sums and every applied action against exactly one stage result and outbox key; exit nonzero on mismatch.
-- [ ] Run each concurrency case five times to expose timing-dependent defects.
+- [x] Build fixtures using only synthetic player/content/config data and RPC calls where production would use them.
+- [x] Prove start/resume returns the same pinned content/config and state projection.
+- [x] Send 100 concurrent copies of one token. Assert one `applied`, 99 logical `cached`, one state-version increment, one stage result, one ledger row, and one outbox row.
+- [x] Race two different valid tokens bound to the same state version. Assert one `applied`, one `stale`, and exactly one effect set.
+- [x] Prove cached-before-stale by applying once, advancing the run, then replaying the original token with another update ID; the original canonical result/hash returns with `cached` and no writes.
+- [x] Simulate a lost HTTP response by committing through one client, discarding its return, reconnecting, and replaying; assert cached result and one effect set.
+- [x] Tamper actor and context before and after processing, and conflict a Telegram update ID across choices. Assert `rejected` and zero extra writes.
+- [x] Reconcile every XP account/cycle cache against ledger sums and every applied action against exactly one stage result and outbox key; exit nonzero on mismatch.
+- [x] Run each concurrency case five times to expose timing-dependent defects.
 
 ### Task 12: Gate 2B verification and checkpoint
 
@@ -310,10 +310,10 @@ public.finalize_identity_deletion_v1(player_id uuid, deletion_id uuid) returns j
 - Create: `docs/checkpoints/2026-07-13-phase-02b.md`
 - Modify: `TASKS.md`, `PROJECT_STATE.md`
 
-- [ ] Clean reset, then run `npm run test:db:unit`, `npm run test:db:integration`, `npm run test:db:concurrency`, `npm run db:lint`, `npm run verify`.
-- [ ] Record test counts, race cardinalities, reconciliation result, and confirmation that callback RPC accepts no mutation payload.
-- [ ] Mark P2-2B approved and P2-2C in progress.
-- [ ] Commit only Gate 2B files with message `feat: add atomic persistent game commands`.
+- [x] Clean reset, then run `npm run test:db:unit`, `npm run test:db:integration`, `npm run test:db:concurrency`, `npm run db:lint`, `npm run verify`.
+- [x] Record test counts, race cardinalities, reconciliation result, and confirmation that callback RPC accepts no mutation payload.
+- [x] Mark P2-2B approved and P2-2C in progress.
+- [x] Commit only Gate 2B files with message `feat: add atomic persistent game commands`.
 
 ---
 

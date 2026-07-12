@@ -5,8 +5,8 @@
   - [x] P2-01: Supplemental design and 5-advisor council review → docs/superpowers/specs/2026-07-13-phase-02-persistent-atomic-core-design.md
   - [x] P2-02: Detailed TDD implementation plan → docs/superpowers/plans/2026-07-13-phase-02-persistent-atomic-core.md
   - [x] P2-2A: Schema, roles, players, config and content → docs/checkpoints/2026-07-13-phase-02a.md
-  - [ ] P2-2B: XP, runs, prepared actions, atomic RPCs and outbox (`in_progress`)
-  - [ ] P2-2C: Deletion recovery, reconciliation, checksums and phase checkpoint
+  - [x] P2-2B: XP, runs, prepared actions, atomic RPCs and outbox → docs/checkpoints/2026-07-13-phase-02b.md
+  - [ ] P2-2C: Deletion recovery, reconciliation, checksums and phase checkpoint (`in_progress`)
 
 ## Completed Phases
 - [x] ID: PHASE-01: Deterministic domain kernel (`approved`; ADR 037)
