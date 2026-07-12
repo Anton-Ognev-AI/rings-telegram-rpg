@@ -1,0 +1,15 @@
+{
+  "build": "strong",
+  "state": {
+    "stage": 1,
+    "exchange": null,
+    "hp": 100,
+    "bossHp": null,
+    "xp": 0,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": null
+  },
+  "command": { "resolverVersion": "v1", "stage": 1, "exchange": null, "choiceId": "s1-agility" },
+  "expected": { "outcome": "success", "hp": 100, "xpDelta": 10, "terminal": null }
+}

@@ -291,7 +291,7 @@ Commit: `feat: resolve deterministic combat exchanges`
 
 ---
 
-### Task 5: V1 stage, mini-boss, and two-exchange boss resolver
+### Task 5: V1 stage, mini-boss, and two-exchange boss resolver ✅
 
 **Files:**
 - Create: `supabase/functions/_shared/domain/resolvers/v1/config.ts`
@@ -310,7 +310,7 @@ Commit: `feat: resolve deterministic combat exchanges`
 - Consumes: validated `DungeonContentV1`, `PartySnapshot`, `RunStateV1`, `ChoiceCommandV1`, combat and party helpers.
 - Produces: `CONFIG_V1`, `resolveChoiceV1(input): ResolutionV1`, and `advanceStateV1(state, resolution): RunStateV1`.
 
-- [ ] **Step 1: Write fixture-driven failing tests**
+- [x] **Step 1: Write fixture-driven failing tests**
 
 Each replay fixture contains `{ contentPath, party, state, command, expected }`. Assert outcome, threshold/power breakdown, HP delta, XP, next stage/exchange, and terminal result. Explicitly assert:
 
@@ -327,7 +327,7 @@ Run: `npx deno test tests/unit/resolver_test.ts`
 
 Expected: FAIL because the V1 resolver is missing.
 
-- [ ] **Step 2: Add one immutable prototype config**
+- [x] **Step 2: Add one immutable prototype config**
 
 Use `Object.freeze` and these exact budgets so simulation changes are reviewable in one file:
 
@@ -344,6 +344,9 @@ export const CONFIG_V1 = {
   bossMaxHp: 90,
   bossDamage: [24, 34],
   bossOwnerDamage: [32, 58],
+  bossNeutralDamagePercent: 25,
+  bossCounterIncomingPercent: 50,
+  bossFailureIncomingPercent: 150,
   defenseScale: 100,
   vampStageCapBps: 800,
   vampRunCapBps: 2500,
@@ -353,13 +356,13 @@ export const CONFIG_V1 = {
 
 Assert `sum(stageXp) === 150` and `sum(stageXp.slice(0,5)) === 90` in `resolver_test.ts`.
 
-- [ ] **Step 3: Implement ordinary resolution and explainability**
+- [x] **Step 3: Implement ordinary resolution and explainability**
 
 Neutral bypasses the check, grants `floor(stageXp × 20 / 100)`, and applies neutral damage. Trap always returns failure. Check computes `threshold = stageThreshold + tierDelta + tacticalBandDelta` and reads the selected aggregate stat; enough power gives success, otherwise failure. Every result includes clue ID/text, rationale, stat, self/companion/total breakdown, threshold, HP before/damage/healing/after, XP before/delta/after, and next state.
 
 Clamp XP output to `dailyXpCap - state.xp`; do not persist it. Before stage 10, terminal is only `defeated` when HP reaches 0.
 
-- [ ] **Step 4: Implement mini-boss and boss state transitions**
+- [x] **Step 4: Implement mini-boss and boss state transitions**
 
 Stage 5 uses the same one-choice resolver with counter threshold band `-1`, standard `0`, and neutral attrition. Stage 10 exchange 1 is valid only from `state.exchange === null` and `state.bossHp === null`; it initializes the configured full `bossMaxHp`. The configured exchange-1 owner damage is lower than full boss HP, so a valid replay cannot win there. Reject a forged exchange-1 state carrying partial boss HP rather than silently clamping it. Return `nextExchange: 2` only when group HP remains positive. Exchange 2 returns victory when boss HP reaches 0, defeated when group HP reaches 0, otherwise contained. Combat helper ordering suppresses counterattack after boss death.
 
@@ -367,7 +370,7 @@ Run: `npx deno test tests/unit/resolver_test.ts`
 
 Expected: all eight replay semantics pass.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `npm run verify`
 

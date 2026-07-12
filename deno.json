@@ -18,7 +18,7 @@
   "tasks": {
     "fmt:check": "deno fmt --check deno.json package.json .github/workflows/ci.yml content supabase/functions tests",
     "lint": "deno lint supabase/functions tests",
-    "check": "deno check supabase/functions/health/index.ts supabase/functions/health/handler.ts supabase/functions/_shared/infrastructure/clock.ts supabase/functions/_shared/infrastructure/telegram-port.ts supabase/functions/_shared/infrastructure/redact.ts supabase/functions/_shared/contracts/content.ts supabase/functions/_shared/contracts/domain.ts supabase/functions/_shared/domain/content-validator.ts supabase/functions/_shared/domain/resolvers/v1/party.ts supabase/functions/_shared/domain/resolvers/v1/combat.ts",
+    "check": "deno check supabase/functions/health/index.ts supabase/functions/health/handler.ts supabase/functions/_shared/infrastructure/clock.ts supabase/functions/_shared/infrastructure/telegram-port.ts supabase/functions/_shared/infrastructure/redact.ts supabase/functions/_shared/contracts/content.ts supabase/functions/_shared/contracts/domain.ts supabase/functions/_shared/domain/content-validator.ts supabase/functions/_shared/domain/resolvers/v1/party.ts supabase/functions/_shared/domain/resolvers/v1/combat.ts supabase/functions/_shared/domain/resolvers/v1/config.ts supabase/functions/_shared/domain/resolvers/v1/resolver.ts",
     "test:unit": "deno test tests/unit",
     "test:property": "deno test tests/property",
     "verify": "deno task fmt:check && deno task lint && deno task check && deno task test:unit && deno task test:property"

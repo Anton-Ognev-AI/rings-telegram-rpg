@@ -1,0 +1,15 @@
+{
+  "build": "weak",
+  "state": {
+    "stage": 7,
+    "exchange": null,
+    "hp": 5,
+    "bossHp": null,
+    "xp": 40,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": null
+  },
+  "command": { "resolverVersion": "v1", "stage": 7, "exchange": null, "choiceId": "s7-physical" },
+  "expected": { "outcome": "failure", "hp": 0, "xpDelta": 0, "terminal": "defeated" }
+}

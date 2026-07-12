@@ -1,0 +1,15 @@
+{
+  "build": "strong",
+  "state": {
+    "stage": 4,
+    "exchange": null,
+    "hp": 100,
+    "bossHp": null,
+    "xp": 0,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": null
+  },
+  "command": { "resolverVersion": "v1", "stage": 4, "exchange": null, "choiceId": "s4-trap" },
+  "expected": { "outcome": "failure", "hp": 90, "xpDelta": 0, "terminal": null }
+}

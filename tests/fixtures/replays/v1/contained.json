@@ -1,0 +1,21 @@
+{
+  "build": "strong",
+  "state": {
+    "stage": 10,
+    "exchange": 2,
+    "hp": 100,
+    "bossHp": 90,
+    "xp": 100,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": null
+  },
+  "command": { "resolverVersion": "v1", "stage": 10, "exchange": 2, "choiceId": "s10e2-neutral" },
+  "expected": {
+    "outcome": "neutral",
+    "hp": 66,
+    "bossHp": 76,
+    "xpDelta": 3,
+    "terminal": "contained"
+  }
+}

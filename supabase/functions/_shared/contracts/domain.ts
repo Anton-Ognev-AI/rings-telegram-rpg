@@ -89,6 +89,9 @@ export interface ResolverConfigV1 {
   readonly bossMaxHp: number;
   readonly bossDamage: readonly [number, number];
   readonly bossOwnerDamage: readonly [number, number];
+  readonly bossNeutralDamagePercent: number;
+  readonly bossCounterIncomingPercent: number;
+  readonly bossFailureIncomingPercent: number;
   readonly defenseScale: number;
   readonly vampStageCapBps: number;
   readonly vampRunCapBps: number;

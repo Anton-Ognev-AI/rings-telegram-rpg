@@ -1,0 +1,15 @@
+{
+  "build": "weak",
+  "state": {
+    "stage": 3,
+    "exchange": null,
+    "hp": 100,
+    "bossHp": null,
+    "xp": 0,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": null
+  },
+  "command": { "resolverVersion": "v1", "stage": 3, "exchange": null, "choiceId": "s3-physical" },
+  "expected": { "outcome": "failure", "hp": 92, "xpDelta": 0, "terminal": null }
+}
