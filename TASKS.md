@@ -5,8 +5,8 @@
   - [x] P0-01: Detailed Phase 0 TDD execution plan → docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md
   - [x] P0-02: Initialize valid Git repository і baseline commit (`45ee953`)
   - [x] P0-03: Concierge dungeon/session kit
-  - [ ] P0-04: Deno/npm/Supabase project scaffold (in progress)
-  - [ ] P0-05: Health endpoint + fake adapters via TDD
+  - [x] P0-04: Deno/npm/Supabase project scaffold
+  - [ ] P0-05: Health endpoint + fake adapters via TDD (in progress)
   - [ ] P0-06: Local verification і Phase 0 checkpoint
 
 ## Completed Planning

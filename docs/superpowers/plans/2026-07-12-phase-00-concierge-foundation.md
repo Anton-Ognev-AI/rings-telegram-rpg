@@ -181,7 +181,7 @@ git commit -m "test: add concierge dungeon kit"
 
 - Produces commands: `npm run verify`, `npm run supabase`, `npx deno task verify`.
 
-- [ ] **Step 1: Create `package.json`**
+- [x] **Step 1: Create `package.json`**
 
 ```json
 {
@@ -201,7 +201,7 @@ git commit -m "test: add concierge dungeon kit"
 }
 ```
 
-- [ ] **Step 2: Install stable project-local CLIs**
+- [x] **Step 2: Install stable project-local CLIs**
 
 Run:
 
@@ -211,7 +211,7 @@ npm install --save-dev deno supabase
 
 Expected: exact versions written to `package-lock.json`; no global/system install.
 
-- [ ] **Step 3: Create `deno.json`**
+- [x] **Step 3: Create `deno.json`**
 
 ```json
 {
@@ -239,7 +239,7 @@ Expected: exact versions written to `package-lock.json`; no global/system instal
 }
 ```
 
-- [ ] **Step 4: Add CI**
+- [x] **Step 4: Add CI**
 
 CI runs on Windows and executes:
 
@@ -263,7 +263,7 @@ jobs:
       - run: npm run verify
 ```
 
-- [ ] **Step 5: Verify package toolchains**
+- [x] **Step 5: Verify package toolchains**
 
 Run:
 
@@ -275,7 +275,7 @@ npx supabase --version
 
 Expected: commands resolve from project dependencies.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add package.json package-lock.json deno.json deno.lock .github/workflows/ci.yml

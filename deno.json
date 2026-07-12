@@ -1,0 +1,23 @@
+{
+  "lock": true,
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.ns", "dom", "dom.iterable", "esnext"]
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "tasks": {
+    "check": "deno check supabase/functions/health/index.ts supabase/functions/health/handler.ts supabase/functions/_shared/infrastructure/clock.ts supabase/functions/_shared/infrastructure/telegram-port.ts supabase/functions/_shared/infrastructure/redact.ts",
+    "test:unit": "deno test tests/unit",
+    "verify": "deno fmt --check && deno lint && deno task check && deno task test:unit"
+  }
+}

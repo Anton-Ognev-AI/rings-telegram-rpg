@@ -1,0 +1,19 @@
+{
+  "name": "telegram-academy-game",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Telegram Academy game MVP",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "deno": "deno",
+    "supabase": "supabase",
+    "verify": "deno task verify"
+  },
+  "devDependencies": {
+    "deno": "^2.9.2",
+    "supabase": "^2.109.1"
+  }
+}
