@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 0 checkpoint — Docker local stack/reset/health verified; concierge session `P01` is recorded and 2–4 more independent sessions remain. Isolated worktree is selected but deferred until the human gate; Phase 0 remains `in_progress`, remote systems do not change.
+- Current Phase: Phase 1 planning — deterministic domain kernel. Phase 0 foundation is `approved_with_waiver`: all technical gates passed, and the owner explicitly stopped concierge validation after `P01`, accepting the residual UX risk (ADR 036). Work remains local; remote systems do not change.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -18,10 +18,10 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/specs/2026-07-11-game-design.md`: Історичний дизайн-документ v1.0 (Status: superseded; keep for history)
 - `docs/specs/2026-07-12-game-design-v1.1.md`: Канонічна спека MVP v1.1 (Status: approved)
 - `docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md`: Master implementation plan Phase 0–10 (Status: approved)
-- `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: in_progress)
-- `prototypes/concierge/`: Validated post-tutorial concierge kit (Status: in_progress; anonymized `P01` recorded)
+- `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: approved_with_waiver)
+- `prototypes/concierge/`: Post-tutorial concierge kit (Status: paused; anonymized `P01` recorded)
 - `supabase/functions/health/` and `_shared/infrastructure/`: TDD Phase 0 foundation (Status: verified)
-- `docs/checkpoints/2026-07-12-phase-00.md`: Current Phase 0 evidence and batched gates (Status: in_progress)
+- `docs/checkpoints/2026-07-12-phase-00.md`: Phase 0 evidence and explicit validation waiver (Status: approved_with_waiver)
 
 ## Current Review Gate
 - Базова рамка: спільний данж дня, фіксована нелінійна драбина, детермінована серверна резолюція, кільця та асинхронний напарник.
@@ -47,8 +47,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Залишкові ризики не блокують review, але мають пройти gates v1.1: симуляція нелінійної драбини/кілець/carry, перевірка втоми від 10 етапів, якості контенту та directional retention на малій alpha.
 - Phase 0 foundation and Docker local gate verified: reproducible npm/Deno/Supabase CLI toolchain, health Edge Function, deterministic fake adapters, scoped CI verify, `supabase start` + `db reset` + HTTP health `200`, local runbook and validated concierge kit. Optional local Analytics is disabled; no remote project was linked.
 - Local-network constraint: on this Windows/Docker Desktop runtime, Supabase published ports remained `0.0.0.0`; start the stack only on a trusted private network with synthetic data and stop it after the test until a separate security decision.
-- Current gates: `PENDING_HUMAN` — 1/3–5 owner-led concierge sessions recorded; `SELECTED_DEFERRED` — isolated worktree `.worktrees/phase-01-domain-kernel` is created only after that gate.
-- Next safe step: collect 2–4 more independent concierge sessions and anonymous aggregates; then synthesize the UX findings, reclassify `PHASE-00` for `approved`, create the Phase 1 worktree and activate `PHASE-01`.
+- Phase 0 transition: the planned 3–5-session UX sample did not pass; the owner stopped it after `P01` and explicitly waived that sample-size gate. Findings remain directional: monotony, weak visibility of stat/combat impact, insufficient early progression, and an unclear next-day hook. They are mandatory inputs to later content/UX phases, but do not expand the Phase 1 kernel boundary (ADR 036).
+- Current gate: activate `PHASE-01` locally in isolated worktree `.worktrees/phase-01-domain-kernel`; first produce and verify the detailed TDD plan. No remote migration, deployment, generator, Telegram UI, item or ring implementation belongs to this step.
+- Next safe step: commit the Phase 0 transition record, create the selected worktree, run the clean baseline verification there, and implement the deterministic domain kernel from its detailed plan.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame

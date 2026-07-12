@@ -1,17 +1,25 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-00: Concierge UX calibration і foundation (Inline execution; checkpoint fixes)
+- [ ] ID: PHASE-01: Deterministic domain kernel (Inline execution)
+  - [ ] P1-01: Detailed TDD implementation plan and isolated worktree (`in_progress`)
+  - [ ] P1-02: Versioned content/domain contracts and fallback dungeon schema
+  - [ ] P1-03: Deterministic party, combat, run and daily-cycle resolvers
+  - [ ] P1-04: Golden/property tests and balance simulation
+  - [ ] P1-05: Phase 1 verification and checkpoint
+
+## Completed Phases
+- [x] ID: PHASE-00: Concierge UX calibration і foundation (`approved_with_waiver`; ADR 036)
   - [x] P0-01: Detailed Phase 0 TDD execution plan → docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md
   - [x] P0-02: Initialize valid Git repository і baseline commit (`45ee953`)
   - [x] P0-03: Concierge dungeon/session kit
   - [x] P0-04: Deno/npm/Supabase project scaffold
   - [x] P0-05: Health endpoint + fake adapters via TDD
-  - [ ] P0-06: Phase 0 gates
+  - [x] P0-06: Phase 0 gates
     - [x] P0-06A: Docker-independent verification і checkpoint report
     - [x] P0-06B: Docker local stack, db reset і HTTP health gate (`PASS_WITH_CONSTRAINT`: trusted-network-only local runtime)
-    - [ ] P0-06C: Owner conducts 3–5 concierge sessions та anonymized metrics (`PENDING_HUMAN`: 1/3–5 recorded; need 2–4 more independent sessions)
-    - [x] P0-06D: Owner chose isolated worktree `.worktrees/phase-01-domain-kernel` (`SELECTED_DEFERRED` until P0 human gate)
+    - [x] P0-06C: Owner stopped validation after `P01`; sample-size gate explicitly waived, residual UX risk retained (`STOPPED_WITH_WAIVER`; ADR 036)
+    - [x] P0-06D: Owner chose isolated worktree `.worktrees/phase-01-domain-kernel` (`READY`)
 
 ## Completed Planning
 - [x] ID: PLAN-001: Master implementation plan MVP затверджено Антоном 2026-07-12; Inline execution → docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md
@@ -43,9 +51,6 @@
   - [x] DESIGN-V11-11: Узгоджено секцію «генерація, різноманіття, валідація й fallback-контент» (ADR 031)
   - [x] DESIGN-V11-12: Узгоджено секцію «стани дня, модель даних, надійність, аналітика та тестування MVP» (ADR 032)
   - [x] DESIGN-V11-13: Зібрати, перевірити й отримати фінальне затвердження канонічної спеки v1.1 → docs/specs/2026-07-12-game-design-v1.1.md (затверджено Антоном 2026-07-12 після self-review, 3 тематичних аудитів і project-council)
-
-## Next (після Phase 0)
-- [ ] ID: PHASE-01: Deterministic domain kernel (після Phase 0 gate)
 
 ## Backlog
 - [ ] ID: SKILLS-001: Create first custom skill
