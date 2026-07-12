@@ -10,10 +10,21 @@
   "scripts": {
     "deno": "deno",
     "supabase": "supabase",
-    "verify": "deno task verify"
+    "verify": "deno task verify",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset && deno run --allow-env --allow-net scripts/db/seed-content.ts",
+    "db:lint": "supabase db lint --schema game,public --level error --fail-on error",
+    "db:checksums": "deno run --allow-read scripts/db/migration-checksums.ts --print",
+    "test:db:unit": "deno run --allow-env --allow-net --allow-read scripts/db/run-pgtap.ts",
+    "test:db:integration": "deno test --allow-env --allow-net tests/integration",
+    "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
+    "test:db:deletion": "deno test --allow-env --allow-net --allow-read --allow-write --allow-run tests/integration/deletion_restore_test.ts",
+    "test:db": "npm run test:db:unit && npm run test:db:integration",
+    "verify:phase2": "npm run verify && npm run test:db && npm run test:db:concurrency && npm run db:lint && deno run --allow-read scripts/db/migration-checksums.ts --verify"
   },
   "devDependencies": {
     "deno": "^2.9.2",
+    "postgres": "3.4.7",
     "supabase": "^2.109.1"
   }
 }

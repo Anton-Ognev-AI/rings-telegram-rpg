@@ -6,7 +6,7 @@
 
 **Architecture:** normalized state lives only in private schema `game`. The application calls narrow versioned `security definer` commands in `public`; no client role can read or mutate tables directly. The trusted TypeScript layer resolves choices before presenting them and stores a hash-bound prepared action. Callback resolution receives no arbitrary outcome payload. An append-only ledger and transactional outbox share the command transaction. A separate local recovery-control database stores only non-PII deletion tombstones.
 
-**Tech Stack:** PostgreSQL 15/Supabase CLI 2.109.1, pgTAP, TypeScript/Deno 2.9.2, pinned `npm:postgres@3.4.7`, Web Crypto SHA-256, local Docker/Supabase only.
+**Tech Stack:** PostgreSQL 17/Supabase CLI 2.109.1, pgTAP, TypeScript/Deno 2.9.2, pinned `npm:postgres@3.4.7`, Web Crypto SHA-256, local Docker/Supabase only.
 
 ## Global Constraints
 
@@ -44,12 +44,12 @@ export function assertLocalDatabaseUrl(url: string, allowRemote?: boolean): URL;
 export async function withDatabase<T>(work: (sql: Sql) => Promise<T>): Promise<T>;
 ```
 
-- [ ] Write RED tests proving loopback URLs are accepted while public hosts, malformed URLs, and non-Postgres schemes are rejected.
-- [ ] Add pinned `postgres@3.4.7` to `devDependencies`; add `db:start`, `db:reset`, `db:lint`, `test:db:unit`, `test:db:integration`, `test:db:concurrency`, `test:db:deletion`, `test:db`, `db:checksums`, and `verify:phase2` tasks without weakening existing `verify`.
-- [ ] Implement the URL guard and direct local connection helper; redact credentials from all errors.
-- [ ] Implement a pgTAP runner that executes `supabase test db` and propagates nonzero status.
-- [ ] Implement ordered SHA-256 output for `supabase/migrations/*.sql`; before the final gate it may generate the manifest, afterwards verification compares it byte-for-byte.
-- [ ] Run `npm run verify` and the guard test. Expected: existing 60 tests plus new guard tests pass.
+- [x] Write RED tests proving loopback URLs are accepted while public hosts, malformed URLs, and non-Postgres schemes are rejected.
+- [x] Add pinned `postgres@3.4.7` to `devDependencies`; add `db:start`, `db:reset`, `db:lint`, `test:db:unit`, `test:db:integration`, `test:db:concurrency`, `test:db:deletion`, `test:db`, `db:checksums`, and `verify:phase2` tasks without weakening existing `verify`.
+- [x] Implement the URL guard and direct local connection helper; redact credentials from all errors.
+- [x] Implement a pgTAP runner over the pinned local Postgres driver and propagate incomplete plans or `not ok` assertions as nonzero status. (`supabase test db` cannot run on this verified Windows stack because its pg_prove wrapper requires a standalone `docker` executable that Docker Desktop did not install in PATH; the same test SQL still runs against the local Supabase database.)
+- [x] Implement ordered SHA-256 output for `supabase/migrations/*.sql`; before the final gate it may generate the manifest, afterwards verification compares it byte-for-byte.
+- [x] Run `npm run verify` and the guard test. Expected: existing 60 tests plus new guard tests pass.
 
 ### Task 2: Foundation, schemas, enums, grants, and security tests
 
@@ -64,11 +64,11 @@ export async function withDatabase<T>(work: (sql: Sql) => Promise<T>): Promise<T
 - Internal `game.touch_updated_at()` and `game.reject_immutable_change()` functions.
 - Explicit default privilege revokes for future tables, sequences, and functions.
 
-- [ ] Write RED pgTAP expectations for schema existence, enum labels, RLS helper posture, and absence of direct privileges.
-- [ ] Create the migration with explicit `REVOKE ALL`; no wildcard grants.
-- [ ] Add `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA game REVOKE ...` for tables, sequences, and functions.
-- [ ] Prove `anon`, `authenticated`, and `service_role` cannot use `game` or select/insert through it.
-- [ ] Run `npm run db:reset`, `npm run test:db:unit`, and `npm run db:lint`. Expected: clean reset, pgTAP pass, no error-level lint findings.
+- [x] Write RED pgTAP expectations for schema existence, enum labels, RLS helper posture, and absence of direct privileges.
+- [x] Create the migration with explicit `REVOKE ALL`; no wildcard grants.
+- [x] Add `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA game REVOKE ...` for tables, sequences, and functions.
+- [x] Prove `anon`, `authenticated`, and `service_role` cannot use `game` or select/insert through it.
+- [x] Run `npm run db:reset`, `npm run test:db:unit`, and `npm run db:lint`. Expected: clean reset, pgTAP pass, no error-level lint findings.
 
 ### Task 3: Immutable configuration and feature flags
 
@@ -87,11 +87,11 @@ game.feature_flags(key text PK, enabled boolean, config_version_id uuid FK,
   updated_at timestamptz)
 ```
 
-- [ ] Write RED tests for unique version/hash, positive cap, immutable active payload, deny-by-default access, and one seeded active `resolver-v1/config-v1` row with cap 150.
-- [ ] Implement typed constraints and immutable trigger for active/retired config content; allow only the lifecycle transition `draft -> active -> retired`.
-- [ ] Seed deterministic config JSON from the exported V1 resolver values and assert its SHA-256 is stable.
-- [ ] Keep feature flags typed and small; seed disabled flags for generation, broadcast, drops, breakthroughs, partnerships, and reminders.
-- [ ] Reset and run pgTAP twice to prove idempotent seed behavior.
+- [x] Write RED tests for unique version/hash, positive cap, immutable active payload, deny-by-default access, and one seeded active `resolver-v1/config-v1` row with cap 150.
+- [x] Implement typed constraints and immutable trigger for active/retired config content; allow only the lifecycle transition `draft -> active -> retired`.
+- [x] Seed deterministic config JSON from the exported V1 resolver values and assert its SHA-256 is stable.
+- [x] Keep feature flags typed and small; seed disabled flags for generation, broadcast, drops, breakthroughs, partnerships, and reminders.
+- [x] Reset and run pgTAP twice to prove idempotent seed behavior.
 
 ### Task 4: Players and identity isolation
 
@@ -113,11 +113,11 @@ game.player_stats(player_id uuid PK FK ON DELETE CASCADE,
   defense integer, max_hp integer, CHECK all values >= 0)
 ```
 
-- [ ] Write RED tests for identity uniqueness, 64-bit Telegram IDs, nonnegative stats, deletion-state/deletion-ID coherence, cascades, RLS, and direct-access denial.
-- [ ] Implement surrogate identity separation. Telegram identifiers appear only in `identity_links`.
-- [ ] Add a constraint requiring deletion metadata exactly when state is `deletion_pending`; terminal `deleted` is represented by no identity link, not a fake external ID.
-- [ ] Seed one synthetic local player and identity only; use obviously fictional ID `900000000000000001`.
-- [ ] Reset, run pgTAP, and verify seed contains no real-looking personal data.
+- [x] Write RED tests for identity uniqueness, 64-bit Telegram IDs, nonnegative stats, deletion-state/deletion-ID coherence, cascades, RLS, and direct-access denial.
+- [x] Implement surrogate identity separation. Telegram identifiers appear only in `identity_links`.
+- [x] Add a constraint requiring deletion metadata exactly when state is `deletion_pending`; terminal `deleted` is represented by no identity link, not a fake external ID.
+- [x] Seed one synthetic local player and identity only; use obviously fictional ID `900000000000000001`.
+- [x] Reset, run pgTAP, and verify seed contains no real-looking personal data.
 
 ### Task 5: Validated immutable content and daily schedule
 
@@ -140,11 +140,11 @@ game.dungeon_days(cycle_id date PK, content_version_id uuid FK,
 game.fallback_content(slot text PK, content_version_id uuid FK)
 ```
 
-- [ ] Write RED tests for content hash uniqueness, immutable validated payload, `closes_at = opens_at + 24h`, `grace_ends_at = closes_at + 2h`, and open/ready days requiring validated or fallback-validated content.
-- [ ] Implement the migration, immutable trigger, and lifecycle constraints.
-- [ ] Add a script that validates `content/fallback/case-001/day-01.json` with the locked Phase 1 validator, computes canonical SHA-256, and emits deterministic SQL parameters rather than interpolated SQL.
-- [ ] Seed the reviewed fallback and one synthetic current day; assert stored hash equals the Phase 1 canonical hash for the content payload.
-- [ ] Verify `service_role`, `anon`, and `authenticated` still cannot directly read any `game` table.
+- [x] Write RED tests for content hash uniqueness, immutable validated payload, Kyiv-local 09:00 boundaries (including 23/25-hour UTC DST cycles), `grace_ends_at = closes_at + 2h`, and open/ready days requiring validated or fallback-validated content.
+- [x] Implement the migration, immutable trigger, and lifecycle constraints.
+- [x] Add a script that validates `content/fallback/case-001/day-01.json` with the locked Phase 1 validator, computes canonical SHA-256, and emits deterministic SQL parameters rather than interpolated SQL.
+- [x] Seed the reviewed fallback and one synthetic current day; assert stored hash equals the Phase 1 canonical hash for the content payload.
+- [x] Verify `service_role`, `anon`, and `authenticated` still cannot directly read any `game` table.
 
 ### Task 6: Gate 2A verification and checkpoint
 
@@ -152,11 +152,11 @@ game.fallback_content(slot text PK, content_version_id uuid FK)
 - Create: `docs/checkpoints/2026-07-13-phase-02a.md`
 - Modify: `TASKS.md`, `PROJECT_STATE.md`
 
-- [ ] Run from a clean local stack: `npm run db:reset`, `npm run test:db:unit`, `npm run db:lint`, `npm run verify`.
-- [ ] Inspect grants with role impersonation; record exact passing counts and commands.
-- [ ] Record residual limitations: local-only, synthetic data, no gameplay mutations yet.
-- [ ] Mark P2-02 and P2-2A approved, P2-2B in progress; update architecture map.
-- [ ] Commit only Gate 2A files with message `feat: establish private persistent schema`.
+- [x] Run from a clean local stack: `npm run db:reset`, `npm run test:db:unit`, `npm run db:lint`, `npm run verify`.
+- [x] Inspect grants with role impersonation; record exact passing counts and commands.
+- [x] Record residual limitations: local-only, synthetic data, no gameplay mutations yet.
+- [x] Mark P2-02 and P2-2A approved, P2-2B in progress; update architecture map.
+- [x] Commit only Gate 2A files with message `feat: establish private persistent schema`.
 
 ---
 

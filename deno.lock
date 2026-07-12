@@ -155,6 +155,7 @@
     "packageJson": {
       "dependencies": [
         "npm:deno@^2.9.2",
+        "npm:postgres@3.4.7",
         "npm:supabase@^2.109.1"
       ]
     }
