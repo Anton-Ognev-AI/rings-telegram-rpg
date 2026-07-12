@@ -3,9 +3,9 @@
 ## Active Task
 - [ ] ID: PHASE-00: Concierge UX calibration і foundation (Inline execution; checkpoint fixes)
   - [x] P0-01: Detailed Phase 0 TDD execution plan → docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md
-  - [ ] P0-02: Initialize valid Git repository й baseline commit (in progress)
-  - [ ] P0-03: Concierge dungeon/session kit
-  - [ ] P0-04: Deno/npm/Supabase project scaffold
+  - [x] P0-02: Initialize valid Git repository і baseline commit (`45ee953`)
+  - [x] P0-03: Concierge dungeon/session kit
+  - [ ] P0-04: Deno/npm/Supabase project scaffold (in progress)
   - [ ] P0-05: Health endpoint + fake adapters via TDD
   - [ ] P0-06: Local verification і Phase 0 checkpoint
 

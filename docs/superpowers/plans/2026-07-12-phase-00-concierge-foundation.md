@@ -35,11 +35,11 @@
 
 - Produces: valid Git repository on `main`; baseline commit containing approved docs only.
 
-- [ ] **Step 1: Record ADR 034 and activate Phase 0**
+- [x] **Step 1: Record ADR 034 and activate Phase 0**
 
 Expected: plan status is approved; `TASKS.md` has exactly one active `PHASE-00`.
 
-- [ ] **Step 2: Create `.gitignore`**
+- [x] **Step 2: Create `.gitignore`**
 
 ```gitignore
 node_modules/
@@ -54,7 +54,7 @@ supabase/.temp/
 prototypes/concierge/session-log.csv
 ```
 
-- [ ] **Step 3: Create `.editorconfig`**
+- [x] **Step 3: Create `.editorconfig`**
 
 ```ini
 root = true
@@ -74,7 +74,7 @@ trim_trailing_whitespace = false
 indent_size = 2
 ```
 
-- [ ] **Step 4: Initialize Git and inspect identity**
+- [x] **Step 4: Initialize Git and inspect identity**
 
 Run:
 
@@ -87,7 +87,7 @@ git status --short
 
 Expected: valid repository on `main`. If identity is absent, do not invent it; postpone commits and add one checkpoint question.
 
-- [ ] **Step 5: Commit approved documentation baseline**
+- [x] **Step 5: Commit approved documentation baseline**
 
 Run:
 
@@ -108,32 +108,35 @@ Expected: one root commit; working tree contains no untracked approved docs.
 - Create: `prototypes/concierge/session-log.template.csv`
 - Create locally/ignored: `prototypes/concierge/session-log.csv`
 - Create: `prototypes/concierge/README.md`
+- Create: `prototypes/concierge/validate.ps1`
 
 **Interfaces:**
 
 - Produces: `ConciergeDungeonV1` represented as ten numbered scene cards with three choices and moderator-only outcomes.
 - Produces: anonymous metrics schema used by the Phase 0 product gate.
 
-- [ ] **Step 1: Write one handcrafted dungeon**
+- [x] **Step 1: Write one handcrafted dungeon**
 
 Requirements:
 
 - exactly 10 stages;
-- stage 1 non-combat and no trap;
+- stage 1 non-combat and no trap; stages 1–2 have no unconditional trap;
 - stage 5 one-choice mini-boss;
 - stage 10 exactly two exchanges;
+- no more than three pure-combat stages, at least one research and one social stage, and no adjacent duplicate encounter types;
+- no more than two important choices and one unconditional trap across the run;
 - each ordinary stage has physical/magical/agility/vitality check coverage across the run plus a neutral route;
 - every choice has a visible clue and one-sentence post-choice explanation;
 - no Max, black ring or flesh magic;
-- reader-facing text stays under 700 characters per stage.
+- reader-facing text stays under 700 characters per scene/exchange card.
 
-- [ ] **Step 2: Create anonymous CSV template**
+- [x] **Step 2: Create anonymous CSV template**
 
 ```csv
-participant_id,started_at_utc,first_choice_seconds,active_run_seconds,reached_stage,boss_result,clue_understood_count,needed_oral_help,message_fatigue_1_5,return_tomorrow_1_5,notes_without_pii
+participant_id,dungeon_version,test_mode,book_familiarity,started_at_utc,first_choice_seconds,first_choice_messages,first_choice_taps,active_run_seconds,reached_stage,boss_result,terminal_reason,clue_understood_count,explained_clue_and_stat_without_help,needed_oral_help,message_fatigue_1_5,return_tomorrow_1_5,notes_without_pii
 ```
 
-- [ ] **Step 3: Create local ignored session log from template**
+- [x] **Step 3: Create local ignored session log from template**
 
 Run:
 
@@ -141,22 +144,21 @@ Run:
 Copy-Item prototypes/concierge/session-log.template.csv prototypes/concierge/session-log.csv
 ```
 
-- [ ] **Step 4: Document moderator protocol**
+- [x] **Step 4: Document moderator protocol**
 
 Protocol must state: send one card at a time; never reveal best choice; manually apply displayed HP; record active time excluding long pauses; use participant IDs `P01`…`P05`; delete free-text PII before committing.
 
-- [ ] **Step 5: Validate the kit structurally**
+- [x] **Step 5: Validate the kit structurally**
 
 Run:
 
 ```powershell
-$text = Get-Content prototypes/concierge/dungeon-001.md -Raw -Encoding UTF8
-([regex]::Matches($text, '(?m)^## Stage \d+')).Count
+& prototypes/concierge/validate.ps1
 ```
 
-Expected: `10`.
+Expected: `OK: 10 stages, 11 cards, 33 choices, all player cards <=700 chars.`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add prototypes/concierge
@@ -641,4 +643,3 @@ Do not mark `PHASE-00` approved until all mandatory Phase 0 gates are satisfied.
 git add PROJECT_STATE.md TASKS.md docs/checkpoints/2026-07-12-phase-00.md docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md
 git commit -m "docs: record Phase 0 checkpoint"
 ```
-
