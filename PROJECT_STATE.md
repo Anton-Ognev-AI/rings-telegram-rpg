@@ -18,6 +18,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/specs/2026-07-11-game-design.md`: Історичний дизайн-документ v1.0 (Status: superseded; keep for history)
 - `docs/specs/2026-07-12-game-design-v1.1.md`: Канонічна спека MVP v1.1 (Status: approved)
 - `docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md`: Master implementation plan Phase 0–10 (Status: approved)
+- `docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md`: Detailed Inline Phase 1 TDD plan (Status: in_progress)
 - `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: approved_with_waiver)
 - `prototypes/concierge/`: Post-tutorial concierge kit (Status: paused; anonymized `P01` recorded)
 - `supabase/functions/health/` and `_shared/infrastructure/`: TDD Phase 0 foundation (Status: verified)
@@ -48,8 +49,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Phase 0 foundation and Docker local gate verified: reproducible npm/Deno/Supabase CLI toolchain, health Edge Function, deterministic fake adapters, scoped CI verify, `supabase start` + `db reset` + HTTP health `200`, local runbook and validated concierge kit. Optional local Analytics is disabled; no remote project was linked.
 - Local-network constraint: on this Windows/Docker Desktop runtime, Supabase published ports remained `0.0.0.0`; start the stack only on a trusted private network with synthetic data and stop it after the test until a separate security decision.
 - Phase 0 transition: the planned 3–5-session UX sample did not pass; the owner stopped it after `P01` and explicitly waived that sample-size gate. Findings remain directional: monotony, weak visibility of stat/combat impact, insufficient early progression, and an unclear next-day hook. They are mandatory inputs to later content/UX phases, but do not expand the Phase 1 kernel boundary (ADR 036).
-- Current gate: activate `PHASE-01` locally in isolated worktree `.worktrees/phase-01-domain-kernel`; first produce and verify the detailed TDD plan. No remote migration, deployment, generator, Telegram UI, item or ring implementation belongs to this step.
-- Next safe step: commit the Phase 0 transition record, create the selected worktree, run the clean baseline verification there, and implement the deterministic domain kernel from its detailed plan.
+- Phase 1 workspace: isolated worktree `.worktrees/phase-01-domain-kernel` and branch `phase-01-domain-kernel` are active. The clean checkout exposed system `core.autocrlf=true`; repository-level `.gitattributes` now pins LF, and the baseline verification passes without source-content changes.
+- Current gate: execute `docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md` inline with RED→GREEN evidence. No remote migration, deployment, generator, Telegram UI, item or ring implementation belongs to this phase.
+- Next safe step: implement Task 1 contracts and verification scopes, then continue through the plan's local checkpoints.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame

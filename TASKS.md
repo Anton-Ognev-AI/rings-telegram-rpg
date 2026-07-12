@@ -2,7 +2,7 @@
 
 ## Active Task
 - [ ] ID: PHASE-01: Deterministic domain kernel (Inline execution)
-  - [ ] P1-01: Detailed TDD implementation plan and isolated worktree (`in_progress`)
+  - [x] P1-01: Detailed TDD implementation plan and isolated worktree → docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md
   - [ ] P1-02: Versioned content/domain contracts and fallback dungeon schema
   - [ ] P1-03: Deterministic party, combat, run and daily-cycle resolvers
   - [ ] P1-04: Golden/property tests and balance simulation
