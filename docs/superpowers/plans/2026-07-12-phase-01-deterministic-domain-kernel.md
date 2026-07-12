@@ -378,7 +378,7 @@ Commit: `feat: resolve v1 dungeon stages and boss`
 
 ---
 
-### Task 6: Resolver registry, canonical result bytes, hash, and golden replay
+### Task 6: Resolver registry, canonical result bytes, hash, and golden replay ✅
 
 **Files:**
 - Create: `supabase/functions/_shared/domain/canonical-json.ts`
@@ -391,7 +391,7 @@ Commit: `feat: resolve v1 dungeon stages and boss`
 **Interfaces:**
 - Produces: `canonicalJson(value): string`, `sha256Hex(text): Promise<string>`, `resolveAndHash(input): Promise<{ resolution; canonical; hash }>` and `getResolver(version: "v1"): Resolver`.
 
-- [ ] **Step 1: Write canonicalization and unknown-version failures**
+- [x] **Step 1: Write canonicalization and unknown-version failures**
 
 Assert recursively sorted object keys, preserved array order, rejection of `undefined`, non-finite numbers, and unknown resolver versions:
 
@@ -404,11 +404,11 @@ Run: `npx deno test tests/unit/resolver_golden_replay_test.ts`
 
 Expected: FAIL because registry/canonical helpers are missing.
 
-- [ ] **Step 2: Implement canonical JSON and SHA-256**
+- [x] **Step 2: Implement canonical JSON and SHA-256**
 
 Canonicalize only null, boolean, finite number, string, arrays, and plain objects. Sort object keys lexicographically, omit no values, and throw with the JSON path for unsupported values. Hash UTF-8 bytes with `crypto.subtle.digest("SHA-256", bytes)` and lower-case hex.
 
-- [ ] **Step 3: Implement closed registry dispatch**
+- [x] **Step 3: Implement closed registry dispatch**
 
 ```ts
 const resolvers = Object.freeze({ v1: { resolveChoice: resolveChoiceV1 } });
@@ -421,7 +421,7 @@ export function getResolver(version: "v1") {
 
 `resolveAndHash` dispatches by the command/content version, resolves once, canonicalizes the resolution, and hashes those exact bytes.
 
-- [ ] **Step 4: Add 1000-repeat and golden tests**
+- [x] **Step 4: Add 1000-repeat and golden tests**
 
 Resolve the same fixture 1000 times and require identical canonical bytes/hash. Replay the full fallback path through boss summary, compare the complete result JSON and pinned hash to `golden-full-run.result.json`, and confirm the expected hash has 64 lower-case hexadecimal characters.
 
@@ -429,7 +429,7 @@ Run: `npx deno test tests/property/determinism_test.ts tests/unit/resolver_golde
 
 Expected: PASS; changing a V1 result changes the golden bytes/hash and fails the test.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `npm run verify`
 

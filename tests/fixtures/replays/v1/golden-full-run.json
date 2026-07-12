@@ -1,0 +1,15 @@
+{
+  "choices": [
+    { "stage": 1, "exchange": null, "choiceId": "s1-agility" },
+    { "stage": 2, "exchange": null, "choiceId": "s2-magic" },
+    { "stage": 3, "exchange": null, "choiceId": "s3-physical" },
+    { "stage": 4, "exchange": null, "choiceId": "s4-agility" },
+    { "stage": 5, "exchange": null, "choiceId": "s5-magical" },
+    { "stage": 6, "exchange": null, "choiceId": "s6-vitality" },
+    { "stage": 7, "exchange": null, "choiceId": "s7-agility" },
+    { "stage": 8, "exchange": null, "choiceId": "s8-magical" },
+    { "stage": 9, "exchange": null, "choiceId": "s9-agility" },
+    { "stage": 10, "exchange": 1, "choiceId": "s10e1-physical" },
+    { "stage": 10, "exchange": 2, "choiceId": "s10e2-magical" }
+  ]
+}

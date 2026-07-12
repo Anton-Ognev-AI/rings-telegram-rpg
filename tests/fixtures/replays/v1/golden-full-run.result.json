@@ -1,0 +1,13 @@
+{
+  "finalState": {
+    "stage": 10,
+    "exchange": null,
+    "hp": 65,
+    "bossHp": null,
+    "xp": 150,
+    "vampHealedStage": 0,
+    "vampHealedRun": 0,
+    "terminal": "victory"
+  },
+  "fullRunHash": "1d63be460b0517de00bbd2c6ce2bc34e4236992d6d16d7252d2ec210ac20a3b0"
+}
