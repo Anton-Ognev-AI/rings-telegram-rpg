@@ -1,0 +1,597 @@
+{
+  "schemaVersion": "dungeon-v1",
+  "resolverVersion": "v1",
+  "id": "case-001-day-01",
+  "title": "Побічна тривога у східному крилі",
+  "stages": [
+    {
+      "number": 1,
+      "role": "entry",
+      "encounterType": "exploration",
+      "scene": "Черговий викладач веде вас до зачиненого східного крила. З-під дверей тягнеться холодний туман, але пил біля правої стіни не зворушений.",
+      "important": false,
+      "clues": [{ "id": "s1-wall", "text": "Пил біля правої стіни не зворушений." }],
+      "choices": [
+        {
+          "id": "s1-agility",
+          "label": "Прослизнути вздовж чистої стіни",
+          "kind": "check",
+          "clueId": "s1-wall",
+          "rationale": "Незворушений пил позначає безпечну лінію руху.",
+          "stat": "agility",
+          "tier": "easy",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Ви входите, не зачепивши холодної завіси.",
+            "neutral": "Ви входите обережно.",
+            "failure": "Туман торкається вас і відбирає сили."
+          }
+        },
+        {
+          "id": "s1-vitality",
+          "label": "Пройти крізь туман напряму",
+          "kind": "check",
+          "clueId": "s1-wall",
+          "rationale": "Прямий шлях ігнорує підказку та перевіряє витривалість.",
+          "stat": "vitality",
+          "tier": "standard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Ви витримуєте крижаний опір.",
+            "neutral": "Ви входите повільно.",
+            "failure": "Холод пробирає до кісток."
+          }
+        },
+        {
+          "id": "s1-neutral",
+          "label": "Почекати, поки туман розвіється",
+          "kind": "neutral",
+          "clueId": "s1-wall",
+          "rationale": "Очікування гарантує прохід, але виснажує часом і холодом.",
+          "copy": {
+            "success": "Прохід відкрито.",
+            "neutral": "Туман слабшає, і ви проходите далі.",
+            "failure": "Очікування затягнулося."
+          }
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "role": "clue",
+      "encounterType": "research",
+      "scene": "У коридорі висять три навчальні печаті. Лише середня відкидає тінь проти світла, а на підлозі крейдою написано: «Відлуння бреше».",
+      "important": false,
+      "clues": [{ "id": "s2-shadow", "text": "Середня печать відкидає тінь проти світла." }],
+      "choices": [
+        {
+          "id": "s2-magic",
+          "label": "Розплести середню печать",
+          "kind": "check",
+          "clueId": "s2-shadow",
+          "rationale": "Неприродна тінь викриває магічну підміну.",
+          "stat": "magical",
+          "tier": "easy",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Фальшива печать гасне й відкриває прохід.",
+            "neutral": "Печаті стихають.",
+            "failure": "Відлуння закляття б'є у відповідь."
+          }
+        },
+        {
+          "id": "s2-agility",
+          "label": "Швидко перетнути проміжок між печатями",
+          "kind": "check",
+          "clueId": "s2-shadow",
+          "rationale": "Точний рух може оминути зону хибної печаті.",
+          "stat": "agility",
+          "tier": "standard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Ви проходите між імпульсами.",
+            "neutral": "Ви минаєте печаті.",
+            "failure": "Один імпульс наздоганяє вас."
+          }
+        },
+        {
+          "id": "s2-neutral",
+          "label": "Заглушити всі печаті захисною тканиною",
+          "kind": "neutral",
+          "clueId": "s2-shadow",
+          "rationale": "Повільний універсальний спосіб не вимагає перевірки.",
+          "copy": {
+            "success": "Коридор безпечний.",
+            "neutral": "Ви витрачаєте час, але проходите.",
+            "failure": "Тканина не втримала імпульс."
+          }
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "role": "application",
+      "encounterType": "combat",
+      "scene": "Зі стелі спускається глиняний сторож. Його праве плече вкрите свіжими тріщинами, а руни на грудях пульсують у повільному ритмі.",
+      "important": false,
+      "clues": [{ "id": "s3-crack", "text": "Праве плече сторожа вкрите свіжими тріщинами." }],
+      "choices": [
+        {
+          "id": "s3-physical",
+          "label": "Ударити в тріснуте плече",
+          "kind": "check",
+          "clueId": "s3-crack",
+          "rationale": "Тріщина є фізичною слабкістю конструкта.",
+          "stat": "physical",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Плече розсипається, сторож падає.",
+            "neutral": "Сторож відступає.",
+            "failure": "Удар ковзає, і сторож відповідає."
+          }
+        },
+        {
+          "id": "s3-magical",
+          "label": "Збити ритм рун імпульсом",
+          "kind": "check",
+          "clueId": "s3-crack",
+          "rationale": "Руни керують пошкодженим тілом сторожа.",
+          "stat": "magical",
+          "tier": "standard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Ритм рун рветься, конструкція завмирає.",
+            "neutral": "Руни слабшають.",
+            "failure": "Руни відбивають нестійкий імпульс."
+          }
+        },
+        {
+          "id": "s3-neutral",
+          "label": "Відступати, прикриваючись колоною",
+          "kind": "neutral",
+          "clueId": "s3-crack",
+          "rationale": "Колона дає гарантований, але виснажливий обхід.",
+          "copy": {
+            "success": "Ви обходите сторожа.",
+            "neutral": "Кілька ударів дістають вас, та шлях відкритий.",
+            "failure": "Сторож затискає прохід."
+          }
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "role": "resistance",
+      "encounterType": "hazard",
+      "scene": "Сходи вкриті срібним пилом. На кожній третій сходинці пил лежить рівно, а збоку тремтить мотузка аварійного спуску.",
+      "important": true,
+      "clues": [{ "id": "s4-third", "text": "На кожній третій сходинці пил лежить рівно." }],
+      "choices": [
+        {
+          "id": "s4-agility",
+          "label": "Ступати лише на кожну третю сходинку",
+          "kind": "check",
+          "clueId": "s4-third",
+          "rationale": "Рівний пил показує неактивні пластини.",
+          "stat": "agility",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Ви проходите між пластинами.",
+            "neutral": "Сходи позаду.",
+            "failure": "Одна пластина спрацьовує."
+          }
+        },
+        {
+          "id": "s4-vitality",
+          "label": "Закритися плащем і бігти",
+          "kind": "check",
+          "clueId": "s4-third",
+          "rationale": "Прямий ривок покладається на витривалість.",
+          "stat": "vitality",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Ви витримуєте град уламків.",
+            "neutral": "Ви дістаєтеся низу.",
+            "failure": "Уламки боляче б'ють крізь плащ."
+          }
+        },
+        {
+          "id": "s4-neutral",
+          "label": "Спуститися аварійною мотузкою",
+          "kind": "neutral",
+          "clueId": "s4-third",
+          "rationale": "Мотузка обходить пастку ціною виснаження.",
+          "copy": {
+            "success": "Ви спускаєтеся.",
+            "neutral": "Мотузка ріже долоні, але витримує.",
+            "failure": "Мотузка рветься."
+          }
+        },
+        {
+          "id": "s4-trap",
+          "label": "Наступити на сходинку з порушеним пилом",
+          "kind": "trap",
+          "clueId": "s4-third",
+          "rationale": "Порушений пил приховує активну пластину.",
+          "copy": {
+            "success": "Пластина мовчить.",
+            "neutral": "Ви проходите.",
+            "failure": "Пластина спрацьовує незалежно від сили."
+          }
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "role": "miniboss",
+      "encounterType": "combat",
+      "scene": "У залі чекає дзеркальний вартовий. Перед кожним ударом його ліва грань темніє, а права накопичує світло.",
+      "important": false,
+      "clues": [{ "id": "s5-dark", "text": "Перед ударом ліва грань вартового темніє." }],
+      "choices": [
+        {
+          "id": "s5-magical",
+          "label": "Розсіяти темну грань контрімпульсом",
+          "kind": "check",
+          "clueId": "s5-dark",
+          "rationale": "Темна грань запускає атаку і вразлива до контрмагії.",
+          "stat": "magical",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Імпульс руйнує ритм вартового.",
+            "neutral": "Вартовий спиняється.",
+            "failure": "Контрімпульсу бракує сили."
+          }
+        },
+        {
+          "id": "s5-physical",
+          "label": "Розбити світлу грань силовим ударом",
+          "kind": "check",
+          "clueId": "s5-dark",
+          "rationale": "Силовий маршрут можливий, але не використовує точний телеграф.",
+          "stat": "physical",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Світла грань тріскається під ударом.",
+            "neutral": "Вартовий хитається.",
+            "failure": "Відбите світло обпалює вас."
+          }
+        },
+        {
+          "id": "s5-neutral",
+          "label": "Перечекати серію за кам'яним щитом",
+          "kind": "neutral",
+          "clueId": "s5-dark",
+          "rationale": "Щит гарантує прохід після виснажливої серії.",
+          "copy": {
+            "success": "Серія завершується.",
+            "neutral": "Щит тріскається, але ви проходите.",
+            "failure": "Щит не витримує."
+          }
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "role": "counterplay",
+      "encounterType": "social",
+      "scene": "За вартовим ховається молодший учень. Він стискає ключ, але повторює одну й ту саму фразу, не кліпаючи.",
+      "important": false,
+      "clues": [{ "id": "s6-repeat", "text": "Учень повторює одну фразу й не кліпає." }],
+      "choices": [
+        {
+          "id": "s6-vitality",
+          "label": "Спокійно втримати його й дочекатися паузи",
+          "kind": "check",
+          "clueId": "s6-repeat",
+          "rationale": "Стійкість дає пережити нав'язаний ритм і не нашкодити учневі.",
+          "stat": "vitality",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Навіювання слабшає, учень віддає ключ.",
+            "neutral": "Він приходить до тями.",
+            "failure": "Нав'язаний ритм виснажує вас."
+          }
+        },
+        {
+          "id": "s6-magical",
+          "label": "Перервати навіювання магічним знаком",
+          "kind": "check",
+          "clueId": "s6-repeat",
+          "rationale": "Повторення видає зовнішню магічну петлю.",
+          "stat": "magical",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Знак розриває петлю.",
+            "neutral": "Петля слабшає.",
+            "failure": "Петля відкидає закляття назад."
+          }
+        },
+        {
+          "id": "s6-neutral",
+          "label": "Залишити учневі записку й узяти запасний шлях",
+          "kind": "neutral",
+          "clueId": "s6-repeat",
+          "rationale": "Запасний шлях безпечний, але довший.",
+          "copy": {
+            "success": "Ви знаходите обхід.",
+            "neutral": "Обхід забирає сили й час.",
+            "failure": "Прохід закритий."
+          }
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "role": "escalation",
+      "encounterType": "pursuit",
+      "scene": "Коридор починає складатися за спиною. Кам'яні плити рухаються хвилею, але перед кожним зсувом шви на мить світлішають.",
+      "important": false,
+      "clues": [{ "id": "s7-seams", "text": "Шви світлішають перед кожним зсувом." }],
+      "choices": [
+        {
+          "id": "s7-agility",
+          "label": "Рухатися в ритмі спалахів",
+          "kind": "check",
+          "clueId": "s7-seams",
+          "rationale": "Спалахи точно телеграфують рух плит.",
+          "stat": "agility",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Ви випереджаєте хвилю плит.",
+            "neutral": "Ви вириваєтеся вперед.",
+            "failure": "Плита зачіпає вас."
+          }
+        },
+        {
+          "id": "s7-physical",
+          "label": "Заклинити механізм уламком колони",
+          "kind": "check",
+          "clueId": "s7-seams",
+          "rationale": "Силове рішення спиняє частину механізму.",
+          "stat": "physical",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Уламок блокує хвилю.",
+            "neutral": "Механізм сповільнюється.",
+            "failure": "Уламок ламається під тиском."
+          }
+        },
+        {
+          "id": "s7-neutral",
+          "label": "Сховатися в бічній ніші",
+          "kind": "neutral",
+          "clueId": "s7-seams",
+          "rationale": "Ніша гарантує виживання, але хвиля тисне на укриття.",
+          "copy": {
+            "success": "Хвиля минає.",
+            "neutral": "Камінь обсипається, та ніша витримує.",
+            "failure": "Нішу завалює."
+          }
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "role": "dilemma",
+      "encounterType": "social",
+      "scene": "Двоє примарних бібліотекарів сперечаються, кому належить печать проходу. Один говорить без тіні, інший не залишає відбитків на пилюці.",
+      "important": true,
+      "clues": [{ "id": "s8-shadow", "text": "Перший бібліотекар говорить без тіні." }],
+      "choices": [
+        {
+          "id": "s8-magical",
+          "label": "Викрити того, хто не має тіні",
+          "kind": "check",
+          "clueId": "s8-shadow",
+          "rationale": "Відсутність тіні видає ілюзорний голос.",
+          "stat": "magical",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Ілюзія тане, справжній бібліотекар віддає печать.",
+            "neutral": "Суперечка стихає.",
+            "failure": "Ілюзія підміняє ваші слова."
+          }
+        },
+        {
+          "id": "s8-vitality",
+          "label": "Вислухати обох до кінця",
+          "kind": "check",
+          "clueId": "s8-shadow",
+          "rationale": "Тривала суперечка перевіряє стійкість до навіювання.",
+          "stat": "vitality",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Фальшивий голос збивається першим.",
+            "neutral": "Ви знаходите суперечність.",
+            "failure": "Голоси виснажують увагу."
+          }
+        },
+        {
+          "id": "s8-neutral",
+          "label": "Відмовитися судити й повернутися до службового ходу",
+          "kind": "neutral",
+          "clueId": "s8-shadow",
+          "rationale": "Службовий хід обходить суперечку ціною attrition.",
+          "copy": {
+            "success": "Ви знаходите службовий хід.",
+            "neutral": "Тісний хід ранить плечі, але веде далі.",
+            "failure": "Хід замкнений."
+          }
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "role": "synthesis",
+      "encounterType": "research",
+      "scene": "Перед останніми дверима схема показує дві фази захисту: спершу кам'яний панцир, потім рухоме ядро. На полях підкреслено: «Не бий у темп ядра».",
+      "important": false,
+      "clues": [{ "id": "s9-phases", "text": "Схема показує панцир, а потім рухоме ядро." }],
+      "choices": [
+        {
+          "id": "s9-agility",
+          "label": "Запам'ятати паузи рухомого ядра",
+          "kind": "check",
+          "clueId": "s9-phases",
+          "rationale": "Паузи готують точне позиціонування для другої фази.",
+          "stat": "agility",
+          "tier": "standard",
+          "tacticalModifier": "counter",
+          "copy": {
+            "success": "Ви знаходите безпечний ритм.",
+            "neutral": "Схема стає зрозумілішою.",
+            "failure": "Ритм вислизає з пам'яті."
+          }
+        },
+        {
+          "id": "s9-magical",
+          "label": "Зчитати слабкість кам'яного панцира",
+          "kind": "check",
+          "clueId": "s9-phases",
+          "rationale": "Магічний аналіз готує контрхід до першої фази.",
+          "stat": "magical",
+          "tier": "hard",
+          "tacticalModifier": "standard",
+          "copy": {
+            "success": "Ви бачите вузол панцира.",
+            "neutral": "Вузол ледь помітний.",
+            "failure": "Схема відповідає болючим імпульсом."
+          }
+        },
+        {
+          "id": "s9-neutral",
+          "label": "Скопіювати схему й рухатися далі",
+          "kind": "neutral",
+          "clueId": "s9-phases",
+          "rationale": "Копіювання гарантує базову підготовку, але забирає час.",
+          "copy": {
+            "success": "Копію завершено.",
+            "neutral": "Ви втомлюєтеся, але несете схему з собою.",
+            "failure": "Схема розсипається."
+          }
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "role": "boss",
+      "encounterType": "combat",
+      "scene": "У серці крила прокидається кам'яний наглядач. Його панцир замикає рухоме ядро, а удари повторюють ритм зі схеми.",
+      "important": false,
+      "clues": [
+        { "id": "s10-shell", "text": "Панцир сходиться у світному вузлі." },
+        { "id": "s10-core", "text": "Ядро завмирає між двома ударами." }
+      ],
+      "bossExchanges": [
+        {
+          "number": 1,
+          "scene": "Наглядач опускає панцир і готує прямий таран; світний вузол на мить лишається відкритим.",
+          "choices": [
+            {
+              "id": "s10e1-physical",
+              "label": "Розколоти відкритий вузол",
+              "kind": "check",
+              "clueId": "s10-shell",
+              "rationale": "Відкритий вузол є контрціллю першої фази.",
+              "stat": "physical",
+              "tier": "standard",
+              "tacticalModifier": "counter",
+              "copy": {
+                "success": "Вузол тріскається, панцир розмикається.",
+                "neutral": "Панцир слабшає.",
+                "failure": "Таран наздоганяє вас раніше."
+              }
+            },
+            {
+              "id": "s10e1-magical",
+              "label": "Перевантажити весь панцир",
+              "kind": "check",
+              "clueId": "s10-shell",
+              "rationale": "Силова магія можлива, але не використовує точну слабкість.",
+              "stat": "magical",
+              "tier": "hard",
+              "tacticalModifier": "standard",
+              "copy": {
+                "success": "Панцир гасне від перевантаження.",
+                "neutral": "Панцир мерехтить.",
+                "failure": "Панцир повертає частину імпульсу."
+              }
+            },
+            {
+              "id": "s10e1-neutral",
+              "label": "Прийняти таран на захист",
+              "kind": "neutral",
+              "clueId": "s10-shell",
+              "rationale": "Захисна позиція гарантує другу фазу, якщо HP витримає attrition.",
+              "copy": {
+                "success": "Ви втримуєте позицію.",
+                "neutral": "Таран відкидає вас, але панцир розкривається.",
+                "failure": "Захист ламається."
+              }
+            }
+          ]
+        },
+        {
+          "number": 2,
+          "scene": "Оголене ядро рухається ривками й завмирає між двома ударами, готуючи останню хвилю.",
+          "choices": [
+            {
+              "id": "s10e2-magical",
+              "label": "Загасити ядро в мить паузи",
+              "kind": "check",
+              "clueId": "s10-core",
+              "rationale": "Пауза відкриває ядро для точного магічного контрходу.",
+              "stat": "magical",
+              "tier": "standard",
+              "tacticalModifier": "counter",
+              "copy": {
+                "success": "Ядро гасне до завершення хвилі.",
+                "neutral": "Хвиля слабшає.",
+                "failure": "Імпульс приходить запізно."
+              }
+            },
+            {
+              "id": "s10e2-agility",
+              "label": "Увійти в паузу й завдати точного удару",
+              "kind": "check",
+              "clueId": "s10-core",
+              "rationale": "Точне позиціонування використовує паузу без магічного придушення.",
+              "stat": "agility",
+              "tier": "hard",
+              "tacticalModifier": "standard",
+              "copy": {
+                "success": "Точний удар розбиває ядро.",
+                "neutral": "Ядро втрачає рівновагу.",
+                "failure": "Ядро відновлює рух раніше."
+              }
+            },
+            {
+              "id": "s10e2-neutral",
+              "label": "Відвести хвилю в порожній коридор",
+              "kind": "neutral",
+              "clueId": "s10-core",
+              "rationale": "Відведення не перемагає наглядача, але може стримати загрозу.",
+              "copy": {
+                "success": "Хвиля йде вбік.",
+                "neutral": "Загрозу стримано, наглядач відступає.",
+                "failure": "Хвиля накриває зал."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

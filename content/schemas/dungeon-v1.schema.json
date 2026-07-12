@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://academy.invalid/schemas/dungeon-v1.schema.json",
+  "title": "Academy Dungeon Content V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "resolverVersion", "id", "title", "stages"],
+  "properties": {
+    "schemaVersion": { "const": "dungeon-v1" },
+    "resolverVersion": { "const": "v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "stages": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "$defs": {
+    "clue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "copy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["success", "neutral", "failure"],
+      "properties": {
+        "success": { "type": "string", "minLength": 1 },
+        "neutral": { "type": "string", "minLength": 1 },
+        "failure": { "type": "string", "minLength": 1 }
+      }
+    },
+    "choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "kind", "clueId", "rationale", "copy"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["check", "neutral", "trap"] },
+        "clueId": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "stat": { "enum": ["physical", "magical", "agility", "vitality"] },
+        "tier": { "enum": ["easy", "standard", "hard"] },
+        "tacticalModifier": { "enum": ["counter", "standard", "against_telegraph"] },
+        "copy": { "$ref": "#/$defs/copy" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "check" } }, "required": ["kind"] },
+          "then": { "required": ["stat", "tier", "tacticalModifier"] }
+        }
+      ]
+    },
+    "exchange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "scene", "choices"],
+      "properties": {
+        "number": { "enum": [1, 2] },
+        "scene": { "type": "string", "minLength": 1, "maxLength": 700 },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/choice" }
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "role", "encounterType", "scene", "important", "clues"],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "role": {
+          "enum": [
+            "entry",
+            "clue",
+            "application",
+            "resistance",
+            "miniboss",
+            "counterplay",
+            "escalation",
+            "dilemma",
+            "synthesis",
+            "boss"
+          ]
+        },
+        "encounterType": {
+          "enum": ["exploration", "research", "social", "hazard", "pursuit", "combat"]
+        },
+        "scene": { "type": "string", "minLength": 1, "maxLength": 700 },
+        "important": { "type": "boolean" },
+        "clues": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/clue" } },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/choice" }
+        },
+        "bossExchanges": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/exchange" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "number": { "const": 10 } }, "required": ["number"] },
+          "then": { "required": ["bossExchanges"], "not": { "required": ["choices"] } },
+          "else": { "required": ["choices"], "not": { "required": ["bossExchanges"] } }
+        }
+      ]
+    }
+  }
+}

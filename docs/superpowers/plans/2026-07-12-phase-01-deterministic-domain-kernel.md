@@ -110,20 +110,19 @@ Commit: `chore: make Phase 1 worktree reproducible`
 
 ---
 
-### Task 2: Dungeon schema, semantic lints, and reviewed fallback fixture
+### Task 2: Dungeon schema, semantic lints, and reviewed fallback fixture ✅
 
 **Files:**
 - Create: `content/schemas/dungeon-v1.schema.json`
 - Create: `content/fallback/case-001/day-01.json`
 - Create: `supabase/functions/_shared/domain/content-validator.ts`
 - Test: `tests/unit/content_validator_test.ts`
-- Test: `tests/fixtures/invalid-content/*.json`
 
 **Interfaces:**
 - Consumes: `DungeonContentV1`, `StageV1`, `ChoiceV1`.
 - Produces: `validateDungeonContentV1(value: unknown): ValidationResult` and `assertDungeonContentV1(value: unknown): asserts value is DungeonContentV1`, where `ValidationResult = { ok: true } | { ok: false; errors: string[] }`.
 
-- [ ] **Step 1: Write table-driven rejection tests**
+- [x] **Step 1: Write table-driven rejection tests**
 
 The test loads the valid fallback, clones it, applies one mutation per case, and asserts an exact error fragment:
 
@@ -143,7 +142,7 @@ Run: `npx deno test tests/unit/content_validator_test.ts`
 
 Expected: FAIL because validator and fixture are missing.
 
-- [ ] **Step 2: Add the JSON Schema shape contract**
+- [x] **Step 2: Add the JSON Schema shape contract**
 
 Use draft 2020-12 with `additionalProperties: false`, required root fields, `minItems/maxItems: 10`, stage number bounds 1–10, 2–4 choices, exact enums, 700-character scene text, and conditional stage-10 `bossExchanges` with exactly two entries. The schema handles local shape; code lints handle quotas, uniqueness, adjacency, clue references, and stage-position rules.
 
@@ -151,7 +150,7 @@ Run: `npx deno eval 'JSON.parse(await Deno.readTextFile("content/schemas/dungeon
 
 Expected: `schema-json-ok`.
 
-- [ ] **Step 3: Create the complete fallback blueprint**
+- [x] **Step 3: Create the complete fallback blueprint**
 
 Use this exact stage matrix; every non-boss stage has two check routes plus neutral, stage 4 adds the only trap as a fourth option, and both boss exchanges have two checks plus neutral:
 
@@ -170,7 +169,7 @@ Use this exact stage matrix; every non-boss stage has two check routes plus neut
 
 Each check references a visible clue ID, carries a one-sentence rationale, and has Ukrainian success/failure copy; each neutral route has fixed neutral copy. Keep every scene at or below 700 characters and do not put numeric mechanics in JSON.
 
-- [ ] **Step 4: Implement schema-equivalent guards and cross-stage lints**
+- [x] **Step 4: Implement schema-equivalent guards and cross-stage lints**
 
 Build errors in stable stage/choice traversal order. Validate shape first, then stage numbering/role, option counts, neutral presence, clue reference, duplicate IDs, early trap, total trap/important/combat quotas, research/social coverage, adjacency, and boss structure. Return every discovered error rather than throwing on the first; `assertDungeonContentV1` throws `Invalid dungeon-v1 content: ${errors.join("; ")}`.
 
@@ -178,7 +177,7 @@ Run: `npx deno test tests/unit/content_validator_test.ts`
 
 Expected: all valid/rejection cases pass.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `npm run verify`
 
