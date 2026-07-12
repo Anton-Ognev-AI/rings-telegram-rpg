@@ -6,8 +6,8 @@
   - [x] P0-02: Initialize valid Git repository і baseline commit (`45ee953`)
   - [x] P0-03: Concierge dungeon/session kit
   - [x] P0-04: Deno/npm/Supabase project scaffold
-  - [ ] P0-05: Health endpoint + fake adapters via TDD (in progress)
-  - [ ] P0-06: Local verification і Phase 0 checkpoint
+  - [x] P0-05: Health endpoint + fake adapters via TDD
+  - [ ] P0-06: Local verification і Phase 0 checkpoint (in progress)
 
 ## Completed Planning
 - [x] ID: PLAN-001: Master implementation plan MVP затверджено Антоном 2026-07-12; Inline execution → docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md

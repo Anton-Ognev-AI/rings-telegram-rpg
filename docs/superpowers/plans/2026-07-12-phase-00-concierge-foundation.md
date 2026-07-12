@@ -232,9 +232,11 @@ Expected: exact versions written to `package-lock.json`; no global/system instal
     }
   },
   "tasks": {
+    "fmt:check": "deno fmt --check deno.json package.json .github/workflows/ci.yml supabase/functions tests/unit",
+    "lint": "deno lint supabase/functions tests/unit",
     "check": "deno check supabase/functions/health/index.ts supabase/functions/health/handler.ts supabase/functions/_shared/infrastructure/clock.ts supabase/functions/_shared/infrastructure/telegram-port.ts supabase/functions/_shared/infrastructure/redact.ts",
     "test:unit": "deno test tests/unit",
-    "verify": "deno fmt --check && deno lint && deno task check && deno task test:unit"
+    "verify": "deno task fmt:check && deno task lint && deno task check && deno task test:unit"
   }
 }
 ```
@@ -299,7 +301,7 @@ git commit -m "chore: add local Deno and Supabase toolchain"
 - [x] **Step 1: Write failing test**
 
 ```ts
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { handleHealth } from "../../supabase/functions/health/handler.ts";
 
 Deno.test("health handler returns a stable service response", async () => {
@@ -386,10 +388,10 @@ git commit -m "feat: add health edge function"
 - Produces: `FakeTelegramPort.send(input): Promise<{ messageId: string }>`.
 - Produces: `redactRecord(record): Record<string, unknown>`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```ts
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { FixedClock } from "../../supabase/functions/_shared/infrastructure/clock.ts";
 import { FakeTelegramPort } from "../../supabase/functions/_shared/infrastructure/telegram-port.ts";
 import { redactRecord } from "../../supabase/functions/_shared/infrastructure/redact.ts";
@@ -426,7 +428,7 @@ Deno.test("redaction removes sensitive values", () => {
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -436,7 +438,7 @@ npx deno test tests/unit/infrastructure_test.ts
 
 Expected: FAIL because the three modules do not exist.
 
-- [ ] **Step 3: Implement minimal clock**
+- [x] **Step 3: Implement minimal clock**
 
 ```ts
 export interface Clock {
@@ -456,7 +458,7 @@ export class FixedClock implements Clock {
 }
 ```
 
-- [ ] **Step 4: Implement minimal Telegram port**
+- [x] **Step 4: Implement minimal Telegram port**
 
 ```ts
 export interface SendMessageInput {
@@ -478,7 +480,7 @@ export class FakeTelegramPort implements TelegramPort {
 }
 ```
 
-- [ ] **Step 5: Implement shallow redaction**
+- [x] **Step 5: Implement shallow redaction**
 
 ```ts
 const SENSITIVE_KEYS = new Set([
@@ -500,7 +502,7 @@ export function redactRecord(
 }
 ```
 
-- [ ] **Step 6: Verify GREEN and full unit suite**
+- [x] **Step 6: Verify GREEN and full unit suite**
 
 Run:
 
@@ -511,7 +513,7 @@ npx deno task test:unit
 
 Expected: `4 passed` across both test files.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add tests/unit/infrastructure_test.ts supabase/functions/_shared/infrastructure

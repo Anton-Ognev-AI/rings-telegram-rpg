@@ -16,8 +16,10 @@
     }
   },
   "tasks": {
+    "fmt:check": "deno fmt --check deno.json package.json .github/workflows/ci.yml supabase/functions tests/unit",
+    "lint": "deno lint supabase/functions tests/unit",
     "check": "deno check supabase/functions/health/index.ts supabase/functions/health/handler.ts supabase/functions/_shared/infrastructure/clock.ts supabase/functions/_shared/infrastructure/telegram-port.ts supabase/functions/_shared/infrastructure/redact.ts",
     "test:unit": "deno test tests/unit",
-    "verify": "deno fmt --check && deno lint && deno task check && deno task test:unit"
+    "verify": "deno task fmt:check && deno task lint && deno task check && deno task test:unit"
   }
 }

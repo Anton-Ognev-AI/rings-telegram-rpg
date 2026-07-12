@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert@1.0.19";
 import { handleHealth } from "../../supabase/functions/health/handler.ts";
 
 Deno.test("health handler returns a stable service response", async () => {
