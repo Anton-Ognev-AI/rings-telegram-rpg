@@ -121,3 +121,8 @@ expectInvalid(
   (x) => (x.stages[0].choices![0] as unknown as Record<string, unknown>).threshold = 99,
   "stage 1 choice has unexpected field threshold",
 );
+expectInvalid(
+  "fewer than two check routes",
+  (x) => x.stages[0].choices![1].kind = "neutral",
+  "stage 1 must contain at least 2 check choices",
+);

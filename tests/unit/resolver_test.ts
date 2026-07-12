@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertThrows } from "jsr:@std/assert@1.0.19";
 import fallback from "../../content/fallback/case-001/day-01.json" with { type: "json" };
 import contained from "../fixtures/replays/v1/contained.json" with { type: "json" };
 import defeated from "../fixtures/replays/v1/defeated.json" with { type: "json" };
@@ -147,4 +147,31 @@ Deno.test("advanceStateV1 carries replay outputs and resets per-stage vamp", () 
     vampHealedRun: 0,
     terminal: null,
   });
+});
+
+Deno.test("resolver rejects forged nonterminal resource snapshots", () => {
+  const fixture = success as unknown as Fixture;
+  const resolve = (state: RunStateV1) =>
+    resolveChoiceV1({ content, party: strong, state, command: fixture.command });
+  assertThrows(
+    () => resolve({ ...fixture.state, hp: 0 }),
+    Error,
+    "Nonterminal run must have positive HP",
+  );
+  assertThrows(
+    () => resolve({ ...fixture.state, xp: 151 }),
+    Error,
+    "Run XP must be between 0 and 150",
+  );
+  assertThrows(
+    () =>
+      resolveChoiceV1({
+        content,
+        party: strong,
+        state: { ...fixture.state, stage: 10, exchange: 2, bossHp: 91 },
+        command: { resolverVersion: "v1", stage: 10, exchange: 2, choiceId: "s10e2-magical" },
+      }),
+    Error,
+    "Carried boss HP is outside configured bounds",
+  );
 });

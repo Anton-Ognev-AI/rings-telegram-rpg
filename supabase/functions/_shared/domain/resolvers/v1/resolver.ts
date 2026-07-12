@@ -224,8 +224,15 @@ export function resolveChoiceV1(input: ResolveChoiceV1Input): ResolutionV1 {
   if (state.stage !== command.stage) throw new Error("Command stage does not match run state");
   const stage = getStage(input.content, command.stage);
   const party = aggregateParty(input.party);
-  if (state.hp < 0 || state.hp > party.total.maxHp) {
+  if (state.hp <= 0) throw new Error("Nonterminal run must have positive HP");
+  if (state.hp > party.total.maxHp) {
     throw new Error("Run HP is outside party bounds");
+  }
+  if (state.xp < 0 || state.xp > CONFIG_V1.dailyXpCap) {
+    throw new Error(`Run XP must be between 0 and ${CONFIG_V1.dailyXpCap}`);
+  }
+  if (state.bossHp !== null && state.bossHp > CONFIG_V1.bossMaxHp) {
+    throw new Error("Carried boss HP is outside configured bounds");
   }
   return command.stage === 10
     ? resolveBoss(stage, party, state, command)

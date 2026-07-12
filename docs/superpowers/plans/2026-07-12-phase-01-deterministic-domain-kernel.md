@@ -476,7 +476,7 @@ Commit: `feat: calculate Kyiv dungeon cycles`
 
 ---
 
-### Task 8: Balance simulation, final verification, and phase checkpoint
+### Task 8: Balance simulation, final verification, and phase checkpoint ✅
 
 **Files:**
 - Create: `scripts/simulate-balance.ts`
@@ -489,7 +489,7 @@ Commit: `feat: calculate Kyiv dungeon cycles`
 - Consumes: fallback content, validator, registry, `CONFIG_V1`, and party fixtures.
 - Produces: deterministic CLI report with build name, terminal stage/result, remaining HP, earned XP, and replay hash.
 
-- [ ] **Step 1: Write simulation expectations as tests**
+- [x] **Step 1: Write simulation expectations as tests**
 
 Add `tests/unit/simulation_test.ts` around exported `simulateBuild`:
 
@@ -507,7 +507,7 @@ Run: `npx deno test tests/unit/simulation_test.ts`
 
 Expected: FAIL because the simulator is missing.
 
-- [ ] **Step 2: Implement CLI simulation through the public registry**
+- [x] **Step 2: Implement CLI simulation through the public registry**
 
 Define an early tutorial snapshot with all self stats 5 plus a modest teacher contribution, and a developed solo snapshot whose specialization can legally meet stage-10 counter thresholds. Select the first compatible counter check, otherwise standard check, otherwise neutral. Advance state only through `resolveAndHash`; do not duplicate resolver formulas in the simulator.
 
@@ -517,7 +517,7 @@ Run: `npx deno run --allow-read scripts/simulate-balance.ts`
 
 Expected: early build terminates near the stage-5 boundary; developed solo reaches stage 10 with victory; both reports contain stable 64-character hashes.
 
-- [ ] **Step 3: Run the full phase gate**
+- [x] **Step 3: Run the full phase gate**
 
 Run:
 
@@ -530,11 +530,11 @@ git diff --check
 
 Expected: format/lint/type-check/tests pass; 1000-repeat determinism passes; simulation meets both reach targets; diff check is clean.
 
-- [ ] **Step 4: Record the checkpoint and project memory**
+- [x] **Step 4: Record the checkpoint and project memory**
 
 `docs/checkpoints/2026-07-12-phase-01.md` records fresh commands, pass counts, golden hash, simulation outputs, scope exclusions, and any prototype-balance caveat. Mark P1-01…P1-05 complete and Phase 1 `approved` only after Step 3 evidence; otherwise keep the failing item `in_progress`. Set the next safe step to Phase 2 planning, not migrations or remote deployment.
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 Run: `git status --short && git diff --check && npm run verify`
 

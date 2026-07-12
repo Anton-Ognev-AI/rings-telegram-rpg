@@ -156,6 +156,7 @@ export function validateDungeonContentV1(value: unknown): ValidationResult {
         return;
       }
       let neutralCount = 0;
+      let checkCount = 0;
       for (const choice of choices) {
         if (!isRecord(choice)) {
           errors.push(`${context} has invalid choice`);
@@ -174,6 +175,7 @@ export function validateDungeonContentV1(value: unknown): ValidationResult {
           errors.push(`${context} has invalid choice kind`);
         }
         if (choice.kind === "neutral") neutralCount++;
+        if (choice.kind === "check") checkCount++;
         if (choice.kind === "trap") {
           trapCount++;
           if (stageNumber <= 2) errors.push("trap is forbidden on stages 1-2");
@@ -205,6 +207,7 @@ export function validateDungeonContentV1(value: unknown): ValidationResult {
         }
       }
       if (neutralCount === 0) errors.push(`${context} must contain a neutral choice`);
+      if (checkCount < 2) errors.push(`${context} must contain at least 2 check choices`);
     };
 
     if (stageNumber === 10) {

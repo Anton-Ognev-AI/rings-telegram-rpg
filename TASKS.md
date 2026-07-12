@@ -1,14 +1,15 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-01: Deterministic domain kernel (Inline execution)
-  - [x] P1-01: Detailed TDD implementation plan and isolated worktree → docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md
-  - [ ] P1-02: Versioned content/domain contracts and fallback dungeon schema
-  - [ ] P1-03: Deterministic party, combat, run and daily-cycle resolvers
-  - [ ] P1-04: Golden/property tests and balance simulation
-  - [ ] P1-05: Phase 1 verification and checkpoint
+- None. Next owner-authorized task: detailed Phase 2 planning; no migrations or remote changes are active.
 
 ## Completed Phases
+- [x] ID: PHASE-01: Deterministic domain kernel (`approved`; ADR 037)
+  - [x] P1-01: Detailed TDD implementation plan and isolated worktree → docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md
+  - [x] P1-02: Versioned content/domain contracts and fallback dungeon schema
+  - [x] P1-03: Deterministic party, combat, run and daily-cycle resolvers
+  - [x] P1-04: Golden/property tests and balance simulation
+  - [x] P1-05: Phase 1 verification and checkpoint → docs/checkpoints/2026-07-12-phase-01.md
 - [x] ID: PHASE-00: Concierge UX calibration і foundation (`approved_with_waiver`; ADR 036)
   - [x] P0-01: Detailed Phase 0 TDD execution plan → docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md
   - [x] P0-02: Initialize valid Git repository і baseline commit (`45ee953`)
@@ -53,6 +54,7 @@
   - [x] DESIGN-V11-13: Зібрати, перевірити й отримати фінальне затвердження канонічної спеки v1.1 → docs/specs/2026-07-12-game-design-v1.1.md (затверджено Антоном 2026-07-12 після self-review, 3 тематичних аудитів і project-council)
 
 ## Backlog
+- [ ] ID: PHASE-02: Persistent atomic core (start with a separate detailed TDD plan; DB/migrations require their phase gate)
 - [ ] ID: SKILLS-001: Create first custom skill
 
 ## Done
