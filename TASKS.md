@@ -1,7 +1,12 @@
 # Tasks
 
 ## Active Task
-- None. Next owner-authorized task: detailed Phase 2 planning; no migrations or remote changes are active.
+- [ ] ID: PHASE-02: Persistent atomic core (local-only; council-approved internal gates)
+  - [x] P2-01: Supplemental design and 5-advisor council review → docs/superpowers/specs/2026-07-13-phase-02-persistent-atomic-core-design.md
+  - [ ] P2-02: Detailed TDD implementation plan (`in_progress`)
+  - [ ] P2-2A: Schema, roles, players, config and content
+  - [ ] P2-2B: XP, runs, prepared actions, atomic RPCs and outbox
+  - [ ] P2-2C: Deletion recovery, reconciliation, checksums and phase checkpoint
 
 ## Completed Phases
 - [x] ID: PHASE-01: Deterministic domain kernel (`approved`; ADR 037)
@@ -54,7 +59,6 @@
   - [x] DESIGN-V11-13: Зібрати, перевірити й отримати фінальне затвердження канонічної спеки v1.1 → docs/specs/2026-07-12-game-design-v1.1.md (затверджено Антоном 2026-07-12 після self-review, 3 тематичних аудитів і project-council)
 
 ## Backlog
-- [ ] ID: PHASE-02: Persistent atomic core (start with a separate detailed TDD plan; DB/migrations require their phase gate)
 - [ ] ID: SKILLS-001: Create first custom skill
 
 ## Done
