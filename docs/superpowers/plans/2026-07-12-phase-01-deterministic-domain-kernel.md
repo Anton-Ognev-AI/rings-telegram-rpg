@@ -187,7 +187,7 @@ Commit: `feat: validate v1 dungeon content`
 
 ---
 
-### Task 3: Transparent solo, teacher, and partner aggregation
+### Task 3: Transparent solo, teacher, and partner aggregation ✅
 
 **Files:**
 - Create: `supabase/functions/_shared/domain/resolvers/v1/party.ts`
@@ -198,7 +198,7 @@ Commit: `feat: validate v1 dungeon content`
 - Consumes: `PartySnapshot`, `CombatantSnapshot`.
 - Produces: `aggregateParty(snapshot: PartySnapshot): AggregatedParty` with exact `total` and `breakdown` fields.
 
-- [ ] **Step 1: Write examples and invariants**
+- [x] **Step 1: Write examples and invariants**
 
 Test solo identity, teacher aggregation, partner aggregation, swapped-member symmetry, integer flooring, and no mutation:
 
@@ -216,7 +216,7 @@ Run: `npx deno test tests/unit/party_test.ts tests/property/party_invariants_tes
 
 Expected: FAIL because `aggregateParty` is missing.
 
-- [ ] **Step 2: Implement pure aggregation and breakdown**
+- [x] **Step 2: Implement pure aggregation and breakdown**
 
 Return `breakdown.self`, optional `breakdown.companion`, and explicit assist values for agility/defense. Only the self snapshot supplies `vampRateBps` and `postHeal`; companion support is default-deny in Phase 1.
 
@@ -224,7 +224,7 @@ Run: `npx deno test tests/unit/party_test.ts tests/property/party_invariants_tes
 
 Expected: PASS.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `npm run verify`
 
