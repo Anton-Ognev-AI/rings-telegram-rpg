@@ -10,7 +10,7 @@
   - [ ] P0-06: Phase 0 gates
     - [x] P0-06A: Docker-independent verification і checkpoint report
     - [x] P0-06B: Docker local stack, db reset і HTTP health gate (`PASS_WITH_CONSTRAINT`: trusted-network-only local runtime)
-    - [ ] P0-06C: Owner conducts 3–5 concierge sessions та anonymized metrics (`PENDING_HUMAN`)
+    - [ ] P0-06C: Owner conducts 3–5 concierge sessions та anonymized metrics (`PENDING_HUMAN`: 1/3–5 recorded; need 2–4 more independent sessions)
     - [x] P0-06D: Owner chose isolated worktree `.worktrees/phase-01-domain-kernel` (`SELECTED_DEFERRED` until P0 human gate)
 
 ## Completed Planning
