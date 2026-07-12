@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 2 persistent atomic core planning in isolated worktree `.worktrees/phase-02-persistent-atomic-core`. Phase 1 is merged and verified on `main`; no remote systems change.
+- Current Phase: Phase 2 Gate 2A schema/access implementation in isolated worktree `.worktrees/phase-02-persistent-atomic-core`. The detailed TDD plan is approved under the owner's autonomous Inline instruction; Phase 1 is merged and verified on `main`; no remote systems change.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -20,6 +20,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md`: Master implementation plan Phase 0–10 (Status: approved)
 - `docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md`: Detailed Inline Phase 1 TDD plan (Status: approved)
 - `docs/superpowers/specs/2026-07-13-phase-02-persistent-atomic-core-design.md`: Supplemental local DB/atomicity design with council-directed gates 2A/2B/2C (Status: approved for planning)
+- `docs/superpowers/plans/2026-07-13-phase-02-persistent-atomic-core.md`: Detailed Phase 2 TDD plan with blocking gates 2A/2B/2C (Status: approved; Gate 2A in_progress)
 - `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: approved_with_waiver)
 - `prototypes/concierge/`: Post-tutorial concierge kit (Status: paused; anonymized `P01` recorded)
 - `supabase/functions/health/` and `_shared/infrastructure/`: TDD Phase 0 foundation (Status: verified)

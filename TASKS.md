@@ -3,8 +3,8 @@
 ## Active Task
 - [ ] ID: PHASE-02: Persistent atomic core (local-only; council-approved internal gates)
   - [x] P2-01: Supplemental design and 5-advisor council review → docs/superpowers/specs/2026-07-13-phase-02-persistent-atomic-core-design.md
-  - [ ] P2-02: Detailed TDD implementation plan (`in_progress`)
-  - [ ] P2-2A: Schema, roles, players, config and content
+  - [x] P2-02: Detailed TDD implementation plan → docs/superpowers/plans/2026-07-13-phase-02-persistent-atomic-core.md
+  - [ ] P2-2A: Schema, roles, players, config and content (`in_progress`)
   - [ ] P2-2B: XP, runs, prepared actions, atomic RPCs and outbox
   - [ ] P2-2C: Deletion recovery, reconciliation, checksums and phase checkpoint
 

@@ -41,7 +41,7 @@ Each gate gets its own commit and verification evidence. A failed gate blocks th
 - `extensions`: existing Supabase extensions only.
 - `anon` and `authenticated`: no `USAGE` on `game`, no table privileges, no command RPC execution.
 - `service_role`: executes explicitly granted public RPCs but receives no direct game-table DML.
-- RPCs are owned by `postgres`, use `security definer`, and set `search_path = pg_catalog, game`.
+- RPCs are owned by `postgres`, use `security definer`, and set `search_path = pg_catalog, game, pg_temp` (`pg_temp` is deliberately last).
 
 RLS is enabled on game tables as defense in depth; direct privileges are revoked. Table-owner RPCs intentionally bypass RLS after validating the actor and bound command context.
 
