@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 0 checkpoint — Docker-незалежний foundation verified; Docker local stack, 3–5 concierge sessions і worktree choice pending; Phase 0 лишається `in_progress`, remote systems не змінюються
+- Current Phase: Phase 0 checkpoint — Docker local stack/reset/health verified; only 3–5 owner-led concierge sessions remain. Isolated worktree is selected but deferred until the human gate; Phase 0 remains `in_progress`, remote systems do not change.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -45,9 +45,10 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Onboarding/menu затверджено: коротка вступна сцена та два реальні данжі дня з навчальним шаром викладача; перший вибір за максимум два натискання, навчальний rescue від надто ранньої загибелі, гарантоване перше синє кільце після другого прогону незалежно від глибини, сумісний звичайний основний предмет, progressive disclosure і меню `2 → 4` кнопки; одна редагована картка на етап та ідемпотентні дії (ADR 029).
 - Пакет «боси/атестації/фінал тижня», «генерація й контроль якості контенту» та «стани дня/дані/надійність/аналітика/тестування» затверджено з усіма рекомендованими defaults (ADR 030–032).
 - Залишкові ризики не блокують review, але мають пройти gates v1.1: симуляція нелінійної драбини/кілець/carry, перевірка втоми від 10 етапів, якості контенту та directional retention на малій alpha.
-- Docker-незалежний Phase 0 foundation verified: reproducible npm/Deno/Supabase CLI toolchain, health Edge Function, deterministic fake adapters, scoped CI verify, local runbook і validated concierge kit.
-- Поточні gates: `BLOCKED_EXTERNAL` — Docker-compatible runtime/local stack; `PENDING_HUMAN` — 3–5 concierge sessions; `PENDING_DECISION` — isolated worktree чи current workspace перед Phase 1.
-- Next safe step: після batched owner answers виконати local stack/reset/health, провести concierge sessions і лише тоді повторно розглянути `PHASE-00` для `approved`; `PHASE-01` не активувати раніше.
+- Phase 0 foundation and Docker local gate verified: reproducible npm/Deno/Supabase CLI toolchain, health Edge Function, deterministic fake adapters, scoped CI verify, `supabase start` + `db reset` + HTTP health `200`, local runbook and validated concierge kit. Optional local Analytics is disabled; no remote project was linked.
+- Local-network constraint: on this Windows/Docker Desktop runtime, Supabase published ports remained `0.0.0.0`; start the stack only on a trusted private network with synthetic data and stop it after the test until a separate security decision.
+- Current gates: `PENDING_HUMAN` — owner-led 3–5 concierge sessions; `SELECTED_DEFERRED` — isolated worktree `.worktrees/phase-01-domain-kernel` is created only after that gate.
+- Next safe step: owner runs concierge sessions and records anonymous aggregates; only then reclassify `PHASE-00` for `approved`, create the Phase 1 worktree and activate `PHASE-01`.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame

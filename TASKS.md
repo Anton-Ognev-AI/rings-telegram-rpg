@@ -9,9 +9,9 @@
   - [x] P0-05: Health endpoint + fake adapters via TDD
   - [ ] P0-06: Phase 0 gates
     - [x] P0-06A: Docker-independent verification і checkpoint report
-    - [ ] P0-06B: Docker local stack, db reset і HTTP health gate (`BLOCKED_EXTERNAL`)
-    - [ ] P0-06C: 3–5 concierge sessions та anonymized metrics (`PENDING_HUMAN`)
-    - [ ] P0-06D: Owner choice — isolated worktree чи current workspace before Phase 1 (`PENDING_DECISION`)
+    - [x] P0-06B: Docker local stack, db reset і HTTP health gate (`PASS_WITH_CONSTRAINT`: trusted-network-only local runtime)
+    - [ ] P0-06C: Owner conducts 3–5 concierge sessions та anonymized metrics (`PENDING_HUMAN`)
+    - [x] P0-06D: Owner chose isolated worktree `.worktrees/phase-01-domain-kernel` (`SELECTED_DEFERRED` until P0 human gate)
 
 ## Completed Planning
 - [x] ID: PLAN-001: Master implementation plan MVP затверджено Антоном 2026-07-12; Inline execution → docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md

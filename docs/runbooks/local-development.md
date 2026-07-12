@@ -13,7 +13,7 @@
 - npm `11.12.1`;
 - Deno `2.9.2`;
 - Supabase CLI `2.109.1`;
-- Docker-сумісний runtime: обов’язкова передумова для local stack, але в поточному середовищі ще не встановлений.
+- Docker Desktop `4.81.0` / Engine `29.6.1` (Linux/amd64) перевірено для local stack; перед запуском будь-який Docker-compatible runtime має відповідати на `docker version`.
 
 CLI встановлюються лише як project-local dev dependencies і зафіксовані в `package-lock.json` та `deno.lock`.
 
@@ -33,8 +33,10 @@ npm run verify
 Потрібен запущений Docker Desktop, Rancher Desktop або інший runtime, сумісний із Docker API.
 
 ```powershell
+docker version
 $env:SUPABASE_TELEMETRY_DISABLED = '1'
 npx supabase start
+npx supabase db reset
 ```
 
 Після успішного старту Edge Function можна запустити й перевірити локально:
@@ -46,18 +48,21 @@ Invoke-WebRequest -Uri 'http://127.0.0.1:54321/functions/v1/health' -UseBasicPar
 
 Очікуване JSON-тіло: `{"status":"ok","service":"telegram-academy"}`.
 
+У Phase 0 `[analytics]` вимкнена в `supabase/config.toml`: локальний Vector/Logflare не потрібен для health gate і на Docker Desktop очікує окремий доступ до Docker log API. Не вмикайте незахищений Docker TCP API лише заради локального Log Explorer; повертайте Analytics тільки після окремого безпечного мережевого рішення.
+
 Зупинка:
 
 ```powershell
 npx supabase stop
 ```
 
-Не повторюйте `supabase start` після відомої помилки «Docker-compatible runtime is not installed/running», доки runtime не встановлено або не запущено.
+Якщо `functions serve` повідомляє, що Docker не знайдено, хоча Docker Desktop уже готовий, відкрийте новий термінал, щоб оновився `PATH` після інсталяції. Не вмикайте Docker daemon на TCP `2375` як обхідний шлях.
 
-## Localhost-only
+## Мережеве обмеження
 
-- Не прокидайте порти `54320`–`54329` і `54321` у LAN або Internet.
-- Не змінюйте bind address на `0.0.0.0` для зручності тесту.
+- На перевіреній Windows/Docker Desktop конфігурації Supabase CLI опублікував порти `54321`–`54324` на `0.0.0.0`, навіть після спроби рекомендованої custom Docker network. Вважайте стек потенційно LAN-доступним, доки `docker ps` явно не показує `127.0.0.1` bindings.
+- Запускайте local stack лише у довіреній приватній мережі, використовуйте тільки synthetic data та зупиняйте його одразу після перевірки.
+- Не відкривайте ці порти у Firewall/Internet без окремого рішення з безпеки.
 - Не використовуйте production data у local stack.
 - Не link-айте remote project у Phase 0.
 
