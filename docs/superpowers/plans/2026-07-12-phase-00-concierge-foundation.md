@@ -535,7 +535,7 @@ git commit -m "test: add deterministic Phase 0 adapters"
 
 - Produces documented local commands and operational defaults.
 
-- [ ] **Step 1: Initialize Supabase**
+- [x] **Step 1: Initialize Supabase**
 
 Run:
 
@@ -545,14 +545,14 @@ npx supabase init
 
 Expected: `supabase/config.toml` created; no remote project linked.
 
-- [ ] **Step 2: Create empty idempotent seed**
+- [x] **Step 2: Create empty idempotent seed**
 
 ```sql
 -- Phase 0 has no schema or seed data.
 select 1;
 ```
 
-- [ ] **Step 3: Write local-development runbook**
+- [x] **Step 3: Write local-development runbook**
 
 Include:
 
@@ -565,11 +565,11 @@ Include:
 - RTO ≤4 hours, disaster RPO ≤24 hours for closed alpha;
 - immediate identity unlink and deletion completion ≤24 hours.
 
-- [ ] **Step 4: Replace template README with project README**
+- [x] **Step 4: Replace template README with project README**
 
 README links canonical spec, master-plan, Phase 0 plan, local runbook and states that runtime LLM is forbidden.
 
-- [ ] **Step 5: Attempt Docker-dependent local gate once**
+- [x] **Step 5: Attempt Docker-dependent local gate once**
 
 Run:
 
@@ -579,7 +579,7 @@ npx supabase start
 
 Expected in current environment: blocked because no Docker-compatible runtime. Record this once in checkpoint; do not retry until Docker/Podman is installed.
 
-- [ ] **Step 6: Commit Docker-independent scaffold**
+- [x] **Step 6: Commit Docker-independent scaffold**
 
 ```powershell
 git add supabase README.md docs/runbooks/local-development.md
