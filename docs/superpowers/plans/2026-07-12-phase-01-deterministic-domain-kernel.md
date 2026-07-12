@@ -437,7 +437,7 @@ Commit: `feat: seal deterministic resolver replays`
 
 ---
 
-### Task 7: Europe/Kyiv cycle and grace boundaries
+### Task 7: Europe/Kyiv cycle and grace boundaries ✅
 
 **Files:**
 - Create: `supabase/functions/_shared/domain/cycle.ts`
@@ -446,7 +446,7 @@ Commit: `feat: seal deterministic resolver replays`
 **Interfaces:**
 - Produces: `getCycleWindow(now: Date): { cycleId; opensAt; closesAt; graceEndsAt }` and `zonedLocalToUtc(parts, "Europe/Kyiv"): Date`.
 
-- [ ] **Step 1: Write failing normal-day and DST boundary tests**
+- [x] **Step 1: Write failing normal-day and DST boundary tests**
 
 Use fixed UTC instants around Kyiv 09:00 in winter/summer and both DST transition weekends. Assert the local cycle date, exact UTC open/close timestamps, consecutive local 09:00 boundaries whose UTC duration is 23/25 hours across DST, and `graceEndsAt = closesAt + 2 hours`.
 
@@ -460,13 +460,13 @@ Run: `npx deno test tests/unit/cycle_test.ts`
 
 Expected: FAIL because cycle helpers are missing.
 
-- [ ] **Step 2: Implement timezone conversion without fixed offsets**
+- [x] **Step 2: Implement timezone conversion without fixed offsets**
 
 Use `Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Kyiv", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23" })`. Convert a target local 09:00 to UTC by starting from `Date.UTC(parts...)`, formatting in Kyiv, applying the observed local-vs-UTC delta, and verifying the formatted result equals the requested local parts; throw if convergence fails after three corrections.
 
 Derive the local date containing `now`, choose today or previous day based on local time before 09:00, independently convert that date and next calendar date at 09:00, then add two absolute hours for grace.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `npm run verify`
 
