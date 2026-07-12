@@ -296,7 +296,7 @@ git commit -m "chore: add local Deno and Supabase toolchain"
 
 - Produces: `handleHealth(request: Request): Response`.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```ts
 import { assertEquals } from "jsr:@std/assert";
@@ -313,7 +313,7 @@ Deno.test("health handler returns a stable service response", async () => {
 });
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -323,7 +323,7 @@ npx deno test tests/unit/health_handler_test.ts
 
 Expected: FAIL because `handler.ts` does not exist.
 
-- [ ] **Step 3: Implement minimal handler**
+- [x] **Step 3: Implement minimal handler**
 
 ```ts
 export function handleHealth(_request: Request): Response {
@@ -334,7 +334,7 @@ export function handleHealth(_request: Request): Response {
 }
 ```
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -344,7 +344,7 @@ npx deno test tests/unit/health_handler_test.ts
 
 Expected: `1 passed`.
 
-- [ ] **Step 5: Add Edge entrypoint**
+- [x] **Step 5: Add Edge entrypoint**
 
 ```ts
 import { handleHealth } from "./handler.ts";
@@ -352,7 +352,7 @@ import { handleHealth } from "./handler.ts";
 Deno.serve(handleHealth);
 ```
 
-- [ ] **Step 6: Check entrypoint**
+- [x] **Step 6: Check entrypoint**
 
 Run:
 
@@ -362,7 +362,7 @@ npx deno check supabase/functions/health/index.ts
 
 Expected: no diagnostics.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add tests/unit/health_handler_test.ts supabase/functions/health
