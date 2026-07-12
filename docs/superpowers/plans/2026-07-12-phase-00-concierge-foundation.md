@@ -600,7 +600,7 @@ git commit -m "docs: add local Supabase development scaffold"
 
 - Produces: evidence table with PASS/BLOCKED/EXTERNAL states and one batched question list.
 
-- [ ] **Step 1: Run Docker-independent verification**
+- [x] **Step 1: Run Docker-independent verification**
 
 ```powershell
 npm ci
@@ -611,7 +611,7 @@ git status --short
 
 Expected: format/lint/check/unit tests pass; only intentional checkpoint/status edits remain.
 
-- [ ] **Step 2: Run document checks**
+- [x] **Step 2: Run document checks**
 
 Verify:
 
@@ -620,14 +620,14 @@ Verify:
 - approved spec/master-plan hashes or sizes are unchanged;
 - no `.env`, token, chat ID or session log is tracked.
 
-- [ ] **Step 3: Classify Phase 0 gate**
+- [x] **Step 3: Classify Phase 0 gate**
 
 - `PASS`: Git/toolchain/tests/docs.
 - `BLOCKED_EXTERNAL`: Docker local stack.
 - `PENDING_HUMAN`: 3–5 concierge sessions.
 - `PENDING_DECISION`: worktree preference before Phase 1.
 
-- [ ] **Step 4: Write one checkpoint report**
+- [x] **Step 4: Write one checkpoint report**
 
 Questions are batched:
 
@@ -635,11 +635,11 @@ Questions are batched:
 2. choose isolated worktree or current workspace for Phase 1;
 3. identify or authorize 3–5 concierge testers.
 
-- [ ] **Step 5: Update project memory**
+- [x] **Step 5: Update project memory**
 
 Do not mark `PHASE-00` approved until all mandatory Phase 0 gates are satisfied. Mark independently completed subtasks and name the next safe step.
 
-- [ ] **Step 6: Commit checkpoint**
+- [x] **Step 6: Commit checkpoint**
 
 ```powershell
 git add PROJECT_STATE.md TASKS.md docs/checkpoints/2026-07-12-phase-00.md docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md

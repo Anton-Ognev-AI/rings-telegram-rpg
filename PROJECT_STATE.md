@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 0 execution — master-plan затверджено ADR 034; Inline режим із checkpoint fixes, активні concierge/foundation tasks; remote systems не змінюються
+- Current Phase: Phase 0 checkpoint — Docker-незалежний foundation verified; Docker local stack, 3–5 concierge sessions і worktree choice pending; Phase 0 лишається `in_progress`, remote systems не змінюються
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -19,6 +19,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/specs/2026-07-12-game-design-v1.1.md`: Канонічна спека MVP v1.1 (Status: approved)
 - `docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md`: Master implementation plan Phase 0–10 (Status: approved)
 - `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: in_progress)
+- `prototypes/concierge/`: Validated post-tutorial concierge kit (Status: pending_human_test)
+- `supabase/functions/health/` and `_shared/infrastructure/`: TDD Phase 0 foundation (Status: verified)
+- `docs/checkpoints/2026-07-12-phase-00.md`: Current Phase 0 evidence and batched gates (Status: in_progress)
 
 ## Current Review Gate
 - Базова рамка: спільний данж дня, фіксована нелінійна драбина, детермінована серверна резолюція, кільця та асинхронний напарник.
@@ -42,7 +45,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Onboarding/menu затверджено: коротка вступна сцена та два реальні данжі дня з навчальним шаром викладача; перший вибір за максимум два натискання, навчальний rescue від надто ранньої загибелі, гарантоване перше синє кільце після другого прогону незалежно від глибини, сумісний звичайний основний предмет, progressive disclosure і меню `2 → 4` кнопки; одна редагована картка на етап та ідемпотентні дії (ADR 029).
 - Пакет «боси/атестації/фінал тижня», «генерація й контроль якості контенту» та «стани дня/дані/надійність/аналітика/тестування» затверджено з усіма рекомендованими defaults (ADR 030–032).
 - Залишкові ризики не блокують review, але мають пройти gates v1.1: симуляція нелінійної драбини/кілець/carry, перевірка втоми від 10 етапів, якості контенту та directional retention на малій alpha.
-- Поточний gate: завершити всі незалежні Phase 0 foundation tasks; зовнішні concierge sessions, Deno/Docker install і рішення про worktree накопичуються в checkpoint-пакет, якщо не можуть бути безпечно виконані локально.
+- Docker-незалежний Phase 0 foundation verified: reproducible npm/Deno/Supabase CLI toolchain, health Edge Function, deterministic fake adapters, scoped CI verify, local runbook і validated concierge kit.
+- Поточні gates: `BLOCKED_EXTERNAL` — Docker-compatible runtime/local stack; `PENDING_HUMAN` — 3–5 concierge sessions; `PENDING_DECISION` — isolated worktree чи current workspace перед Phase 1.
+- Next safe step: після batched owner answers виконати local stack/reset/health, провести concierge sessions і лише тоді повторно розглянути `PHASE-00` для `approved`; `PHASE-01` не активувати раніше.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
