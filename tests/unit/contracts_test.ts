@@ -19,6 +19,7 @@ Deno.test("v1 contracts represent an immutable replay command", () => {
     hp: 40,
     bossHp: null,
     xp: 0,
+    vampHealedStage: 0,
     vampHealedRun: 0,
     terminal: null,
   };

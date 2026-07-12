@@ -65,6 +65,7 @@ export interface RunStateV1 {
   readonly hp: number;
   readonly bossHp: number | null;
   readonly xp: number;
+  readonly vampHealedStage: number;
   readonly vampHealedRun: number;
   readonly terminal: TerminalResult | null;
 }

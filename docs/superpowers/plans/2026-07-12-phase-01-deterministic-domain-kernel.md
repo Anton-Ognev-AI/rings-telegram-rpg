@@ -232,7 +232,7 @@ Commit: `feat: aggregate immutable party snapshots`
 
 ---
 
-### Task 4: HP, defense, vampirism, healing, and boss exchange order
+### Task 4: HP, defense, vampirism, healing, and boss exchange order ✅
 
 **Files:**
 - Create: `supabase/functions/_shared/domain/resolvers/v1/combat.ts`
@@ -242,29 +242,29 @@ Commit: `feat: aggregate immutable party snapshots`
 **Interfaces:**
 - Produces: `mitigateDamage(raw, defense, scale)`, `applyHeal(hp, maxHp, amount)`, and `resolveCombatExchange(input): CombatExchangeResult`.
 
-- [ ] **Step 1: Write failing combat-order examples**
+- [x] **Step 1: Write failing combat-order examples**
 
 Cover no overheal, heal-at-zero, non-overkill owner damage, stage/run vamp caps, vamp before counter, boss death suppressing counter, counter reducing HP to zero suppressing post-heal, and damage mitigation:
 
 ```ts
 assertEquals(applyHeal(0, 100, 30), 0);
 assertEquals(applyHeal(90, 100, 30), 100);
-const result = resolveCombatExchange({ hp: 20, maxHp: 100, bossHp: 5, ownerDamage: 20, incomingDamage: 99, defense: 0, defenseScale: 100, vampRateBps: 5000, vampHealedStage: 0, vampHealedRun: 0, postHeal: 10 });
-assertEquals({ bossHp: result.bossHp, actualOwnerDamage: result.actualOwnerDamage, incoming: result.incomingDamage, hp: result.hp }, { bossHp: 0, actualOwnerDamage: 5, incoming: 0, hp: 22 });
+const result = resolveCombatExchange({ hp: 20, maxHp: 100, bossHp: 5, ownerDamage: 20, incomingDamage: 99, defense: 0, defenseScale: 100, vampRateBps: 5000, vampStageCapBps: 800, vampRunCapBps: 2500, vampHealedStage: 0, vampHealedRun: 0, postHeal: 10 });
+assertEquals({ bossHp: result.bossHp, actualOwnerDamage: result.actualOwnerDamage, incoming: result.incomingDamage, hp: result.hp }, { bossHp: 0, actualOwnerDamage: 5, incoming: 0, hp: 32 });
 ```
 
 Run: `npx deno test tests/unit/combat_test.ts`
 
 Expected: FAIL because combat helpers are missing.
 
-- [ ] **Step 2: Implement the exact pure algorithm**
+- [x] **Step 2: Implement the exact pure algorithm**
 
 ```ts
 const actualOwnerDamage = Math.min(input.bossHp, Math.max(0, input.ownerDamage));
 const bossHp = input.bossHp - actualOwnerDamage;
 const rawVamp = Math.floor(actualOwnerDamage * input.vampRateBps / 10_000);
-const stageRoom = Math.floor(input.maxHp * 800 / 10_000) - input.vampHealedStage;
-const runRoom = Math.floor(input.maxHp * 2500 / 10_000) - input.vampHealedRun;
+const stageRoom = Math.floor(input.maxHp * input.vampStageCapBps / 10_000) - input.vampHealedStage;
+const runRoom = Math.floor(input.maxHp * input.vampRunCapBps / 10_000) - input.vampHealedRun;
 const vamp = Math.max(0, Math.min(rawVamp, stageRoom, runRoom));
 let hp = applyHeal(input.hp, input.maxHp, vamp);
 const incoming = bossHp === 0 ? 0 : mitigateDamage(input.incomingDamage, input.defense, input.defenseScale);
@@ -275,7 +275,7 @@ hp += postHeal;
 
 `mitigateDamage` returns 0 for non-positive raw damage; otherwise `max(1, floor(raw × scale / (scale + max(0, defense))))`.
 
-- [ ] **Step 3: Add deterministic property coverage**
+- [x] **Step 3: Add deterministic property coverage**
 
 Iterate a fixed Cartesian sample of HP, max HP, damage, defense, boss HP, vamp rate, and healing values. Assert all HP values stay in `[0,maxHp]`, boss HP is non-negative, actual owner damage never exceeds pre-exchange boss HP, healing at zero is zero, vamp never exceeds actual owner damage-derived heal or either cap, boss death means incoming damage zero, and post-heal is zero after lethal incoming damage.
 
@@ -283,7 +283,7 @@ Run: `npx deno test tests/unit/combat_test.ts tests/property/combat_invariants_t
 
 Expected: PASS.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run: `npm run verify`
 
