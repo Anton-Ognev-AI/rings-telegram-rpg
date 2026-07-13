@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 3 Telegram fallback-first vertical-slice planning is next. Phase 2 is fully verified in isolated worktree `.worktrees/phase-02-persistent-atomic-core` and awaits local integration; no remote systems changed.
+- Current Phase: Phase 3 Telegram fallback-first vertical slice, Gate 3A service-contract expansion. Phase 2 was locally fast-forwarded into `main` at `8953f4a`; no remote systems changed.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -24,6 +24,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/checkpoints/2026-07-13-phase-02a.md`: Private schema/access/config/player/content evidence and migration hashes (Status: approved)
 - `docs/checkpoints/2026-07-13-phase-02b.md`: Atomic XP/run/action/outbox/RPC and concurrency evidence (Status: approved)
 - `docs/checkpoints/2026-07-13-phase-02.md`: Final persistence/deletion/recovery/checksum evidence (Status: approved)
+- `docs/superpowers/specs/2026-07-13-phase-03-telegram-fallback-vertical-slice-design.md`: Council-corrected Phase 3 design with blocking Gates 3A/3B/3C (Status: approved for autonomous local implementation)
+- `docs/superpowers/plans/2026-07-13-phase-03-telegram-fallback-vertical-slice.md`: Detailed Phase 3 TDD plan (Status: approved for autonomous local execution)
 - `recovery-control/` and `scripts/recovery/`: Non-PII tombstone store and restore replay tooling (Status: approved locally; production provisioning deferred)
 - `supabase/migrations/SHA256SUMS`: Canonical Phase 2 migration manifest (Status: locked after Phase 2)
 - `supabase/migrations/202607120001_foundation.sql` … `202607120004_content.sql`: Private normalized Gate 2A schema (Status: approved)
@@ -68,7 +70,10 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Phase 1 gate passed locally: 57 unit and 3 property tests; 1000 identical replays produce byte-identical canonical results and hashes; golden full-run hash is `1d63be460b0517de00bbd2c6ce2bc34e4236992d6d16d7252d2ec210ac20a3b0`.
 - Balance evidence: synthetic early tutorial build completes stage 5 and is defeated on stage 6 with 43 XP; developed solo build wins stage 10 with 65 HP and 150 XP. These are prototype curve checks, not final balance or UX validation.
 - Scope remained pure/local: no DB, migrations, Telegram, items, ring progression, generator, reminders, RNG, network calls or remote mutation. P01 monotony/progression findings remain mandatory inputs to later content/UX phases.
-- Next safe step: create and review a detailed Phase 2 persistent-atomic-core TDD plan. Do not create migrations, link Supabase, deploy or change remote systems until that phase gate is explicit.
+- Phase 3 planning audit: fresh source verification passed `73` unit + `3` property tests and migration checksums remained clean. A fresh DB rerun was blocked by sandbox denial of Docker Desktop named-pipe access; this is an environment constraint, not a passing DB rerun.
+- Full five-advisor council returned `SPLIT_PHASE`: Gate 3A adds missing service-only identity/start/view/outbox/day commands through forward migration 009; Gate 3B builds the local Telegram-shaped run; Gate 3C proves delivery/privacy/grace/load behavior. Direct Edge DML into private `game` tables is forbidden.
+- P01 debt is now explicit Phase 3 rendering acceptance: encounter-specific layouts, post-choice stat/threshold breakdown, HP/combat/XP deltas, visible early accumulation, and a concrete next-day hook. Named canonical teachers remain deferred until lore source verification.
+- Next safe step: execute Gate 3A in an isolated worktree using TDD. Do not edit migrations 001–008, Phase 1 resolver/config/golden files, link Supabase, deploy, register Telegram webhooks, load secrets, or invite testers.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
