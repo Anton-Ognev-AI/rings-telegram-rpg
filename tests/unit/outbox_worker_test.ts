@@ -146,9 +146,7 @@ Deno.test("outbox worker sends the first canonical card and completes its lease"
   assertEquals(telegram.calls[0].operation, "sendMessage");
   if (telegram.calls[0].operation !== "sendMessage") throw new Error("missing_send");
   assertEquals(telegram.calls[0].input.timeoutMs, 10_000);
-  const authorization = database.calls.find((call) =>
-    call.rpc === "authorize_outbox_delivery_v2"
-  );
+  const authorization = database.calls.find((call) => call.rpc === "authorize_outbox_delivery_v2");
   assertEquals(authorization?.args.p_is_new_send, true);
   assertEquals(authorization?.args.p_transport_seconds, 15);
   assertEquals(completion(database).p_result, "sent");
@@ -166,9 +164,7 @@ Deno.test("outbox worker edits the existing run card", async () => {
   });
 
   assertEquals(telegram.calls[0].operation, "editMessage");
-  const authorization = database.calls.find((call) =>
-    call.rpc === "authorize_outbox_delivery_v2"
-  );
+  const authorization = database.calls.find((call) => call.rpc === "authorize_outbox_delivery_v2");
   assertEquals(authorization?.args.p_is_new_send, false);
   assertEquals(completion(database).p_result, "sent");
   assertEquals(completion(database).p_telegram_message_id, "9001");

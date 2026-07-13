@@ -17,6 +17,7 @@
     "db:checksums": "deno run --allow-read scripts/db/migration-checksums.ts --print",
     "db:reconcile": "deno run --allow-env --allow-net scripts/db/reconcile.ts",
     "db:recovery:bootstrap": "deno run --allow-env --allow-net --allow-read scripts/recovery/local-recovery-database.ts",
+    "load:callbacks": "deno run --allow-env --allow-net scripts/load-callbacks.ts",
     "test:db:unit": "deno run --allow-env --allow-net --allow-read scripts/db/run-pgtap.ts",
     "test:db:integration": "deno test --allow-env --allow-net tests/integration/start_resume_test.ts tests/integration/action_atomicity_test.ts tests/integration/reconciliation_test.ts",
     "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
