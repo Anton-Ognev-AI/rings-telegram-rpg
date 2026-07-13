@@ -1,0 +1,12 @@
+{
+  "update_id": 930002,
+  "callback_query": {
+    "id": "synthetic-callback-1",
+    "from": { "id": 910000001 },
+    "message": {
+      "message_id": 2,
+      "chat": { "id": 910000001 }
+    },
+    "data": "cb_fixture_opaque"
+  }
+}

@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 3 Telegram fallback-first vertical slice, Gate 3B playable local Telegram slice in isolated worktree `.worktrees/phase-03-telegram-vertical-slice`. Gate 3A is approved locally (ADR 043); no remote systems changed.
+- Current Phase: Phase 3 Telegram fallback-first vertical slice, Gate 3C reliability/privacy/lifecycle proof in isolated worktree `.worktrees/phase-03-telegram-vertical-slice`. Gates 3A and 3B are approved locally (ADR 043–044); no remote systems changed.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -27,15 +27,19 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/superpowers/specs/2026-07-13-phase-03-telegram-fallback-vertical-slice-design.md`: Council-corrected Phase 3 design with blocking Gates 3A/3B/3C (Status: approved for autonomous local implementation)
 - `docs/superpowers/plans/2026-07-13-phase-03-telegram-fallback-vertical-slice.md`: Detailed Phase 3 TDD plan (Status: approved for autonomous local execution)
 - `recovery-control/` and `scripts/recovery/`: Non-PII tombstone store and restore replay tooling (Status: approved locally; production provisioning deferred)
-- `supabase/migrations/SHA256SUMS`: Canonical locked migration manifest for migrations 001–009 (Status: approved; later changes require a new forward migration)
+- `supabase/migrations/SHA256SUMS`: Canonical locked migration manifest for migrations 001–010 (Status: approved; later changes require a new forward migration)
 - `supabase/migrations/202607120001_foundation.sql` … `202607120004_content.sql`: Private normalized Gate 2A schema (Status: approved)
 - `supabase/tests/0001_foundation_security.test.sql` … `0004_content.test.sql`: 59 pgTAP assertions (Status: approved)
 - `scripts/db/`: Loopback-only DB guard, direct local pgTAP runner, content seed and checksum tooling (Status: approved for local use)
 - `supabase/migrations/202607120005_xp.sql` … `202607120008_core_commands.sql`: Atomic gameplay persistence and service-only command RPCs (Status: approved)
 - `supabase/functions/_shared/application/`: Approved narrow Phase 2/3A command port and wrappers (Status: approved)
 - `supabase/migrations/202607130009_telegram_commands.sql`: Service-only identity/start/view/outbox/day lifecycle contract with stale-intent supersession (Status: approved and locked; ADR 043)
+- `supabase/migrations/202607130010_render_request.sql`: Service-only owner-bound, edit-only canonical card repair with cross-session coalescing (Status: approved and locked; ADR 044)
 - `supabase/tests/0009_telegram_commands.test.sql` and Phase 3A integration tests: 31 security assertions plus 11 identity/lifecycle/outbox/concurrency scenarios (Status: approved)
 - `docs/checkpoints/2026-07-13-phase-03a.md`: Gate 3A service-contract evidence (Status: approved)
+- `supabase/functions/_shared/telegram/`, `_shared/render/`, and `_shared/application/process-outbox.ts`: Local Telegram boundary, P01-informed cards, opaque callbacks, pure handler, and canonical outbox delivery (Status: approved for Gate 3B)
+- `tests/e2e/fallback_solo_test.ts` and `restart_resume_test.ts`: Full persisted fake-Telegram victory and restart-safe resume proof (Status: approved)
+- `docs/checkpoints/2026-07-13-phase-03b.md`: Gate 3B playable-slice evidence and controlled Gate 3C boundary (Status: approved)
 - `tests/integration/`: Start/resume, tamper, lost-response, zero-XP, concurrency and reconciliation proofs (Status: approved)
 - `docs/superpowers/plans/2026-07-12-phase-00-concierge-foundation.md`: Detailed Inline Phase 0 TDD plan (Status: approved_with_waiver)
 - `prototypes/concierge/`: Post-tutorial concierge kit (Status: paused; anonymized `P01` recorded)
@@ -74,9 +78,10 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Balance evidence: synthetic early tutorial build completes stage 5 and is defeated on stage 6 with 43 XP; developed solo build wins stage 10 with 65 HP and 150 XP. These are prototype curve checks, not final balance or UX validation.
 - Scope remained pure/local: no DB, migrations, Telegram, items, ring progression, generator, reminders, RNG, network calls or remote mutation. P01 monotony/progression findings remain mandatory inputs to later content/UX phases.
 - Gate 3A passed from a clean reset: migrations 001–009, `73` unit + `3` property, `197` pgTAP, Phase 2's `5 + 1 + 1` integration/concurrency/deletion tests, `11` Phase 3A integration tests, reconciliation `0/0/0`, database lint, checksum verification, and diff hygiene. Stale-intent supersession, lease expiry and the ten-attempt retry budget are explicitly covered (ADR 043).
+- Gate 3B passed locally after adversarial re-review: privileged internal roots require a dedicated secret before service-role construction; runtime starts from persisted player stats; migration 010 adds service-only edit-only render repair for `/resume`, cached and stale callbacks without blind resend. Terminal cached/stale summary recovery and a true zero-pending resume are E2E-proven; 20 cross-session requests coalesce to one repair. Final evidence is `113 + 3` source tests, `214` pgTAP, Phase 2 and Gate 3A regressions, sequential clean-reset `2/2` E2E, reconciliation `0/0/0`, DB lint and locked checksums 001–010 (ADR 044).
 - Full five-advisor council returned `SPLIT_PHASE`: Gate 3A adds missing service-only identity/start/view/outbox/day commands through forward migration 009; Gate 3B builds the local Telegram-shaped run; Gate 3C proves delivery/privacy/grace/load behavior. Direct Edge DML into private `game` tables is forbidden.
 - P01 debt is now explicit Phase 3 rendering acceptance: encounter-specific layouts, post-choice stat/threshold breakdown, HP/combat/XP deltas, visible early accumulation, and a concrete next-day hook. Named canonical teachers remain deferred until lore source verification.
-- Next safe step: execute Gate 3B Tasks 3–7 through TDD: Telegram secret/update boundary, opaque callbacks, P01-informed rendering, pure handler, fake outbox worker and a complete local persisted fallback run. Do not edit migrations 001–009, change Phase 1 resolver/config/golden files, link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers.
+- Next safe step: execute Gate 3C Tasks 8–10 through TDD: recovery-backed privacy/deletion, grace and delivery fault matrices, callback load proof, final Phase 3 verification/council review, then stop the local stack. Do not edit migrations 001–010 or Phase 1 resolver/config/golden files, link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame

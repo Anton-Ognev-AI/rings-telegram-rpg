@@ -1,0 +1,9 @@
+{
+  "update_id": 930001,
+  "message": {
+    "message_id": 1,
+    "from": { "id": 910000001 },
+    "chat": { "id": 910000001 },
+    "text": "/start"
+  }
+}

@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract through migration 202607130009.
+// Generated locally from the public RPC contract through migration 202607130010.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -61,6 +61,10 @@ export type Database = {
       };
       publish_fallback_day_v1: {
         Args: { p_at: string };
+        Returns: Json;
+      };
+      request_run_render_v1: {
+        Args: { p_player_id: string; p_request_key: string; p_run_id: string };
         Returns: Json;
       };
       resolve_choice_v1: {

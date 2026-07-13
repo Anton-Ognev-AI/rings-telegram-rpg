@@ -4,8 +4,8 @@
 - [ ] ID: PHASE-03: Telegram fallback-first vertical slice (`in_progress`; local-only)
   - [x] P3-01: Supplemental design, threat model, full council and detailed TDD plan
   - [x] P3-3A: Service-only Telegram identity/start/view/outbox/day RPC contracts (`approved`; checkpoint `docs/checkpoints/2026-07-13-phase-03a.md`, ADR 043)
-  - [ ] P3-3B: Local webhook/render/worker and persisted fallback run (`in_progress`)
-  - [ ] P3-3C: Delivery/privacy/grace/load proof and final checkpoint (`blocked_by_3B`)
+  - [x] P3-3B: Local webhook/render/worker and persisted fallback run (`approved`; checkpoint `docs/checkpoints/2026-07-13-phase-03b.md`, ADR 044)
+  - [ ] P3-3C: Delivery/privacy/grace/load proof and final checkpoint (`in_progress`)
 
 ## Completed Phases
 - [x] ID: PHASE-02: Persistent atomic core (`approved`; ADR 041)
