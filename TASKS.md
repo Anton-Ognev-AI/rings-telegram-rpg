@@ -1,14 +1,16 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-02: Persistent atomic core (local-only; council-approved internal gates)
-  - [x] P2-01: Supplemental design and 5-advisor council review → docs/superpowers/specs/2026-07-13-phase-02-persistent-atomic-core-design.md
-  - [x] P2-02: Detailed TDD implementation plan → docs/superpowers/plans/2026-07-13-phase-02-persistent-atomic-core.md
-  - [x] P2-2A: Schema, roles, players, config and content → docs/checkpoints/2026-07-13-phase-02a.md
-  - [x] P2-2B: XP, runs, prepared actions, atomic RPCs and outbox → docs/checkpoints/2026-07-13-phase-02b.md
-  - [ ] P2-2C: Deletion recovery, reconciliation, checksums and phase checkpoint (`in_progress`)
+- [ ] ID: PHASE-03: Telegram fallback-first vertical slice (`planning`; no implementation started)
+  - [ ] P3-01: Supplemental design, threat model and detailed TDD plan (`in_progress`)
 
 ## Completed Phases
+- [x] ID: PHASE-02: Persistent atomic core (`approved`; ADR 041)
+  - [x] P2-01: Supplemental design and council review
+  - [x] P2-02: Detailed TDD implementation plan
+  - [x] P2-2A: Private schema/config/player/content checkpoint
+  - [x] P2-2B: Atomic XP/run/action/outbox/RPC checkpoint
+  - [x] P2-2C: Deletion/recovery, checksums and final checkpoint → docs/checkpoints/2026-07-13-phase-02.md
 - [x] ID: PHASE-01: Deterministic domain kernel (`approved`; ADR 037)
   - [x] P1-01: Detailed TDD implementation plan and isolated worktree → docs/superpowers/plans/2026-07-12-phase-01-deterministic-domain-kernel.md
   - [x] P1-02: Versioned content/domain contracts and fallback dungeon schema

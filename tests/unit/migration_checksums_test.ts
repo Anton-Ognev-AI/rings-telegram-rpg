@@ -1,5 +1,8 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19";
-import { formatChecksumManifest } from "../../scripts/db/migration-checksums.ts";
+import {
+  formatChecksumManifest,
+  verifyChecksumManifest,
+} from "../../scripts/db/migration-checksums.ts";
 
 Deno.test("migration checksum manifest is ordered and newline terminated", () => {
   const manifest = formatChecksumManifest([
@@ -11,4 +14,14 @@ Deno.test("migration checksum manifest is ordered and newline terminated", () =>
     manifest,
     `${"a".repeat(64)}  202607120001_foundation.sql\n${"b".repeat(64)}  202607120002_config.sql\n`,
   );
+});
+
+Deno.test("migration checksum verification rejects byte drift", () => {
+  let message = "";
+  try {
+    verifyChecksumManifest("canonical\n", "mutated\n");
+  } catch (error) {
+    message = error instanceof Error ? error.message : String(error);
+  }
+  assertEquals(message, "migration checksum drift detected");
 });

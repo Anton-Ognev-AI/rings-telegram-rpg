@@ -10,6 +10,10 @@ export function formatChecksumManifest(entries: readonly MigrationChecksum[]): s
     .join("");
 }
 
+export function verifyChecksumManifest(expected: string, actual: string): void {
+  if (actual !== expected) throw new Error("migration checksum drift detected");
+}
+
 function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
@@ -37,7 +41,7 @@ async function main(): Promise<void> {
   }
   if (mode === "--verify") {
     const expected = await Deno.readTextFile(manifestPath);
-    if (actual !== expected) throw new Error("migration checksum drift detected");
+    verifyChecksumManifest(expected, actual);
     return;
   }
   if (mode !== "--print") throw new Error(`unknown mode: ${mode}`);

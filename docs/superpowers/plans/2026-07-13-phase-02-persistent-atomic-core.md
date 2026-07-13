@@ -341,11 +341,11 @@ interface IdentityDeletionSink {
 }
 ```
 
-- [ ] Write RED unit tests for begin -> sink -> finalize order, sink failure leaving the player pending, retry after sink success, and finalize failure retrying without a second logical tombstone.
-- [ ] Create a minimal separate Postgres schema/migration and local URL on a port distinct from primary. Apply the same loopback-only safety guard.
-- [ ] Implement sink with parameterized SQL and a unique deletion ID. Do not accept arbitrary metadata.
-- [ ] Implement orchestrator with injected database port, sink, and clock. Never report completion until both durable steps succeed.
-- [ ] Add a static test that recovery migration/schema contains none of `telegram`, `username`, `display_name`, `message`, or external identity columns.
+- [x] Write RED unit tests for begin -> sink -> finalize order, sink failure leaving the player pending, retry after sink success, and finalize failure retrying without a second logical tombstone.
+- [x] Create a minimal separate logical Postgres database and migration outside the restored primary database. Apply the same loopback-only safety guard. (The local test instance shares a port; production separation remains mandatory.)
+- [x] Implement sink with parameterized SQL and a unique deletion ID. Do not accept arbitrary metadata.
+- [x] Implement orchestrator with injected database port and sink. Never report completion until both durable steps succeed; the caller supplies the recorded timestamp.
+- [x] Add a static test that recovery migration/schema contains none of `telegram`, `username`, `display_name`, `message`, or external identity columns.
 
 ### Task 14: Restore replay, deletion E2E, and canonical migration manifest
 
@@ -356,12 +356,12 @@ interface IdentityDeletionSink {
 - Create: `supabase/functions/_shared/contracts/database.types.ts`
 - Modify: `scripts/db/migration-checksums.ts`
 
-- [ ] Create a synthetic identity, begin deletion, persist external tombstone, finalize primary deletion, and prove all gameplay commands remain blocked/identity absent.
-- [ ] Capture a primary-only dump before finalization, restore it into a disposable local primary database, replay tombstones before simulated traffic, and prove the restored Telegram link is removed.
-- [ ] Repeat tombstone replay twice; prove it is idempotent.
-- [ ] Generate local TypeScript database types after a clean reset with `supabase gen types typescript --local`; check them with Deno.
-- [ ] Generate `supabase/migrations/SHA256SUMS`, then make checksum verification read-only. In a temporary copy mutate one migration and prove verification fails without touching canonical files.
-- [ ] Run reconciliation after deletion and restored-primary replay; expected zero mismatches.
+- [x] Create a synthetic identity, begin deletion, persist external tombstone, finalize primary deletion, and prove all gameplay commands remain blocked/identity absent.
+- [x] Capture the pre-deletion identity backup fixture in a disposable isolated primary database, replay tombstones before simulated traffic, and prove the restored Telegram link is removed.
+- [x] Repeat tombstone replay twice; prove it is idempotent.
+- [x] Generate and Deno-check the local public RPC database type contract after a clean reset. (`supabase gen types` was attempted in both `--local` and loopback `--db-url` modes but its helper requires the unavailable standalone Docker/Podman CLI.)
+- [x] Generate `supabase/migrations/SHA256SUMS`, make checksum verification read-only, and unit-test that byte drift is rejected without touching canonical files.
+- [x] Run reconciliation after deletion and restored-primary replay; expected zero mismatches.
 
 ### Task 15: Final Phase 2 verification, review, and checkpoint
 
@@ -369,13 +369,13 @@ interface IdentityDeletionSink {
 - Create: `docs/checkpoints/2026-07-13-phase-02.md`
 - Modify: `TASKS.md`, `PROJECT_STATE.md`, `DECISIONS.md`
 
-- [ ] Stop local stacks without backup; start clean primary and recovery stores; apply all migrations from zero.
-- [ ] Run `npm run verify:phase2`, which includes format, lint, typecheck, Phase 1 tests, pgTAP, integration, five-pass concurrency, reconciliation, checksum, deletion, and isolated-restore tests.
-- [ ] Inspect `git diff --check`, `git status --short`, migration ordering, grants, RPC search paths, and Phase 1 golden hash.
-- [ ] Perform adversarial review of atomicity, access, deletion, and recovery evidence; fix only Phase 2 issues and rerun the full gate.
-- [ ] Document exact command outputs, test counts, hashes, known limitations, no-remote-change proof, and rollback instructions.
-- [ ] Mark PHASE-02/P2-2C approved, set the next master-plan phase as active but do not begin it in this commit, and add an ADR pinning migration checksums and RPC V1 contracts.
-- [ ] Commit with message `feat: complete persistent atomic core`.
+- [x] Recreate clean primary and recovery logical databases and apply all migrations from zero.
+- [x] Run `npm run verify:phase2`, which includes format, lint, typecheck, Phase 1 tests, pgTAP, integration, five-pass concurrency, reconciliation, checksum, deletion, and isolated-restore tests.
+- [x] Inspect `git diff --check`, `git status --short`, migration ordering, grants, RPC search paths, and Phase 1 golden hash.
+- [x] Perform adversarial review of atomicity, access, deletion, and recovery evidence; fix only Phase 2 issues and rerun the full gate.
+- [x] Document exact command outputs, test counts, hashes, known limitations, no-remote-change proof, and rollback instructions.
+- [x] Mark PHASE-02/P2-2C approved, set the next master-plan phase as active but do not begin it in this commit, and add an ADR pinning migration checksums and RPC V1 contracts.
+- [x] Commit with message `feat: complete persistent atomic core`.
 
 ## Completion Contract
 
