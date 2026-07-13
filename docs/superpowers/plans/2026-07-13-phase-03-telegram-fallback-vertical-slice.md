@@ -288,7 +288,7 @@ systems remain forbidden.
 - [x] Cover cycle timestamps immediately before open, at open, before close, at close, before grace
       end, and at grace end for normal, spring, and autumn cycles.
 - [x] Assert a started old run resumes during grace, blocks a new run, expires after grace, and can
-      be explicitly abandoned.
+      be explicitly abandoned; also abandon yesterday during grace and start today immediately.
 - [x] Inject `429`, `500`, timeout-before-response, timeout-after-unknown-send, permanent error, and
       edit timeout.
 - [x] Assert bounded retries, no blind resend of delivery-unknown new send, safe edit retry, and
@@ -310,17 +310,17 @@ systems remain forbidden.
 
 - Produces: one `verify:phase3` command and a reproducible local checkpoint.
 
-- [ ] Generate 6,000 fake callbacks at 10 callbacks/s without network calls; record callback
-      acknowledgement p50/p95/p99, error count, duplicate effects, and maximum outbox backlog.
-- [ ] Require p95 `<2s`, zero duplicate effects, zero lost canonical outcomes, and bounded queue
-      growth.
-- [ ] Add `verify:phase3` chaining source, Phase 2 regression, Phase 3 DB, E2E, load,
+- [x] Generate 6,000 fake callbacks across 60 independent runs without network calls; record actual
+      effective throughput, acknowledgement p50/p95/p99, errors, duplicate effects and backlog.
+- [x] Require effective throughput `≥10/s`, p95 `<2s`, 60/60 canonical runs, zero duplicate effects,
+      zero lost outcomes, bounded queue growth and an empty final queue.
+- [x] Add `verify:phase3` chaining source, Phase 2 regression, Phase 3 DB, E2E, load,
       reconciliation, lint, and checksum gates.
-- [ ] Run from clean reset; rerun the complete command once to detect state leakage.
-- [ ] Verify `git diff --check`, secret/PII scan, no remote link, unchanged locked hashes, and
+- [x] Run from clean reset; rerun the complete command once to detect state leakage.
+- [x] Verify `git diff --check`, secret/PII scan, no remote link, unchanged locked hashes, and
       stopped local stack.
-- [ ] Run the five-advisor final review. Apply only in-scope fixes and rerun affected/full gates.
-- [ ] Record controlled deviations, remaining external gates, accumulated nonblocking
+- [x] Run the final council review. Apply only in-scope fixes and rerun affected/full gates.
+- [x] Record controlled deviations, remaining external gates, accumulated nonblocking
       questions/proposals, and commit `feat: complete Telegram fallback vertical slice`.
 
 ## Execution order and stop conditions

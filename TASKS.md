@@ -1,13 +1,14 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-03: Telegram fallback-first vertical slice (`in_progress`; local-only)
-  - [x] P3-01: Supplemental design, threat model, full council and detailed TDD plan
-  - [x] P3-3A: Service-only Telegram identity/start/view/outbox/day RPC contracts (`approved`; checkpoint `docs/checkpoints/2026-07-13-phase-03a.md`, ADR 043)
-  - [x] P3-3B: Local webhook/render/worker and persisted fallback run (`approved`; checkpoint `docs/checkpoints/2026-07-13-phase-03b.md`, ADR 044)
-  - [ ] P3-3C: Delivery/privacy/grace/load proof and final checkpoint (`in_progress`)
+- [ ] ID: CORE-LOOP-GATE: Run the master-plan 5–10 tester validation or receive an explicit owner waiver/amendment (`todo`; required before Phase 4 and Parallel Track G)
 
 ## Completed Phases
+- [x] ID: PHASE-03: Telegram fallback-first vertical slice (`approved` locally; ADR 045)
+  - [x] P3-01: Supplemental design, threat model, full council and detailed TDD plan
+  - [x] P3-3A: Service-only Telegram identity/start/view/outbox/day RPC contracts → `docs/checkpoints/2026-07-13-phase-03a.md`
+  - [x] P3-3B: Local webhook/render/worker and persisted fallback run → `docs/checkpoints/2026-07-13-phase-03b.md`
+  - [x] P3-3C: Delivery/privacy/grace/load proof and repeated final gate → `docs/checkpoints/2026-07-13-phase-03.md`
 - [x] ID: PHASE-02: Persistent atomic core (`approved`; ADR 041)
   - [x] P2-01: Supplemental design and council review
   - [x] P2-02: Detailed TDD implementation plan
