@@ -1,5 +1,6 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert@1.0.19";
 import { withDatabase } from "../../scripts/db/local-database.ts";
+import { abandonRun } from "../../supabase/functions/_shared/application/abandon-run.ts";
 import {
   advanceDay,
   publishFallbackDay,
@@ -195,5 +196,58 @@ Deno.test("an old run resumes during grace, blocks the next day, expires, and ab
         (select status::text from game.runs where id = ${firstRunId}::uuid) as first_status,
         (select status::text from game.runs where id = ${secondRunId}::uuid) as second_status`;
     assertEquals(statuses, { first_status: "expired", second_status: "abandoned" });
+  });
+});
+
+Deno.test("a player can abandon yesterday during grace and start today's run immediately", async () => {
+  await withDatabase(async (sql) => {
+    const database = new PostgresRpcDatabase(sql);
+    const identity = await getTelegramIdentity(database, {
+      telegramExternalId: 995000000000000002n,
+      create: true,
+    });
+    const playerId = String(identity.playerId);
+    const snapshotSha = await sha256Hex(canonicalJson(snapshot));
+    const loadoutSha = await sha256Hex(canonicalJson(loadout));
+
+    await publishFallbackDay(database, "2026-11-04T07:00:00.000Z");
+    await advanceDay(database, "2026-11-04T07:00:00.000Z");
+    const yesterday = await startTelegramRun(database, {
+      playerId,
+      at: "2026-11-04T07:00:00.000Z",
+      selfSnapshot: snapshot,
+      selfSnapshotSha256: snapshotSha,
+      loadoutSnapshot: loadout,
+      loadoutSnapshotSha256: loadoutSha,
+    });
+    assertEquals(yesterday.status, "applied");
+    const yesterdayRunId = String(
+      (yesterday.projection as { run: { id: string } }).run.id,
+    );
+
+    await publishFallbackDay(database, "2026-11-05T07:00:00.000Z");
+    await advanceDay(database, "2026-11-05T08:00:00.000Z");
+    assertEquals(await abandonRun(database, { playerId, runId: yesterdayRunId }), {
+      status: "applied",
+      runId: yesterdayRunId,
+    });
+
+    const today = await startTelegramRun(database, {
+      playerId,
+      at: "2026-11-05T08:00:00.000Z",
+      selfSnapshot: snapshot,
+      selfSnapshotSha256: snapshotSha,
+      loadoutSnapshot: loadout,
+      loadoutSnapshotSha256: loadoutSha,
+    });
+    assertEquals(today.status, "applied");
+    const todayRunId = String((today.projection as { run: { id: string } }).run.id);
+    assertNotEquals(todayRunId, yesterdayRunId);
+
+    const [statuses] = await sql<{ yesterday_status: string; today_status: string }[]>`select
+        (select status::text from game.runs where id = ${yesterdayRunId}::uuid)
+          as yesterday_status,
+        (select status::text from game.runs where id = ${todayRunId}::uuid) as today_status`;
+    assertEquals(statuses, { yesterday_status: "abandoned", today_status: "active" });
   });
 });
