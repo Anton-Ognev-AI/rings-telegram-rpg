@@ -250,12 +250,29 @@ pgTAP, Web Crypto, fake Telegram/database adapters, local Edge Functions.
 - Produces: readable privacy notice, explicit confirmation, blocked pending identity, finalized
   unlink, and restore replay proof.
 
-- [ ] Test `/privacy` before and during a run.
-- [ ] Test `/delete_me` without confirmation is non-mutating and confirmation orders begin →
+- [x] Test `/privacy` before and during a run.
+- [x] Test `/delete_me` without confirmation is non-mutating and confirmation orders begin →
       tombstone → finalize.
-- [ ] Test sink failure leaves the player blocked and safe to retry.
-- [ ] Restore the primary database in isolation and replay the tombstone twice; assert the deleted
+- [x] Test sink failure leaves the player blocked and safe to retry.
+- [x] Restore the primary database in isolation and replay the tombstone twice; assert the deleted
       identity does not reappear.
+
+#### Task 8a council correction: deletion/outbox fence
+
+Allowed scope: new forward migration/test `012`, deletion/outbox application wrappers and worker,
+privacy/deletion renderer/handler, generated public RPC types, E2E helpers, Task 8 tests, checksum
+manifest, and this plan. Migrations `001`–`010`, Phase 1 resolver/config/golden files, and remote
+systems remain forbidden.
+
+- [x] Begin deletion atomically blocks gameplay and supersedes queued/expired delivery intents.
+- [x] A worker leases only active linked identities and re-authorizes the exact lease immediately
+      before Telegram I/O; inactive work becomes superseded without a Telegram call.
+- [x] Finalization refuses to unlink while a live lease exists, then succeeds with zero
+      pending/leased intents after the lease drains.
+- [x] Guard concurrent outbox insertion and direct identity unlink so locked V1 paths cannot bypass
+      the fence; prove both lease-wins/finalize-wins outcomes.
+- [x] Describe unlink/pseudonymization and retained non-PII recovery/game records accurately; test a
+      forwarded deletion token against a second active identity.
 
 ### Task 9: Grace, restart, and delivery fault matrix
 

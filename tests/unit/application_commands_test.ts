@@ -6,6 +6,7 @@ import {
   publishFallbackDay,
 } from "../../supabase/functions/_shared/application/day-cycle.ts";
 import {
+  authorizeOutboxDelivery,
   completeOutbox,
   leaseOutbox,
 } from "../../supabase/functions/_shared/application/outbox.ts";
@@ -74,6 +75,11 @@ Deno.test("application commands use one narrow RPC each", async () => {
     leaseSeconds: 30,
     at: "2026-07-13T06:00:01.000Z",
   });
+  await authorizeOutboxDelivery(database, {
+    outboxId: "outbox-1",
+    leaseId: "lease-1",
+    at: "2026-07-13T06:00:01.500Z",
+  });
   await completeOutbox(database, {
     outboxId: "outbox-1",
     leaseId: "lease-1",
@@ -94,7 +100,8 @@ Deno.test("application commands use one narrow RPC each", async () => {
     "advance_day_v1",
     "start_run_v2",
     "run_view_v1",
-    "lease_outbox_v1",
+    "lease_outbox_v2",
+    "authorize_outbox_delivery_v1",
     "complete_outbox_v1",
     "abandon_run_v1",
   ]);
@@ -109,6 +116,11 @@ Deno.test("application commands use one narrow RPC each", async () => {
     p_create_if_missing: true,
   });
   assertEquals(database.calls[10].args, {
+    p_outbox_id: "outbox-1",
+    p_lease_id: "lease-1",
+    p_at: "2026-07-13T06:00:01.500Z",
+  });
+  assertEquals(database.calls[11].args, {
     p_outbox_id: "outbox-1",
     p_lease_id: "lease-1",
     p_result: "sent",

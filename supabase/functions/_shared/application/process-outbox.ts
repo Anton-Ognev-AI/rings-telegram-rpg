@@ -5,7 +5,7 @@ import { renderSummaryCard } from "../render/summary.ts";
 import type { RenderedCard } from "../render/types.ts";
 import { TelegramDeliveryError, type TelegramPort } from "../telegram/port.ts";
 import type { CommandResult, DatabasePort } from "./database-port.ts";
-import { completeOutbox, leaseOutbox } from "./outbox.ts";
+import { authorizeOutboxDelivery, completeOutbox, leaseOutbox } from "./outbox.ts";
 import { prepareRunCard, type TelegramRunView } from "./prepare-run-card.ts";
 import { getRunView } from "./run-view.ts";
 
@@ -38,7 +38,6 @@ interface LeasedOutboxMessage {
   readonly payload: { readonly runId: string; readonly stateVersion: number };
   readonly attempts: number;
   readonly playerId: string;
-  readonly telegramExternalId: string;
   readonly cardMessageId: string | null;
 }
 
@@ -48,7 +47,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 
 function parseMessage(value: unknown): LeasedOutboxMessage {
   if (!isRecord(value) || !isRecord(value.payload)) throw new Error("invalid_outbox_message");
-  const fields = ["id", "leaseId", "intentType", "playerId", "telegramExternalId"] as const;
+  const fields = ["id", "leaseId", "intentType", "playerId"] as const;
   if (fields.some((field) => typeof value[field] !== "string")) {
     throw new Error("invalid_outbox_message");
   }
@@ -69,8 +68,32 @@ function parseMessage(value: unknown): LeasedOutboxMessage {
     payload: { runId, stateVersion },
     attempts,
     playerId: value.playerId as string,
-    telegramExternalId: value.telegramExternalId as string,
     cardMessageId,
+  };
+}
+
+interface DeliveryAuthorization {
+  readonly telegramExternalId: string;
+  readonly deliveryDeadline: string;
+}
+
+function parseDeliveryAuthorization(
+  value: unknown,
+): DeliveryAuthorization | "superseded" | "retry" {
+  if (!isRecord(value) || typeof value.status !== "string") {
+    throw new Error("invalid_delivery_authorization");
+  }
+  if (value.status === "superseded") return "superseded";
+  if (value.status === "rejected") return "retry";
+  if (
+    value.status !== "ok" || typeof value.telegramExternalId !== "string" ||
+    !/^[1-9][0-9]*$/u.test(value.telegramExternalId) ||
+    typeof value.deliveryDeadline !== "string" ||
+    !Number.isFinite(Date.parse(value.deliveryDeadline))
+  ) throw new Error("invalid_delivery_authorization");
+  return {
+    telegramExternalId: value.telegramExternalId,
+    deliveryDeadline: value.deliveryDeadline,
   };
 }
 
@@ -183,12 +206,23 @@ export async function processOutboxBatch(
       continue;
     }
 
-    const view = asRunView(
-      await getRunView(dependencies.database, {
-        playerId: message.playerId,
-        runId: message.payload.runId,
-      }),
-    );
+    const runViewResult = await getRunView(dependencies.database, {
+      playerId: message.playerId,
+      runId: message.payload.runId,
+    });
+    if (runViewResult.status === "rejected" && runViewResult.reason === "inactive_player") {
+      assertCompleted(
+        await completeOutbox(dependencies.database, {
+          ...completionBase,
+          result: "superseded",
+          telegramMessageId: null,
+          retryAt: null,
+        }),
+      );
+      result.superseded += 1;
+      continue;
+    }
+    const view = asRunView(runViewResult);
     if (
       repairRender &&
       (message.cardMessageId === null || view.card === null ||
@@ -229,16 +263,34 @@ export async function processOutboxBatch(
     const existingMessageId = message.cardMessageId === null
       ? null
       : parsePositiveBigInt(message.cardMessageId, "invalid_card_message_id");
+    const authorization = parseDeliveryAuthorization(
+      await authorizeOutboxDelivery(dependencies.database, {
+        outboxId: message.id,
+        leaseId: message.leaseId,
+        at: dependencies.clock.now().toISOString(),
+      }),
+    );
+    if (authorization === "superseded") {
+      result.superseded += 1;
+      continue;
+    }
+    if (
+      authorization === "retry" ||
+      Date.parse(authorization.deliveryDeadline) <= dependencies.clock.now().getTime()
+    ) {
+      result.retried += 1;
+      continue;
+    }
     try {
       const delivered = existingMessageId === null
         ? await dependencies.telegram.sendMessage({
-          chatId: message.telegramExternalId,
+          chatId: authorization.telegramExternalId,
           text: card.text,
           buttons: card.buttons,
           parseMode: "HTML",
         })
         : await dependencies.telegram.editMessage({
-          chatId: message.telegramExternalId,
+          chatId: authorization.telegramExternalId,
           messageId: existingMessageId,
           text: card.text,
           buttons: card.buttons,

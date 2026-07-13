@@ -2,6 +2,7 @@ import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19";
 import type { DatabasePort } from "../../supabase/functions/_shared/application/database-port.ts";
 import {
   deleteIdentity,
+  deleteTelegramIdentity,
   type IdentityDeletionSink,
 } from "../../supabase/functions/_shared/application/delete-identity.ts";
 
@@ -80,5 +81,22 @@ Deno.test("retry is safe after finalize failure", async () => {
     recordedAt: "2026-07-13T12:00:00.000Z",
   });
   assertEquals(result.status, "applied");
+  assertEquals(sink.records, ["deletion-1"]);
+});
+
+Deno.test("Telegram deletion uses the V2 outbox fence on both database transitions", async () => {
+  const database = new RecordingDatabase();
+  const sink = new RecordingSink();
+  const result = await deleteTelegramIdentity(database, sink, {
+    surrogatePlayerId: "player-1",
+    deletionId: "deletion-1",
+    recordedAt: "2026-07-13T12:00:00.000Z",
+  });
+
+  assertEquals(result.status, "applied");
+  assertEquals(database.calls, [
+    "begin_identity_deletion_v2",
+    "finalize_identity_deletion_v2",
+  ]);
   assertEquals(sink.records, ["deletion-1"]);
 });

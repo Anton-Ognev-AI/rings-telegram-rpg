@@ -14,6 +14,11 @@ import type { ResolutionV1 } from "../../supabase/functions/_shared/contracts/do
 import { renderMenuCard } from "../../supabase/functions/_shared/render/menu.ts";
 import { renderOnboardingCard } from "../../supabase/functions/_shared/render/onboarding.ts";
 import {
+  renderDeletionPrompt,
+  renderDeletionRetryCard,
+  renderPrivacyCard,
+} from "../../supabase/functions/_shared/render/privacy.ts";
+import {
   renderResolvedCard,
   renderStageCard,
 } from "../../supabase/functions/_shared/render/stage-card.ts";
@@ -232,4 +237,25 @@ Deno.test("onboarding and menu expose compact static routes", () => {
   assertMatch(intro.text, /учень|Академ/u);
   assertEquals(intro.buttons.flat()[0].callbackData, "nav:expedition");
   assertEquals(menu.buttons.flat()[0].callbackData, "nav:resume");
+});
+
+Deno.test("privacy and deletion confirmation are readable without claiming early completion", () => {
+  const privacy = renderPrivacyCard();
+  assertStringIncludes(privacy.text, "Telegram ID");
+  assertStringIncludes(privacy.text, "прогрес");
+  assertStringIncludes(privacy.text, "/delete_me");
+  assertStringIncludes(privacy.text, "production");
+  assertStringIncludes(privacy.text, "без Telegram ID");
+  assertNotMatch(privacy.text, /повне видалення|видалити всі дані/u);
+
+  const confirmation = renderDeletionPrompt("del_synthetic");
+  assertStringIncludes(confirmation.text, "не можна скасувати");
+  assertStringIncludes(confirmation.text, "Псевдонімний прогрес");
+  assertNotMatch(confirmation.text, /Видалити всі дані|видалити все/u);
+  assertNotMatch(confirmation.text, /Дані гри видалено|готово/u);
+  assertEquals(confirmation.buttons.flat()[0].callbackData, "del_synthetic");
+  assertEquals(confirmation.buttons.flat()[1].callbackData, "nav:menu");
+  const retry = renderDeletionRetryCard("del_synthetic");
+  assertStringIncludes(retry.text, "ще не завершено");
+  assertEquals(retry.buttons.flat()[0].callbackData, "del_synthetic");
 });

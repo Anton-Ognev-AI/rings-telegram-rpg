@@ -76,6 +76,8 @@ Deno.test("deletion tombstone removes identity after isolated primary restore", 
   const playerId = "60000000-0000-4000-8000-000000000001";
   const deletionId = "61000000-0000-4000-8000-000000000001";
   const identityId = "62000000-0000-4000-8000-000000000001";
+  const replacementPlayerId = "60000000-0000-4000-8000-000000000002";
+  const replacementIdentityId = "62000000-0000-4000-8000-000000000002";
   const externalId = 900000000000000601n;
 
   await withDatabase(async (primary) => {
@@ -118,6 +120,34 @@ Deno.test("deletion tombstone removes identity after isolated primary restore", 
     `;
     assertEquals(identity.count, 0);
     assertEquals(player, { deletion_state: "deletion_pending", personal_label: null });
+
+    await restored`insert into game.players(id, personal_label)
+      values (${replacementPlayerId}::uuid, 'Replacement Synthetic Student')`;
+    await restored`insert into game.identity_links(id, player_id, platform, external_id)
+      values (
+        ${replacementIdentityId}::uuid,
+        ${replacementPlayerId}::uuid,
+        'telegram',
+        ${externalId.toString()}::bigint
+      )`;
+    await withRecoveryDatabase(async (recovery) => {
+      assertEquals(await replayTombstones(restored, recovery) >= 1, true);
+    });
+    const [replacement] = await restored<{
+      links: number;
+      deletion_state: string;
+      personal_label: string | null;
+    }[]>`select
+      (select count(*)::integer from game.identity_links
+        where player_id = p.id) as links,
+      p.deletion_state,
+      p.personal_label
+      from game.players p where p.id = ${replacementPlayerId}::uuid`;
+    assertEquals(replacement, {
+      links: 1,
+      deletion_state: "active",
+      personal_label: "Replacement Synthetic Student",
+    });
   } finally {
     await restored.end();
     const admin = postgres(ADMIN_URL, { max: 1 });

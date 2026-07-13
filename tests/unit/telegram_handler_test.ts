@@ -3,6 +3,7 @@ import type { DatabasePort } from "../../supabase/functions/_shared/application/
 import type { IdentityDeletionSink } from "../../supabase/functions/_shared/application/delete-identity.ts";
 import { FixedClock } from "../../supabase/functions/_shared/infrastructure/clock.ts";
 import { RecordingTelegramPort } from "../../supabase/functions/_shared/telegram/fake.ts";
+import { deriveDeletionCallbackToken } from "../../supabase/functions/_shared/telegram/deletion-callback.ts";
 import {
   handleTelegramUpdate,
   type TelegramHandlerDependencies,
@@ -69,6 +70,7 @@ class EventSink implements IdentityDeletionSink {
 }
 
 const playerId = "10000000-0000-4000-8000-000000000001";
+const callbackKey = new TextEncoder().encode("0123456789abcdef0123456789abcdef");
 const identity = {
   status: "ok",
   created: false,
@@ -82,6 +84,13 @@ const identity = {
     maxHp: 40,
   },
   xpBalance: 0,
+};
+const deletionIdentity = {
+  status: "ok",
+  playerId,
+  deletionState: "active",
+  deletionId: null,
+  deletionRequestedAt: null,
 };
 const commandBase = {
   kind: "command" as const,
@@ -112,7 +121,7 @@ function dependencies(
     telegram,
     clock: new FixedClock("2026-08-25T07:00:00.000Z"),
     deletionSink: sink,
-    callbackKey: new TextEncoder().encode("0123456789abcdef0123456789abcdef"),
+    callbackKey,
     deletionEnabled,
   };
 }
@@ -315,34 +324,40 @@ Deno.test("privacy is always readable and deletion requires explicit confirmatio
   assertStringIncludes(privacySend.input.text, "Telegram ID");
 
   const promptTelegram = new RecordingTelegramPort();
+  const promptDatabase = new ScriptedDatabase({
+    telegram_deletion_identity_v1: [deletionIdentity],
+  });
   const prompt = await handleTelegramUpdate(
-    dependencies(new ScriptedDatabase({}), promptTelegram),
+    dependencies(promptDatabase, promptTelegram),
     { ...commandBase, command: "delete_me" },
   );
   assertEquals(prompt.route, "delete_confirmation");
   const promptSend = promptTelegram.calls[0];
   if (!promptSend || promptSend.operation !== "sendMessage") throw new Error("missing prompt");
-  assertEquals(promptSend.input.buttons?.flat()[0].callbackData, "nav:delete-confirm");
+  const confirmationToken = promptSend.input.buttons?.flat()[0].callbackData;
+  if (!confirmationToken) throw new Error("missing confirmation token");
+  assertEquals(confirmationToken.startsWith("del_"), true);
+  assertEquals(confirmationToken.includes(playerId), false);
 
   const events: string[] = [];
   const deletionDb = new ScriptedDatabase({
-    telegram_identity_v1: [identity],
-    begin_identity_deletion_v1: [{ status: "applied" }],
-    finalize_identity_deletion_v1: [{ status: "applied" }],
+    telegram_deletion_identity_v1: [deletionIdentity],
+    begin_identity_deletion_v2: [{ status: "applied" }],
+    finalize_identity_deletion_v2: [{ status: "applied" }],
   }, events);
   const deletionTelegram = new EventTelegram(events);
   const sink = new EventSink(events);
   const deleted = await handleTelegramUpdate(
     dependencies(deletionDb, deletionTelegram, sink),
-    { ...callbackBase, data: "nav:delete-confirm" },
+    { ...callbackBase, data: confirmationToken },
   );
   assertEquals(deleted.route, "deleted");
   assertEquals(events.slice(0, 5), [
     "telegram:answer",
-    "db:telegram_identity_v1",
-    "db:begin_identity_deletion_v1",
+    "db:telegram_deletion_identity_v1",
+    "db:begin_identity_deletion_v2",
     "sink:tombstone",
-    "db:finalize_identity_deletion_v1",
+    "db:finalize_identity_deletion_v2",
   ]);
   assertEquals(sink.tombstones.length, 1);
 });
@@ -357,8 +372,92 @@ Deno.test("disabled deletion composition never begins a destructive transition",
       { recordTombstone: () => Promise.reject(new Error("must_not_run")) },
       false,
     ),
-    { ...callbackBase, data: "nav:delete-confirm" },
+    {
+      ...callbackBase,
+      data: await deriveDeletionCallbackToken(callbackKey, {
+        telegramExternalId: callbackBase.telegramExternalId,
+        playerId,
+      }),
+    },
   );
   assertEquals(result.route, "deletion_unavailable");
   assertEquals(database.calls, []);
+});
+
+Deno.test("old deletion confirmation cannot delete a re-registered player", async () => {
+  const oldToken = await deriveDeletionCallbackToken(callbackKey, {
+    telegramExternalId: callbackBase.telegramExternalId,
+    playerId,
+  });
+  const newPlayerId = "10000000-0000-4000-8000-000000000002";
+  const database = new ScriptedDatabase({
+    telegram_deletion_identity_v1: [{
+      ...deletionIdentity,
+      playerId: newPlayerId,
+    }],
+  });
+  const result = await handleTelegramUpdate(
+    dependencies(database),
+    { ...callbackBase, data: oldToken },
+  );
+
+  assertEquals(result.route, "deletion_rejected");
+  assertEquals(database.calls.map((call) => call.rpc), ["telegram_deletion_identity_v1"]);
+});
+
+Deno.test("legacy static deletion confirmation is rejected without identity bootstrap", async () => {
+  const database = new ScriptedDatabase({});
+  const result = await handleTelegramUpdate(
+    dependencies(database),
+    { ...callbackBase, data: "nav:delete-confirm" },
+  );
+
+  assertEquals(result.route, "deletion_rejected");
+  assertEquals(database.calls, []);
+});
+
+Deno.test("sink failure keeps confirmation retryable and never finalizes early", async () => {
+  const token = await deriveDeletionCallbackToken(callbackKey, {
+    telegramExternalId: callbackBase.telegramExternalId,
+    playerId,
+  });
+  const database = new ScriptedDatabase({
+    telegram_deletion_identity_v1: [deletionIdentity],
+    begin_identity_deletion_v2: [{ status: "applied" }],
+  });
+  const telegram = new RecordingTelegramPort();
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram, {
+      recordTombstone: () => Promise.reject(new Error("synthetic_sink_failure")),
+    }),
+    { ...callbackBase, data: token },
+  );
+
+  assertEquals(result.route, "deletion_retryable");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_deletion_identity_v1",
+    "begin_identity_deletion_v2",
+  ]);
+  const send = telegram.calls.find((call) => call.operation === "sendMessage");
+  if (!send || send.operation !== "sendMessage") throw new Error("missing retry card");
+  assertStringIncludes(send.input.text, "не завершено");
+  assertEquals(send.input.buttons?.flat()[0].callbackData, token);
+});
+
+Deno.test("/start exposes a blocked pending deletion instead of onboarding", async () => {
+  const database = new ScriptedDatabase({
+    telegram_identity_v1: [{ status: "rejected", reason: "identity_deletion_pending" }],
+  });
+  const telegram = new RecordingTelegramPort();
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram),
+    { ...commandBase, command: "start" },
+  );
+
+  assertEquals(result.route, "identity_pending");
+  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v1"]);
+  const send = telegram.calls.find((call) => call.operation === "sendMessage");
+  if (!send || send.operation !== "sendMessage") throw new Error("missing pending card");
+  assertStringIncludes(send.input.text, "Видалення");
+  assertStringIncludes(send.input.text, "/delete_me");
 });

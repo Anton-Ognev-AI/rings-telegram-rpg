@@ -1,4 +1,8 @@
-import { deleteIdentity, type IdentityDeletionSink } from "../application/delete-identity.ts";
+import {
+  deleteTelegramIdentity,
+  deriveDeletionId,
+  type IdentityDeletionSink,
+} from "../application/delete-identity.ts";
 import type { CommandResult, DatabasePort } from "../application/database-port.ts";
 import { resolveChoice } from "../application/resolve-choice.ts";
 import { requestRunRender } from "../application/request-run-render.ts";
@@ -6,12 +10,19 @@ import { resumeRun } from "../application/resume.ts";
 import { getRunView } from "../application/run-view.ts";
 import { startTelegramRun } from "../application/start-telegram-run.ts";
 import { getTelegramIdentity } from "../application/telegram-identity.ts";
+import { getTelegramDeletionIdentity } from "../application/telegram-deletion-identity.ts";
 import type { Clock } from "../infrastructure/clock.ts";
 import { canonicalJson, sha256Hex } from "../domain/canonical-json.ts";
 import { renderMenuCard } from "../render/menu.ts";
 import { renderOnboardingCard } from "../render/onboarding.ts";
-import { renderCard, type RenderedCard, staticButton } from "../render/types.ts";
+import {
+  renderDeletionPrompt,
+  renderDeletionRetryCard,
+  renderPrivacyCard,
+} from "../render/privacy.ts";
+import { renderCard, type RenderedCard } from "../render/types.ts";
 import { hashCallbackForActor } from "./callback-token.ts";
+import { deriveDeletionCallbackToken, verifyDeletionCallbackToken } from "./deletion-callback.ts";
 import type { TelegramPort } from "./port.ts";
 import type { NormalizedTelegramUpdate } from "./update.ts";
 
@@ -76,9 +87,20 @@ function persistedStartBuild(identity: CommandResult): StartBuild | null {
 const INVALID_BUILD_CARD = renderCard(
   "Не вдалося прочитати характеристики учня. Спробуйте ще раз пізніше.",
 );
+const DELETION_PENDING_CARD = renderCard(
+  [
+    "Видалення ще не завершено",
+    "",
+    "Профіль захищено від нових змін. Надішліть /delete_me, щоб безпечно повторити завершення.",
+  ].join("\n"),
+);
 
 function playerId(result: CommandResult): string | null {
   return result.status === "ok" && typeof result.playerId === "string" ? result.playerId : null;
+}
+
+function deletionPending(result: CommandResult): boolean {
+  return result.status === "rejected" && result.reason === "identity_deletion_pending";
 }
 
 function activeRun(result: CommandResult): boolean {
@@ -128,33 +150,6 @@ async function acknowledgeCallback(telegram: TelegramPort, callbackQueryId: stri
   } catch {
     // Callback acknowledgement is ephemeral; durable gameplay processing must continue.
   }
-}
-
-function privacyCard(): RenderedCard {
-  return renderCard(
-    [
-      "Приватність",
-      "",
-      "Гра зберігає зв’язок із вашим числовим Telegram ID, внутрішній профіль і прогрес експедицій. Ім’я користувача та текст приватних повідомлень не потрібні.",
-      "",
-      "Команда /delete_me запускає повне видалення після окремого підтвердження. Під час локальних тестів дані не розгортаються у production.",
-    ].join("\n"),
-    [[staticButton("Повернутися", "nav:menu")]],
-  );
-}
-
-function deletionPrompt(): RenderedCard {
-  return renderCard(
-    [
-      "Видалити всі дані гри?",
-      "",
-      "Буде видалено зв’язок із Telegram ID, профіль і прогрес. Цю дію не можна скасувати.",
-    ].join("\n"),
-    [
-      [staticButton("Так, видалити все", "nav:delete-confirm")],
-      [staticButton("Скасувати", "nav:menu")],
-    ],
-  );
 }
 
 async function identityFor(
@@ -238,6 +233,7 @@ async function startExpedition(
 async function confirmDeletion(
   dependencies: TelegramHandlerDependencies,
   update: NormalizedTelegramUpdate,
+  confirmationToken: string,
 ): Promise<TelegramHandlerResult> {
   if (dependencies.deletionEnabled === false) {
     await sendCard(
@@ -247,9 +243,11 @@ async function confirmDeletion(
     );
     return { statusCode: 200, route: "deletion_unavailable" };
   }
-  const identity = await identityFor(dependencies, update.telegramExternalId, false);
-  const id = playerId(identity);
-  if (id === null) {
+  const identity = await getTelegramDeletionIdentity(
+    dependencies.database,
+    update.telegramExternalId,
+  );
+  if (identity.status === "none") {
     await sendCard(
       dependencies.telegram,
       update.chatId,
@@ -257,17 +255,99 @@ async function confirmDeletion(
     );
     return { statusCode: 200, route: "deleted" };
   }
-  await deleteIdentity(dependencies.database, dependencies.deletionSink, {
-    surrogatePlayerId: id,
-    deletionId: crypto.randomUUID(),
-    recordedAt: dependencies.clock.now().toISOString(),
-  });
+  const id = playerId(identity);
+  const deletionState = identity.deletionState;
+  if (
+    id === null || (deletionState !== "active" && deletionState !== "deletion_pending") ||
+    !await verifyDeletionCallbackToken(dependencies.callbackKey, confirmationToken, {
+      telegramExternalId: update.telegramExternalId,
+      playerId: id,
+    })
+  ) {
+    await sendCard(
+      dependencies.telegram,
+      update.chatId,
+      renderCard(
+        "Це підтвердження вже не належить поточному профілю. Запустіть /delete_me ще раз.",
+      ),
+    );
+    return { statusCode: 200, route: "deletion_rejected" };
+  }
+  const pendingDeletionId = identity.deletionId;
+  const pendingRecordedAt = identity.deletionRequestedAt;
+  const deletionId = deletionState === "active"
+    ? await deriveDeletionId(id)
+    : typeof pendingDeletionId === "string"
+    ? pendingDeletionId
+    : null;
+  const recordedAt = deletionState === "active"
+    ? dependencies.clock.now().toISOString()
+    : typeof pendingRecordedAt === "string"
+    ? pendingRecordedAt
+    : null;
+  if (deletionId === null || recordedAt === null) {
+    await sendCard(
+      dependencies.telegram,
+      update.chatId,
+      renderCard("Контекст видалення пошкоджено. Дані не змінено."),
+    );
+    return { statusCode: 200, route: "deletion_rejected" };
+  }
+  try {
+    await deleteTelegramIdentity(dependencies.database, dependencies.deletionSink, {
+      surrogatePlayerId: id,
+      deletionId,
+      recordedAt,
+    });
+  } catch {
+    await sendCard(
+      dependencies.telegram,
+      update.chatId,
+      renderDeletionRetryCard(confirmationToken),
+    );
+    return { statusCode: 200, route: "deletion_retryable" };
+  }
   await sendCard(
     dependencies.telegram,
     update.chatId,
-    renderCard("Дані гри видалено. За бажанням ви зможете почати знову командою /start."),
+    renderCard(
+      "Зв’язок із Telegram видалено, профіль знеособлено. За бажанням ви зможете почати знову командою /start.",
+    ),
   );
   return { statusCode: 200, route: "deleted" };
+}
+
+async function showDeletionPrompt(
+  dependencies: TelegramHandlerDependencies,
+  update: NormalizedTelegramUpdate,
+): Promise<TelegramHandlerResult> {
+  if (dependencies.deletionEnabled === false) {
+    await sendCard(
+      dependencies.telegram,
+      update.chatId,
+      renderCard("Видалення буде доступне після підключення ізольованого recovery-сховища."),
+    );
+    return { statusCode: 200, route: "deletion_unavailable" };
+  }
+  const identity = await getTelegramDeletionIdentity(
+    dependencies.database,
+    update.telegramExternalId,
+  );
+  const id = playerId(identity);
+  if (identity.status === "none" || id === null) {
+    await sendCard(
+      dependencies.telegram,
+      update.chatId,
+      renderCard("Збережених даних не знайдено."),
+    );
+    return { statusCode: 200, route: "deleted" };
+  }
+  const token = await deriveDeletionCallbackToken(dependencies.callbackKey, {
+    telegramExternalId: update.telegramExternalId,
+    playerId: id,
+  });
+  await sendCard(dependencies.telegram, update.chatId, renderDeletionPrompt(token));
+  return { statusCode: 200, route: "delete_confirmation" };
 }
 
 async function handleChoice(
@@ -325,19 +405,31 @@ export async function handleTelegramUpdate(
       case "nav:menu":
         return await showMenu(dependencies, update, true, "menu");
       case "nav:privacy":
-        await sendCard(dependencies.telegram, update.chatId, privacyCard());
+        await sendCard(dependencies.telegram, update.chatId, renderPrivacyCard());
         return { statusCode: 200, route: "privacy" };
       case "nav:delete-confirm":
-        return await confirmDeletion(dependencies, update);
+        await sendCard(
+          dependencies.telegram,
+          update.chatId,
+          renderCard("Це застаріле підтвердження. Дані не змінено; запустіть /delete_me ще раз."),
+        );
+        return { statusCode: 200, route: "deletion_rejected" };
       default:
         if (update.data.startsWith("cb_")) return await handleChoice(dependencies, update);
+        if (update.data.startsWith("del_")) {
+          return await confirmDeletion(dependencies, update, update.data);
+        }
         return await showMenu(dependencies, update, true, "menu");
     }
   }
 
   switch (update.command) {
     case "start": {
-      await identityFor(dependencies, update.telegramExternalId, true);
+      const identity = await identityFor(dependencies, update.telegramExternalId, true);
+      if (deletionPending(identity)) {
+        await sendCard(dependencies.telegram, update.chatId, DELETION_PENDING_CARD);
+        return { statusCode: 200, route: "identity_pending" };
+      }
       await sendCard(dependencies.telegram, update.chatId, renderOnboardingCard());
       return { statusCode: 200, route: "onboarding" };
     }
@@ -346,11 +438,10 @@ export async function handleTelegramUpdate(
     case "resume":
       return await showMenu(dependencies, update, true, "resume");
     case "privacy":
-      await sendCard(dependencies.telegram, update.chatId, privacyCard());
+      await sendCard(dependencies.telegram, update.chatId, renderPrivacyCard());
       return { statusCode: 200, route: "privacy" };
     case "delete_me":
-      await sendCard(dependencies.telegram, update.chatId, deletionPrompt());
-      return { statusCode: 200, route: "delete_confirmation" };
+      return await showDeletionPrompt(dependencies, update);
     case "unknown":
       return await showMenu(dependencies, update, true, "menu");
   }

@@ -51,6 +51,11 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${Boolean(args.p_create_if_missing)}::boolean
         ) as response`;
         break;
+      case "telegram_deletion_identity_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.telegram_deletion_identity_v1(
+          ${stringArgument(args, "p_external_id")}::bigint
+        ) as response`;
+        break;
       case "publish_fallback_day_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.publish_fallback_day_v1(
           ${stringArgument(args, "p_at")}::timestamptz
@@ -120,6 +125,21 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;
+      case "lease_outbox_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.lease_outbox_v2(
+          ${stringArgument(args, "p_worker_id")}::uuid,
+          ${numberArgument(args, "p_limit")}::integer,
+          ${numberArgument(args, "p_lease_seconds")}::integer,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
+      case "authorize_outbox_delivery_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.authorize_outbox_delivery_v1(
+          ${stringArgument(args, "p_outbox_id")}::uuid,
+          ${stringArgument(args, "p_lease_id")}::uuid,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
       case "complete_outbox_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.complete_outbox_v1(
           ${stringArgument(args, "p_outbox_id")}::uuid,
@@ -129,6 +149,32 @@ export class PostgresRpcDatabase implements DatabasePort {
           args.p_telegram_message_id === null ? null : stringArgument(args, "p_telegram_message_id")
         }::bigint,
           ${args.p_retry_at === null ? null : stringArgument(args, "p_retry_at")}::timestamptz,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
+      case "begin_identity_deletion_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.begin_identity_deletion_v1(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_deletion_id")}::uuid
+        ) as response`;
+        break;
+      case "begin_identity_deletion_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.begin_identity_deletion_v2(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_deletion_id")}::uuid,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
+      case "finalize_identity_deletion_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.finalize_identity_deletion_v1(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_deletion_id")}::uuid
+        ) as response`;
+        break;
+      case "finalize_identity_deletion_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.finalize_identity_deletion_v2(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_deletion_id")}::uuid,
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;

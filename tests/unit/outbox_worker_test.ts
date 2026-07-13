@@ -1,6 +1,9 @@
 import { assertEquals, assertMatch } from "jsr:@std/assert@1.0.19";
 import fallbackJson from "../../content/fallback/case-001/day-01.json" with { type: "json" };
-import type { DatabasePort } from "../../supabase/functions/_shared/application/database-port.ts";
+import type {
+  CommandResult,
+  DatabasePort,
+} from "../../supabase/functions/_shared/application/database-port.ts";
 import {
   processOutboxBatch,
   type ProcessOutboxDependencies,
@@ -75,7 +78,6 @@ function leasedMessage(
     },
     attempts: 1,
     playerId: "10000000-0000-4000-8000-000000000001",
-    telegramExternalId: "700000001",
     cardMessageId,
   };
 }
@@ -85,16 +87,24 @@ class WorkerDatabase implements DatabasePort {
 
   constructor(
     private readonly message: ReturnType<typeof leasedMessage>,
-    private readonly view: TelegramRunView,
+    private readonly view: TelegramRunView | CommandResult,
+    private readonly authorization: Readonly<Record<string, unknown>> = {
+      status: "ok",
+      telegramExternalId: "700000001",
+      deliveryDeadline: "2026-08-25T07:00:30.000Z",
+    },
   ) {}
 
   call<T>(rpc: string, args: Readonly<Record<string, unknown>>): Promise<T> {
     this.calls.push({ rpc, args });
-    if (rpc === "lease_outbox_v1") {
+    if (rpc === "lease_outbox_v2") {
       return Promise.resolve({ status: "ok", messages: [this.message] } as T);
     }
     if (rpc === "run_view_v1") return Promise.resolve(this.view as T);
     if (rpc === "prepare_action_v1") return Promise.resolve({ status: "ok" } as T);
+    if (rpc === "authorize_outbox_delivery_v1") {
+      return Promise.resolve(this.authorization as T);
+    }
     if (rpc === "complete_outbox_v1") return Promise.resolve({ status: "applied" } as T);
     throw new Error(`unexpected_rpc:${rpc}`);
   }
@@ -233,4 +243,42 @@ Deno.test("delivery-unknown edit is retried because edit cannot create a second 
   });
   assertEquals(completion(database).p_result, "retry");
   assertMatch(String(completion(database).p_retry_at), /^2026-08-25T07:00:/u);
+});
+
+Deno.test("leased work for a deletion-pending player is superseded without Telegram", async () => {
+  const database = new WorkerDatabase(leasedMessage(), {
+    status: "rejected",
+    reason: "inactive_player",
+  });
+  const telegram = new RecordingTelegramPort();
+  const result = await processOutboxBatch(deps(database, telegram), {
+    workerId: "50000000-0000-4000-8000-000000000001",
+    limit: 1,
+    leaseSeconds: 30,
+  });
+
+  assertEquals(result.superseded, 1);
+  assertEquals(telegram.calls, []);
+  assertEquals(completion(database).p_result, "superseded");
+});
+
+Deno.test("delivery authorization revoked by deletion is superseded without Telegram", async () => {
+  const database = new WorkerDatabase(
+    leasedMessage(),
+    runView(),
+    { status: "superseded" },
+  );
+  const telegram = new RecordingTelegramPort();
+  const result = await processOutboxBatch(deps(database, telegram), {
+    workerId: "50000000-0000-4000-8000-000000000001",
+    limit: 1,
+    leaseSeconds: 30,
+  });
+
+  assertEquals(result.superseded, 1);
+  assertEquals(telegram.calls, []);
+  assertEquals(
+    database.calls.filter((call) => call.rpc === "authorize_outbox_delivery_v1").length,
+    1,
+  );
 });
