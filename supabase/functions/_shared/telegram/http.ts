@@ -45,6 +45,13 @@ function apiError(status: number, body: unknown): TelegramDeliveryError {
   return new TelegramDeliveryError("permanent");
 }
 
+export class TelegramTransportError extends Error {
+  constructor(readonly phase: "before_dispatch") {
+    super("telegram_transport_failure");
+    this.name = "TelegramTransportError";
+  }
+}
+
 export class TelegramBotApiPort implements TelegramPort {
   readonly #baseUrl: string;
 
@@ -66,8 +73,10 @@ export class TelegramBotApiPort implements TelegramPort {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch {
-      throw new TelegramDeliveryError("delivery_unknown");
+    } catch (error) {
+      throw error instanceof TelegramTransportError && error.phase === "before_dispatch"
+        ? new TelegramDeliveryError("retryable")
+        : new TelegramDeliveryError("delivery_unknown");
     }
     let body: unknown;
     try {

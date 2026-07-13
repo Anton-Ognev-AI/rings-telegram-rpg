@@ -178,6 +178,12 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;
+      case "abandon_run_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.abandon_run_v1(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_run_id")}::uuid
+        ) as response`;
+        break;
       default:
         throw new Error(`unsupported_test_rpc:${rpc}`);
     }

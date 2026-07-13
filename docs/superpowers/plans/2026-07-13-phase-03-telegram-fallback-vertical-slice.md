@@ -285,13 +285,13 @@ systems remain forbidden.
 
 - Produces: executable lifecycle and delivery state-machine proof.
 
-- [ ] Cover cycle timestamps immediately before open, at open, before close, at close, before grace
+- [x] Cover cycle timestamps immediately before open, at open, before close, at close, before grace
       end, and at grace end for normal, spring, and autumn cycles.
-- [ ] Assert a started old run resumes during grace, blocks a new run, expires after grace, and can
+- [x] Assert a started old run resumes during grace, blocks a new run, expires after grace, and can
       be explicitly abandoned.
-- [ ] Inject `429`, `500`, timeout-before-response, timeout-after-unknown-send, permanent error, and
+- [x] Inject `429`, `500`, timeout-before-response, timeout-after-unknown-send, permanent error, and
       edit timeout.
-- [ ] Assert bounded retries, no blind resend of delivery-unknown new send, safe edit retry, and
+- [x] Assert bounded retries, no blind resend of delivery-unknown new send, safe edit retry, and
       canonical resume after every failure.
 
 ### Task 10: Load, final verification, and checkpoint

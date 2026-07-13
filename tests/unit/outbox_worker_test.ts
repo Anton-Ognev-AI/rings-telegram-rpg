@@ -93,6 +93,7 @@ class WorkerDatabase implements DatabasePort {
       telegramExternalId: "700000001",
       deliveryDeadline: "2026-08-25T07:00:30.000Z",
     },
+    private readonly completionResult: CommandResult = { status: "applied" },
   ) {}
 
   call<T>(rpc: string, args: Readonly<Record<string, unknown>>): Promise<T> {
@@ -105,7 +106,7 @@ class WorkerDatabase implements DatabasePort {
     if (rpc === "authorize_outbox_delivery_v1") {
       return Promise.resolve(this.authorization as T);
     }
-    if (rpc === "complete_outbox_v1") return Promise.resolve({ status: "applied" } as T);
+    if (rpc === "complete_outbox_v1") return Promise.resolve(this.completionResult as T);
     throw new Error(`unexpected_rpc:${rpc}`);
   }
 }
@@ -281,4 +282,28 @@ Deno.test("delivery authorization revoked by deletion is superseded without Tele
     database.calls.filter((call) => call.rpc === "authorize_outbox_delivery_v1").length,
     1,
   );
+});
+
+Deno.test("the tenth retry is reported as dead when the database exhausts its budget", async () => {
+  const message = { ...leasedMessage(), attempts: 10 };
+  const database = new WorkerDatabase(
+    message,
+    runView(),
+    {
+      status: "ok",
+      telegramExternalId: "700000001",
+      deliveryDeadline: "2026-08-25T07:00:30.000Z",
+    },
+    { status: "applied", outboxStatus: "dead" },
+  );
+  const telegram = new RecordingTelegramPort([{ kind: "retryable" }]);
+  const result = await processOutboxBatch(deps(database, telegram), {
+    workerId: "50000000-0000-4000-8000-000000000001",
+    limit: 1,
+    leaseSeconds: 30,
+  });
+
+  assertEquals(result.dead, 1);
+  assertEquals(result.retried, 0);
+  assertEquals(completion(database).p_result, "retry");
 });

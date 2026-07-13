@@ -157,10 +157,11 @@ function retryDelaySeconds(attempts: number, requested?: number): number {
   return Math.min(300, 2 ** Math.min(8, attempts));
 }
 
-function assertCompleted(result: CommandResult): void {
+function assertCompleted(result: CommandResult): CommandResult {
   if (result.status !== "applied" && result.status !== "cached") {
     throw new Error("outbox_completion_rejected");
   }
+  return result;
 }
 
 export async function processOutboxBatch(
@@ -320,7 +321,7 @@ export async function processOutboxBatch(
             retryDelaySeconds(message.attempts, error.retryAfterSeconds) * 1000,
         ).toISOString()
         : null;
-      assertCompleted(
+      const completed = assertCompleted(
         await completeOutbox(dependencies.database, {
           ...completionBase,
           result: completionResult,
@@ -328,7 +329,8 @@ export async function processOutboxBatch(
           retryAt,
         }),
       );
-      if (completionResult === "retry") result.retried += 1;
+      if (completionResult === "retry" && completed.outboxStatus === "dead") result.dead += 1;
+      else if (completionResult === "retry") result.retried += 1;
       else if (completionResult === "dead") result.dead += 1;
       else result.deliveryUnknown += 1;
     }

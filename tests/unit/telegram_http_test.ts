@@ -1,6 +1,9 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19";
 import type { FetchPort } from "../../supabase/functions/_shared/infrastructure/supabase-rpc.ts";
-import { TelegramBotApiPort } from "../../supabase/functions/_shared/telegram/http.ts";
+import {
+  TelegramBotApiPort,
+  TelegramTransportError,
+} from "../../supabase/functions/_shared/telegram/http.ts";
 import { TelegramDeliveryError } from "../../supabase/functions/_shared/telegram/port.ts";
 
 Deno.test("Telegram HTTP adapter maps send and edit payloads without storing responses", async () => {
@@ -45,4 +48,37 @@ Deno.test("Telegram HTTP adapter classifies rate limits and unknown delivery saf
   ) as TelegramDeliveryError;
   assertEquals(unknownError.kind, "delivery_unknown");
   assertEquals(unknownError.message.includes(secret), false);
+});
+
+Deno.test("Telegram HTTP adapter separates safe pre-dispatch retry from ambiguous transport loss", async () => {
+  const input = { chatId: "7001", text: "test" };
+  const beforeDispatch = new TelegramBotApiPort(
+    "123456:synthetic-token",
+    () => Promise.reject(new TelegramTransportError("before_dispatch")),
+  );
+  const beforeError = await assertRejects(
+    () => beforeDispatch.sendMessage(input),
+    TelegramDeliveryError,
+  ) as TelegramDeliveryError;
+  assertEquals(beforeError.kind, "retryable");
+
+  const serverError = new TelegramBotApiPort(
+    "123456:synthetic-token",
+    () => Promise.resolve(Response.json({ ok: false, error_code: 500 }, { status: 500 })),
+  );
+  const retryable = await assertRejects(
+    () => serverError.sendMessage(input),
+    TelegramDeliveryError,
+  ) as TelegramDeliveryError;
+  assertEquals(retryable.kind, "retryable");
+
+  const badRequest = new TelegramBotApiPort(
+    "123456:synthetic-token",
+    () => Promise.resolve(Response.json({ ok: false, error_code: 400 }, { status: 400 })),
+  );
+  const permanent = await assertRejects(
+    () => badRequest.sendMessage(input),
+    TelegramDeliveryError,
+  ) as TelegramDeliveryError;
+  assertEquals(permanent.kind, "permanent");
 });
