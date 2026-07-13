@@ -73,7 +73,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Phase 3 planning audit: fresh source verification passed `73` unit + `3` property tests and migration checksums remained clean. A fresh DB rerun was blocked by sandbox denial of Docker Desktop named-pipe access; this is an environment constraint, not a passing DB rerun.
 - Full five-advisor council returned `SPLIT_PHASE`: Gate 3A adds missing service-only identity/start/view/outbox/day commands through forward migration 009; Gate 3B builds the local Telegram-shaped run; Gate 3C proves delivery/privacy/grace/load behavior. Direct Edge DML into private `game` tables is forbidden.
 - P01 debt is now explicit Phase 3 rendering acceptance: encounter-specific layouts, post-choice stat/threshold breakdown, HP/combat/XP deltas, visible early accumulation, and a concrete next-day hook. Named canonical teachers remain deferred until lore source verification.
-- Next safe step: execute Gate 3A in an isolated worktree using TDD. Do not edit migrations 001–008, Phase 1 resolver/config/golden files, link Supabase, deploy, register Telegram webhooks, load secrets, or invite testers.
+- Execution blocker: the sandbox denied writes to `.git` for `git worktree add`; the required escalation was not evaluated because the automatic approval reviewer was at capacity. No partial branch/worktree or Gate 3A code was created. The same environment also denied Docker Desktop named-pipe access for a fresh DB rerun.
+- Next safe step: after explicit renewed permission succeeds, create `.worktrees/phase-03-telegram-vertical-slice`, run the clean source baseline, and execute Gate 3A with TDD. Do not implement on `main`, edit migrations 001–008, change Phase 1 resolver/config/golden files, link Supabase, deploy, register Telegram webhooks, load secrets, or invite testers.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
