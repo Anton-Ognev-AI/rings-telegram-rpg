@@ -8,6 +8,7 @@ export interface TelegramMessageInput {
   readonly text: string;
   readonly buttons?: ReadonlyArray<ReadonlyArray<TelegramButton>>;
   readonly parseMode?: "HTML";
+  readonly timeoutMs?: number;
 }
 
 export interface TelegramEditInput extends TelegramMessageInput {

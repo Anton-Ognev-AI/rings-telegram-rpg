@@ -76,12 +76,13 @@ function dependencies(
   database: DatabasePort,
   telegram: RecordingTelegramPort,
   deletionSink: IdentityDeletionSink,
+  now = at,
 ): TelegramHandlerDependencies {
   return {
     database,
     telegram,
     deletionSink,
-    clock: new FixedClock(at),
+    clock: new FixedClock(now),
     callbackKey: CALLBACK_KEY,
     startBuild: developedBuild,
   };
@@ -91,9 +92,13 @@ async function handle(
   database: DatabasePort,
   deletionSink: IdentityDeletionSink,
   update: ReturnType<typeof command>,
+  now = at,
 ) {
   const telegram = new RecordingTelegramPort();
-  const result = await handleTelegramUpdate(dependencies(database, telegram, deletionSink), update);
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram, deletionSink, now),
+    update,
+  );
   return { result, telegram };
 }
 
@@ -314,7 +319,55 @@ Deno.test("a live delivery lease blocks unlink until authorization is revoked", 
   });
 });
 
-Deno.test("pending deletion context survives finalize faults and ambiguous success", async () => {
+Deno.test("a crashed delivery lease expires against the current deletion attempt time", async () => {
+  await ensureRecoveryDatabase();
+  await withDatabase(async (sql) => {
+    const externalId = externalIdBase + 6;
+    const database = new PostgresRpcDatabase(sql);
+    const sink = new LocalRecoveryDeletionSink();
+    await handle(database, sink, command(externalId, "/start", 975001));
+    await publishFallbackDay(database, at);
+    await advanceDay(database, at);
+    assertEquals(
+      (await handle(database, sink, callback(externalId, "nav:expedition", 975002))).result.route,
+      "expedition_started",
+    );
+    const identity = await linkedIdentity(sql, externalId);
+    if (!identity) throw new Error("missing_expiry_identity");
+
+    const lease = await database.call<{
+      status: string;
+      messages: Array<{ playerId: string }>;
+    }>("lease_outbox_v2", {
+      p_worker_id: "50000000-0000-4000-8000-000000000094",
+      p_limit: 20,
+      p_lease_seconds: 30,
+      p_at: at,
+    });
+    assertEquals(lease.messages.some((message) => message.playerId === identity.player_id), true);
+
+    const prompt = await handle(database, sink, command(externalId, "/delete_me", 975003));
+    const token = firstCallback(prompt.telegram);
+    assertEquals(
+      (await handle(database, sink, callback(externalId, token, 975004))).result.route,
+      "deletion_retryable",
+    );
+
+    const afterLeaseExpiry = new Date(Date.parse(at) + 31_000).toISOString();
+    assertEquals(
+      (await handle(
+        database,
+        sink,
+        callback(externalId, token, 975005),
+        afterLeaseExpiry,
+      )).result.route,
+      "deleted",
+    );
+    assertEquals(await linkedIdentity(sql, externalId), undefined);
+  });
+});
+
+Deno.test("one-shot finalize faults converge to a deleted identity", async () => {
   await ensureRecoveryDatabase();
   await withDatabase(async (sql) => {
     const sink = new LocalRecoveryDeletionSink();
@@ -344,7 +397,7 @@ Deno.test("pending deletion context survives finalize faults and ambiguous succe
         sink,
         callback(scenario.externalId, token, scenario.updateBase + 3),
       );
-      assertEquals(faulted.result.route, "deletion_retryable");
+      assertEquals(faulted.result.route, "deleted");
 
       const retried = await handle(
         database,

@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract through migration 202607130012.
+// Generated locally from the public RPC contract through migration 202607130013.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -25,6 +25,16 @@ export type Database = {
       };
       authorize_outbox_delivery_v1: {
         Args: { p_at: string; p_lease_id: string; p_outbox_id: string };
+        Returns: Json;
+      };
+      authorize_outbox_delivery_v2: {
+        Args: {
+          p_at: string;
+          p_is_new_send: boolean;
+          p_lease_id: string;
+          p_outbox_id: string;
+          p_transport_seconds: number;
+        };
         Returns: Json;
       };
       complete_outbox_v1: {
@@ -56,6 +66,15 @@ export type Database = {
         Returns: Json;
       };
       lease_outbox_v2: {
+        Args: {
+          p_at: string;
+          p_lease_seconds: number;
+          p_limit: number;
+          p_worker_id: string;
+        };
+        Returns: Json;
+      };
+      lease_outbox_v3: {
         Args: {
           p_at: string;
           p_lease_seconds: number;

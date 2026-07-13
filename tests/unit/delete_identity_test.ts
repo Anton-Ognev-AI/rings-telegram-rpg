@@ -8,9 +8,11 @@ import {
 
 class RecordingDatabase implements DatabasePort {
   readonly calls: string[] = [];
+  readonly args: Readonly<Record<string, unknown>>[] = [];
   failFinalize = false;
-  call<T>(rpc: string): Promise<T> {
+  call<T>(rpc: string, args: Readonly<Record<string, unknown>>): Promise<T> {
     this.calls.push(rpc);
+    this.args.push(args);
     if (rpc === "finalize_identity_deletion_v1" && this.failFinalize) {
       return Promise.reject(new Error("primary unavailable"));
     }
@@ -91,6 +93,7 @@ Deno.test("Telegram deletion uses the V2 outbox fence on both database transitio
     surrogatePlayerId: "player-1",
     deletionId: "deletion-1",
     recordedAt: "2026-07-13T12:00:00.000Z",
+    attemptedAt: "2026-07-13T12:00:31.000Z",
   });
 
   assertEquals(result.status, "applied");
@@ -98,5 +101,7 @@ Deno.test("Telegram deletion uses the V2 outbox fence on both database transitio
     "begin_identity_deletion_v2",
     "finalize_identity_deletion_v2",
   ]);
+  assertEquals(database.args[0].p_at, "2026-07-13T12:00:31.000Z");
+  assertEquals(database.args[1].p_at, "2026-07-13T12:00:31.000Z");
   assertEquals(sink.records, ["deletion-1"]);
 });

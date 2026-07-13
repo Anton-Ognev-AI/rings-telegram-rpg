@@ -19,6 +19,8 @@ export interface CompleteOutboxInput {
 export interface AuthorizeOutboxDeliveryInput {
   readonly outboxId: string;
   readonly leaseId: string;
+  readonly isNewSend: boolean;
+  readonly transportSeconds: number;
   readonly at: string;
 }
 
@@ -26,7 +28,7 @@ export function leaseOutbox(
   database: DatabasePort,
   input: LeaseOutboxInput,
 ): Promise<CommandResult> {
-  return database.call<CommandResult>("lease_outbox_v2", {
+  return database.call<CommandResult>("lease_outbox_v3", {
     p_worker_id: input.workerId,
     p_limit: input.limit,
     p_lease_seconds: input.leaseSeconds,
@@ -38,9 +40,11 @@ export function authorizeOutboxDelivery(
   database: DatabasePort,
   input: AuthorizeOutboxDeliveryInput,
 ): Promise<unknown> {
-  return database.call<unknown>("authorize_outbox_delivery_v1", {
+  return database.call<unknown>("authorize_outbox_delivery_v2", {
     p_outbox_id: input.outboxId,
     p_lease_id: input.leaseId,
+    p_is_new_send: input.isNewSend,
+    p_transport_seconds: input.transportSeconds,
     p_at: input.at,
   });
 }

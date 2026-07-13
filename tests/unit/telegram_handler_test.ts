@@ -27,7 +27,9 @@ class ScriptedDatabase implements DatabasePort {
     const queue = this.responses[rpc];
     const index = this.calls.filter((call) => call.rpc === rpc).length - 1;
     if (!queue || index >= queue.length) throw new Error(`unexpected_rpc:${rpc}`);
-    return Promise.resolve(queue[index] as T);
+    const response = queue[index];
+    if (response instanceof Error) return Promise.reject(response);
+    return Promise.resolve(response as T);
   }
 }
 
@@ -362,6 +364,92 @@ Deno.test("privacy is always readable and deletion requires explicit confirmatio
   assertEquals(sink.tombstones.length, 1);
 });
 
+Deno.test("lost finalize response is reported as deleted after canonical unlink", async () => {
+  const token = await deriveDeletionCallbackToken(callbackKey, {
+    telegramExternalId: callbackBase.telegramExternalId,
+    playerId,
+  });
+  const database = new ScriptedDatabase({
+    telegram_deletion_identity_v1: [deletionIdentity, { status: "none" }],
+    begin_identity_deletion_v2: [{ status: "applied" }],
+    finalize_identity_deletion_v2: [new Error("synthetic_finalize_response_lost")],
+  });
+  const telegram = new RecordingTelegramPort();
+
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram),
+    { ...callbackBase, data: token },
+  );
+
+  assertEquals(result.route, "deleted");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_deletion_identity_v1",
+    "begin_identity_deletion_v2",
+    "finalize_identity_deletion_v2",
+    "telegram_deletion_identity_v1",
+  ]);
+  const sent = telegram.calls.find((call) => call.operation === "sendMessage");
+  if (!sent || sent.operation !== "sendMessage") throw new Error("missing_deletion_success");
+  assertStringIncludes(sent.input.text, "Зв’язок із Telegram видалено");
+});
+
+Deno.test("rejected or malformed read-after-error remains retryable", async () => {
+  const token = await deriveDeletionCallbackToken(callbackKey, {
+    telegramExternalId: callbackBase.telegramExternalId,
+    playerId,
+  });
+  for (const latest of [{ status: "rejected", reason: "unavailable" }, { status: "ok" }]) {
+    const database = new ScriptedDatabase({
+      telegram_deletion_identity_v1: [deletionIdentity, latest, latest],
+      begin_identity_deletion_v2: [{ status: "applied" }, { status: "cached" }],
+      finalize_identity_deletion_v2: [
+        new Error("synthetic_finalize_failure"),
+        new Error("synthetic_finalize_failure"),
+      ],
+    });
+
+    const result = await handleTelegramUpdate(
+      dependencies(database),
+      { ...callbackBase, data: token },
+    );
+
+    assertEquals(result.route, "deletion_retryable");
+  }
+});
+
+Deno.test("a deletion race retries once while the original identity is still linked", async () => {
+  const token = await deriveDeletionCallbackToken(callbackKey, {
+    telegramExternalId: callbackBase.telegramExternalId,
+    playerId,
+  });
+  const database = new ScriptedDatabase({
+    telegram_deletion_identity_v1: [deletionIdentity, {
+      ...deletionIdentity,
+      deletionState: "deletion_pending",
+    }],
+    begin_identity_deletion_v2: [{ status: "applied" }, { status: "cached" }],
+    finalize_identity_deletion_v2: [
+      new Error("synthetic_concurrent_finalize"),
+      { status: "applied" },
+    ],
+  });
+
+  const result = await handleTelegramUpdate(
+    dependencies(database),
+    { ...callbackBase, data: token },
+  );
+
+  assertEquals(result.route, "deleted");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_deletion_identity_v1",
+    "begin_identity_deletion_v2",
+    "finalize_identity_deletion_v2",
+    "telegram_deletion_identity_v1",
+    "begin_identity_deletion_v2",
+    "finalize_identity_deletion_v2",
+  ]);
+});
+
 Deno.test("disabled deletion composition never begins a destructive transition", async () => {
   const database = new ScriptedDatabase({});
   const telegram = new RecordingTelegramPort();
@@ -422,8 +510,8 @@ Deno.test("sink failure keeps confirmation retryable and never finalizes early",
     playerId,
   });
   const database = new ScriptedDatabase({
-    telegram_deletion_identity_v1: [deletionIdentity],
-    begin_identity_deletion_v2: [{ status: "applied" }],
+    telegram_deletion_identity_v1: [deletionIdentity, deletionIdentity, deletionIdentity],
+    begin_identity_deletion_v2: [{ status: "applied" }, { status: "cached" }],
   });
   const telegram = new RecordingTelegramPort();
   const result = await handleTelegramUpdate(
@@ -437,6 +525,9 @@ Deno.test("sink failure keeps confirmation retryable and never finalizes early",
   assertEquals(database.calls.map((call) => call.rpc), [
     "telegram_deletion_identity_v1",
     "begin_identity_deletion_v2",
+    "telegram_deletion_identity_v1",
+    "begin_identity_deletion_v2",
+    "telegram_deletion_identity_v1",
   ]);
   const send = telegram.calls.find((call) => call.operation === "sendMessage");
   if (!send || send.operation !== "sendMessage") throw new Error("missing retry card");

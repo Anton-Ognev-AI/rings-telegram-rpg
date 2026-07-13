@@ -65,13 +65,22 @@ export class TelegramBotApiPort implements TelegramPort {
     this.#baseUrl = `https://api.telegram.org/bot${botToken}`;
   }
 
-  async #call(method: string, payload: Readonly<Record<string, unknown>>): Promise<unknown> {
+  async #call(
+    method: string,
+    payload: Readonly<Record<string, unknown>>,
+    timeoutMs?: number,
+  ): Promise<unknown> {
+    if (
+      timeoutMs !== undefined &&
+      (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000)
+    ) throw new TelegramDeliveryError("permanent");
     let response: Response;
     try {
       response = await this.fetcher(`${this.#baseUrl}/${method}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        ...(timeoutMs === undefined ? {} : { signal: AbortSignal.timeout(timeoutMs) }),
       });
     } catch (error) {
       throw error instanceof TelegramTransportError && error.phase === "before_dispatch"
@@ -100,7 +109,7 @@ export class TelegramBotApiPort implements TelegramPort {
   }
 
   async sendMessage(input: TelegramMessageInput): Promise<{ readonly messageId: bigint }> {
-    const result = await this.#call("sendMessage", messagePayload(input));
+    const result = await this.#call("sendMessage", messagePayload(input), input.timeoutMs);
     if (!isRecord(result) || typeof result.message_id !== "number") {
       throw new TelegramDeliveryError("delivery_unknown");
     }
@@ -115,7 +124,7 @@ export class TelegramBotApiPort implements TelegramPort {
     const result = await this.#call("editMessageText", {
       ...messagePayload(input),
       message_id: messageId,
-    });
+    }, input.timeoutMs);
     if (isRecord(result) && typeof result.message_id === "number") {
       return { messageId: BigInt(result.message_id) };
     }

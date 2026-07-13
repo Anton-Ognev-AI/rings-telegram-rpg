@@ -212,6 +212,48 @@ Deno.test("retryable Telegram failures recover to one canonical editable card", 
   });
 });
 
+Deno.test("crash after arming a new send becomes delivery unknown without blind resend", async () => {
+  await withDatabase(async (sql) => {
+    const database = new PostgresRpcDatabase(sql);
+    await ensureDay(database);
+    const scenario = await startScenario(database, 996000000000000099n);
+    const leased = await database.call<{
+      status: string;
+      messages: Array<{ id: string; leaseId: string; payload: { runId: string } }>;
+    }>("lease_outbox_v3", {
+      p_worker_id: "50000000-0000-4000-8000-000000000199",
+      p_limit: 50,
+      p_lease_seconds: 30,
+      p_at: atOffset(10),
+    });
+    const message = leased.messages.find((candidate) => candidate.payload.runId === scenario.runId);
+    if (!message) throw new Error("missing_crash_lease");
+    const authorization = await database.call<{ status: string }>(
+      "authorize_outbox_delivery_v2",
+      {
+        p_outbox_id: message.id,
+        p_lease_id: message.leaseId,
+        p_is_new_send: true,
+        p_transport_seconds: 5,
+        p_at: atOffset(11),
+      },
+    );
+    assertEquals(authorization.status, "ok");
+
+    const transportCalls: Array<{ url: string; body: Readonly<Record<string, unknown>> }> = [];
+    const reclaimed = await work(
+      database,
+      atOffset(17),
+      199,
+      telegram("success", transportCalls, 8199),
+    );
+    assertEquals(reclaimed.leased, 0);
+    assertEquals(transportCalls, []);
+    assertEquals((await latestOutbox(sql, scenario.runId)).status, "delivery_unknown");
+    assertEquals(await cardCount(sql, scenario.runId), 0);
+  });
+});
+
 Deno.test("500 retries stop at ten attempts without losing canonical run state", async () => {
   await withDatabase(async (sql) => {
     const database = new PostgresRpcDatabase(sql);

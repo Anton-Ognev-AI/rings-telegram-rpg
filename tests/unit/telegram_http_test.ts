@@ -82,3 +82,22 @@ Deno.test("Telegram HTTP adapter separates safe pre-dispatch retry from ambiguou
   ) as TelegramDeliveryError;
   assertEquals(permanent.kind, "permanent");
 });
+
+Deno.test("Telegram HTTP adapter bounds an armed transport timeout", async () => {
+  let receivedSignal = false;
+  const telegram = new TelegramBotApiPort("123456:synthetic-token", (_input, init) => {
+    const signal = init?.signal;
+    if (!signal) return Promise.reject(new Error("missing_abort_signal"));
+    receivedSignal = true;
+    return new Promise<Response>((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    });
+  });
+
+  const error = await assertRejects(
+    () => telegram.sendMessage({ chatId: "7001", text: "test", timeoutMs: 5 }),
+    TelegramDeliveryError,
+  ) as TelegramDeliveryError;
+  assertEquals(receivedSignal, true);
+  assertEquals(error.kind, "delivery_unknown");
+});

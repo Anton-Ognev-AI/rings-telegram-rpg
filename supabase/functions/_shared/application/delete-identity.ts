@@ -15,6 +15,10 @@ export interface DeleteIdentityInput {
   readonly recordedAt: string;
 }
 
+export interface DeleteTelegramIdentityInput extends DeleteIdentityInput {
+  readonly attemptedAt: string;
+}
+
 export async function deriveDeletionId(surrogatePlayerId: string): Promise<string> {
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
@@ -62,12 +66,12 @@ export async function deleteIdentity(
 export async function deleteTelegramIdentity(
   database: DatabasePort,
   sink: IdentityDeletionSink,
-  input: DeleteIdentityInput,
+  input: DeleteTelegramIdentityInput,
 ): Promise<CommandResult> {
   const args = {
     p_player_id: input.surrogatePlayerId,
     p_deletion_id: input.deletionId,
-    p_at: input.recordedAt,
+    p_at: input.attemptedAt,
   };
   const begun = await database.call<CommandResult>("begin_identity_deletion_v2", args);
   if (begun.status !== "applied" && begun.status !== "cached") {

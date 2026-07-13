@@ -78,6 +78,8 @@ Deno.test("application commands use one narrow RPC each", async () => {
   await authorizeOutboxDelivery(database, {
     outboxId: "outbox-1",
     leaseId: "lease-1",
+    isNewSend: true,
+    transportSeconds: 15,
     at: "2026-07-13T06:00:01.500Z",
   });
   await completeOutbox(database, {
@@ -100,8 +102,8 @@ Deno.test("application commands use one narrow RPC each", async () => {
     "advance_day_v1",
     "start_run_v2",
     "run_view_v1",
-    "lease_outbox_v2",
-    "authorize_outbox_delivery_v1",
+    "lease_outbox_v3",
+    "authorize_outbox_delivery_v2",
     "complete_outbox_v1",
     "abandon_run_v1",
   ]);
@@ -118,6 +120,8 @@ Deno.test("application commands use one narrow RPC each", async () => {
   assertEquals(database.calls[10].args, {
     p_outbox_id: "outbox-1",
     p_lease_id: "lease-1",
+    p_is_new_send: true,
+    p_transport_seconds: 15,
     p_at: "2026-07-13T06:00:01.500Z",
   });
   assertEquals(database.calls[11].args, {

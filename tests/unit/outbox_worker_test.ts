@@ -98,12 +98,12 @@ class WorkerDatabase implements DatabasePort {
 
   call<T>(rpc: string, args: Readonly<Record<string, unknown>>): Promise<T> {
     this.calls.push({ rpc, args });
-    if (rpc === "lease_outbox_v2") {
+    if (rpc === "lease_outbox_v3") {
       return Promise.resolve({ status: "ok", messages: [this.message] } as T);
     }
     if (rpc === "run_view_v1") return Promise.resolve(this.view as T);
     if (rpc === "prepare_action_v1") return Promise.resolve({ status: "ok" } as T);
-    if (rpc === "authorize_outbox_delivery_v1") {
+    if (rpc === "authorize_outbox_delivery_v2") {
       return Promise.resolve(this.authorization as T);
     }
     if (rpc === "complete_outbox_v1") return Promise.resolve(this.completionResult as T);
@@ -144,6 +144,13 @@ Deno.test("outbox worker sends the first canonical card and completes its lease"
     superseded: 0,
   });
   assertEquals(telegram.calls[0].operation, "sendMessage");
+  if (telegram.calls[0].operation !== "sendMessage") throw new Error("missing_send");
+  assertEquals(telegram.calls[0].input.timeoutMs, 10_000);
+  const authorization = database.calls.find((call) =>
+    call.rpc === "authorize_outbox_delivery_v2"
+  );
+  assertEquals(authorization?.args.p_is_new_send, true);
+  assertEquals(authorization?.args.p_transport_seconds, 15);
   assertEquals(completion(database).p_result, "sent");
   assertEquals(completion(database).p_telegram_message_id, "8123");
   assertEquals(database.calls.filter((call) => call.rpc === "prepare_action_v1").length, 3);
@@ -159,6 +166,10 @@ Deno.test("outbox worker edits the existing run card", async () => {
   });
 
   assertEquals(telegram.calls[0].operation, "editMessage");
+  const authorization = database.calls.find((call) =>
+    call.rpc === "authorize_outbox_delivery_v2"
+  );
+  assertEquals(authorization?.args.p_is_new_send, false);
   assertEquals(completion(database).p_result, "sent");
   assertEquals(completion(database).p_telegram_message_id, "9001");
 });
@@ -279,7 +290,7 @@ Deno.test("delivery authorization revoked by deletion is superseded without Tele
   assertEquals(result.superseded, 1);
   assertEquals(telegram.calls, []);
   assertEquals(
-    database.calls.filter((call) => call.rpc === "authorize_outbox_delivery_v1").length,
+    database.calls.filter((call) => call.rpc === "authorize_outbox_delivery_v2").length,
     1,
   );
 });

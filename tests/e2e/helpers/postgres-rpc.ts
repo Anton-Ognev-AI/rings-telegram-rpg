@@ -15,6 +15,12 @@ function numberArgument(args: Readonly<Record<string, unknown>>, name: string): 
   return value;
 }
 
+function booleanArgument(args: Readonly<Record<string, unknown>>, name: string): boolean {
+  const value = args[name];
+  if (typeof value !== "boolean") throw new Error(`invalid_rpc_argument:${name}`);
+  return value;
+}
+
 function integerStringArgument(args: Readonly<Record<string, unknown>>, name: string): string {
   const value = args[name];
   if (
@@ -133,10 +139,27 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;
+      case "lease_outbox_v3":
+        rows = await this.sql<{ response: unknown }[]>`select public.lease_outbox_v3(
+          ${stringArgument(args, "p_worker_id")}::uuid,
+          ${numberArgument(args, "p_limit")}::integer,
+          ${numberArgument(args, "p_lease_seconds")}::integer,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
       case "authorize_outbox_delivery_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.authorize_outbox_delivery_v1(
           ${stringArgument(args, "p_outbox_id")}::uuid,
           ${stringArgument(args, "p_lease_id")}::uuid,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
+      case "authorize_outbox_delivery_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.authorize_outbox_delivery_v2(
+          ${stringArgument(args, "p_outbox_id")}::uuid,
+          ${stringArgument(args, "p_lease_id")}::uuid,
+          ${booleanArgument(args, "p_is_new_send")}::boolean,
+          ${numberArgument(args, "p_transport_seconds")}::integer,
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;

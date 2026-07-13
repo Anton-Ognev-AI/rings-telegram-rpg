@@ -94,9 +94,18 @@ const DELETION_PENDING_CARD = renderCard(
     "Профіль захищено від нових змін. Надішліть /delete_me, щоб безпечно повторити завершення.",
   ].join("\n"),
 );
+const DELETION_COMPLETE_CARD = renderCard(
+  "Зв’язок із Telegram видалено, профіль знеособлено. За бажанням ви зможете почати знову командою /start.",
+);
 
 function playerId(result: CommandResult): string | null {
   return result.status === "ok" && typeof result.playerId === "string" ? result.playerId : null;
+}
+
+function deletionConfirmedAfterError(result: CommandResult, expectedPlayerId: string): boolean {
+  if (result.status === "none") return true;
+  const latestPlayerId = playerId(result);
+  return result.status === "ok" && latestPlayerId !== null && latestPlayerId !== expectedPlayerId;
 }
 
 function deletionPending(result: CommandResult): boolean {
@@ -298,22 +307,51 @@ async function confirmDeletion(
       surrogatePlayerId: id,
       deletionId,
       recordedAt,
+      attemptedAt: dependencies.clock.now().toISOString(),
     });
   } catch {
-    await sendCard(
-      dependencies.telegram,
-      update.chatId,
-      renderDeletionRetryCard(confirmationToken),
-    );
-    return { statusCode: 200, route: "deletion_retryable" };
+    try {
+      const latestIdentity = await getTelegramDeletionIdentity(
+        dependencies.database,
+        update.telegramExternalId,
+      );
+      if (deletionConfirmedAfterError(latestIdentity, id)) {
+        await sendCard(dependencies.telegram, update.chatId, DELETION_COMPLETE_CARD);
+        return { statusCode: 200, route: "deleted" };
+      }
+    } catch {
+      // A failed read cannot prove deletion; keep the retry path honest.
+    }
+    let retryable = true;
+    try {
+      await deleteTelegramIdentity(dependencies.database, dependencies.deletionSink, {
+        surrogatePlayerId: id,
+        deletionId,
+        recordedAt,
+        attemptedAt: dependencies.clock.now().toISOString(),
+      });
+      retryable = false;
+    } catch {
+      try {
+        const latestIdentity = await getTelegramDeletionIdentity(
+          dependencies.database,
+          update.telegramExternalId,
+        );
+        retryable = !deletionConfirmedAfterError(latestIdentity, id);
+      } catch {
+        // A second failed read still cannot prove deletion.
+      }
+    }
+    if (retryable) {
+      await sendCard(
+        dependencies.telegram,
+        update.chatId,
+        renderDeletionRetryCard(confirmationToken),
+      );
+      return { statusCode: 200, route: "deletion_retryable" };
+    }
   }
-  await sendCard(
-    dependencies.telegram,
-    update.chatId,
-    renderCard(
-      "Зв’язок із Telegram видалено, профіль знеособлено. За бажанням ви зможете почати знову командою /start.",
-    ),
-  );
+  await sendCard(dependencies.telegram, update.chatId, DELETION_COMPLETE_CARD);
   return { statusCode: 200, route: "deleted" };
 }
 

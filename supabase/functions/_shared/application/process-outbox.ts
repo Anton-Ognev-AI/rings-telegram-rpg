@@ -9,6 +9,10 @@ import { authorizeOutboxDelivery, completeOutbox, leaseOutbox } from "./outbox.t
 import { prepareRunCard, type TelegramRunView } from "./prepare-run-card.ts";
 import { getRunView } from "./run-view.ts";
 
+const TRANSPORT_AUTHORIZATION_SECONDS = 15;
+const TRANSPORT_TIMEOUT_CAP_MS = 10_000;
+const TRANSPORT_DRAIN_MARGIN_MS = 1_000;
+
 export interface ProcessOutboxDependencies {
   readonly database: DatabasePort;
   readonly telegram: TelegramPort;
@@ -268,6 +272,8 @@ export async function processOutboxBatch(
       await authorizeOutboxDelivery(dependencies.database, {
         outboxId: message.id,
         leaseId: message.leaseId,
+        isNewSend: existingMessageId === null,
+        transportSeconds: TRANSPORT_AUTHORIZATION_SECONDS,
         at: dependencies.clock.now().toISOString(),
       }),
     );
@@ -275,13 +281,15 @@ export async function processOutboxBatch(
       result.superseded += 1;
       continue;
     }
-    if (
-      authorization === "retry" ||
-      Date.parse(authorization.deliveryDeadline) <= dependencies.clock.now().getTime()
-    ) {
+    const remainingTransportMs = authorization === "retry"
+      ? 0
+      : Date.parse(authorization.deliveryDeadline) - dependencies.clock.now().getTime() -
+        TRANSPORT_DRAIN_MARGIN_MS;
+    if (authorization === "retry" || remainingTransportMs <= 0) {
       result.retried += 1;
       continue;
     }
+    const timeoutMs = Math.min(TRANSPORT_TIMEOUT_CAP_MS, Math.floor(remainingTransportMs));
     try {
       const delivered = existingMessageId === null
         ? await dependencies.telegram.sendMessage({
@@ -289,6 +297,7 @@ export async function processOutboxBatch(
           text: card.text,
           buttons: card.buttons,
           parseMode: "HTML",
+          timeoutMs,
         })
         : await dependencies.telegram.editMessage({
           chatId: authorization.telegramExternalId,
@@ -296,6 +305,7 @@ export async function processOutboxBatch(
           text: card.text,
           buttons: card.buttons,
           parseMode: "HTML",
+          timeoutMs,
         });
       assertCompleted(
         await completeOutbox(dependencies.database, {
