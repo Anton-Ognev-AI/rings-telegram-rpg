@@ -21,6 +21,7 @@
     "test:db:integration": "deno test --allow-env --allow-net tests/integration/start_resume_test.ts tests/integration/action_atomicity_test.ts tests/integration/reconciliation_test.ts",
     "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
     "test:db:deletion": "deno test --allow-env --allow-net --allow-read tests/integration/deletion_restore_test.ts",
+    "test:db:phase3a": "deno test --allow-env --allow-net tests/integration/telegram_commands_test.ts tests/integration/outbox_delivery_test.ts",
     "test:db": "npm run test:db:unit && npm run test:db:integration",
     "verify:phase2": "npm run verify && npm run test:db && npm run test:db:concurrency && npm run test:db:deletion && npm run db:reconcile && npm run db:lint && deno run --allow-read scripts/db/migration-checksums.ts --verify"
   },

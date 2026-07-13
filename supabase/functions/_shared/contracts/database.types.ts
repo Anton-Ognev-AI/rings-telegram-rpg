@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract in migration 202607120008.
+// Generated locally from the public RPC contract through migration 202607130009.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -7,12 +7,40 @@ export type Database = {
     Tables: Record<never, never>;
     Views: Record<never, never>;
     Functions: {
+      abandon_run_v1: {
+        Args: { p_player_id: string; p_run_id: string };
+        Returns: Json;
+      };
+      advance_day_v1: {
+        Args: { p_at: string };
+        Returns: Json;
+      };
       begin_identity_deletion_v1: {
         Args: { p_deletion_id: string; p_player_id: string };
         Returns: Json;
       };
+      complete_outbox_v1: {
+        Args: {
+          p_at: string;
+          p_lease_id: string;
+          p_outbox_id: string;
+          p_result: string;
+          p_retry_at: string | null;
+          p_telegram_message_id: number | null;
+        };
+        Returns: Json;
+      };
       finalize_identity_deletion_v1: {
         Args: { p_deletion_id: string; p_player_id: string };
+        Returns: Json;
+      };
+      lease_outbox_v1: {
+        Args: {
+          p_at: string;
+          p_lease_seconds: number;
+          p_limit: number;
+          p_worker_id: string;
+        };
         Returns: Json;
       };
       prepare_action_v1: {
@@ -31,6 +59,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      publish_fallback_day_v1: {
+        Args: { p_at: string };
+        Returns: Json;
+      };
       resolve_choice_v1: {
         Args: {
           p_actor_player_id: string;
@@ -44,6 +76,10 @@ export type Database = {
         Args: { p_player_id: string };
         Returns: Json;
       };
+      run_view_v1: {
+        Args: { p_player_id: string; p_run_id?: string | null };
+        Returns: Json;
+      };
       start_run_v1: {
         Args: {
           p_cycle_id: string;
@@ -53,6 +89,21 @@ export type Database = {
           p_self_snapshot: Json;
           p_self_snapshot_sha256: string;
         };
+        Returns: Json;
+      };
+      start_run_v2: {
+        Args: {
+          p_at: string;
+          p_loadout_snapshot: Json;
+          p_loadout_snapshot_sha256: string;
+          p_player_id: string;
+          p_self_snapshot: Json;
+          p_self_snapshot_sha256: string;
+        };
+        Returns: Json;
+      };
+      telegram_identity_v1: {
+        Args: { p_create_if_missing: boolean; p_external_id: number };
         Returns: Json;
       };
     };
