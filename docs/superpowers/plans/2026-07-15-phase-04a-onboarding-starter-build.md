@@ -416,6 +416,11 @@ function routeCanonicalHome(
 
 ## Gate 4.3 — Two-Day E2E, Balance and Full Regression
 
+**Implementation checkpoint (2026-07-15):** Tasks 10–11 source is complete in commits `f982392`,
+`fa096fa` and `12f48b6`; source verification and the 24-cell simulation are green. The acceptance
+checkboxes below remain open because local Docker/database runtime and the two required clean full
+verifier passes are unavailable. See `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`.
+
 ### Task 10: Prove the two-cycle progression loop end to end
 
 **Files:**

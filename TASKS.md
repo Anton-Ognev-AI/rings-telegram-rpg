@@ -5,7 +5,7 @@
   - [x] P4A-00: Isolated worktree and repeated Phase 3 baseline → `docs/checkpoints/2026-07-15-phase-04a-baseline.md`
   - [x] P4A-41: Gate 4.1 schema, security and atomic progression (`approved` locally; ADR 049) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`
   - [ ] P4A-42: Gate 4.2 canonical build, cards and routing (`implementation_complete`, `verification_hold`; ADR 050) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`
-  - [ ] P4A-43: Gate 4.3 two-day E2E, balance and repeated verifier (`todo`; source-only TDD may proceed while P4A-42 local DB verification is unavailable)
+  - [ ] P4A-43: Gate 4.3 two-day E2E, balance and repeated verifier (`implementation_complete`, `verification_hold`; 165 + 3 source tests and 24-cell simulation green, local Docker runtime unavailable) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)
