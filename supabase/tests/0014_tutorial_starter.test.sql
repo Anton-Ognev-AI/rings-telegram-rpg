@@ -1,5 +1,5 @@
 begin;
-select plan(31);
+select plan(32);
 
 select has_table('game', 'progression_config_versions', 'progression config table exists');
 select has_table('game', 'player_onboarding', 'player onboarding table exists');

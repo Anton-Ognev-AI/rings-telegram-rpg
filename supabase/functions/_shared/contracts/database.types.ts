@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract through migration 202607130013.
+// Generated locally from the public RPC contract through migration 202607150014.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -12,6 +12,10 @@ export type Database = {
         Returns: Json;
       };
       advance_day_v1: {
+        Args: { p_at: string };
+        Returns: Json;
+      };
+      advance_day_v2: {
         Args: { p_at: string };
         Returns: Json;
       };
@@ -99,12 +103,45 @@ export type Database = {
         };
         Returns: Json;
       };
+      prepare_action_v2: {
+        Args: {
+          p_choice_id: string;
+          p_context_sha256: string;
+          p_exchange: number;
+          p_expected_state_version: number;
+          p_expires_at: string;
+          p_player_id: string;
+          p_prepared_resolution: Json;
+          p_resolution_sha256: string;
+          p_run_id: string;
+          p_stage: number;
+          p_token_sha256: string;
+          p_tutorial_adapter?: Json | null;
+        };
+        Returns: Json;
+      };
+      prepare_player_action_v1: {
+        Args: {
+          p_action: Json;
+          p_context_sha256: string;
+          p_expected_message_id: number;
+          p_expected_profile_version: number;
+          p_expires_at: string;
+          p_player_id: string;
+          p_token_sha256: string;
+        };
+        Returns: Json;
+      };
       publish_fallback_day_v1: {
         Args: { p_at: string };
         Returns: Json;
       };
       request_run_render_v1: {
         Args: { p_player_id: string; p_request_key: string; p_run_id: string };
+        Returns: Json;
+      };
+      request_run_render_v2: {
+        Args: { p_player_id: string; p_run_id: string };
         Returns: Json;
       };
       resolve_choice_v1: {
@@ -116,11 +153,34 @@ export type Database = {
         };
         Returns: Json;
       };
+      resolve_choice_v2: {
+        Args: {
+          p_actor_player_id: string;
+          p_context_sha256: string;
+          p_telegram_update_id: number;
+          p_token_sha256: string;
+        };
+        Returns: Json;
+      };
+      resolve_player_action_v1: {
+        Args: {
+          p_actor_player_id: string;
+          p_callback_message_id: number;
+          p_context_sha256: string;
+          p_telegram_update_id: number;
+          p_token_sha256: string;
+        };
+        Returns: Json;
+      };
       resume_v1: {
         Args: { p_player_id: string };
         Returns: Json;
       };
       run_view_v1: {
+        Args: { p_player_id: string; p_run_id?: string | null };
+        Returns: Json;
+      };
+      run_view_v2: {
         Args: { p_player_id: string; p_run_id?: string | null };
         Returns: Json;
       };
@@ -146,8 +206,20 @@ export type Database = {
         };
         Returns: Json;
       };
+      start_run_v3: {
+        Args: { p_at: string; p_player_id: string };
+        Returns: Json;
+      };
       telegram_identity_v1: {
         Args: { p_create_if_missing: boolean; p_external_id: number };
+        Returns: Json;
+      };
+      telegram_identity_v2: {
+        Args: { p_create_if_missing: boolean; p_external_id: number };
+        Returns: Json;
+      };
+      player_home_v1: {
+        Args: { p_player_id: string };
         Returns: Json;
       };
       telegram_deletion_identity_v1: {

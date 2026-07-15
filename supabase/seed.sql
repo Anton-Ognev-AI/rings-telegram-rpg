@@ -22,8 +22,12 @@ insert into game.feature_flags (key, enabled, config_version_id) values
   ('drops', false, '00000000-0000-4000-8000-000000000001'),
   ('breakthroughs', false, '00000000-0000-4000-8000-000000000001'),
   ('partnerships', false, '00000000-0000-4000-8000-000000000001'),
-  ('reminders', false, '00000000-0000-4000-8000-000000000001')
+  ('reminders', false, '00000000-0000-4000-8000-000000000001'),
+  ('tutorial_starter_enabled', true, '00000000-0000-4000-8000-000000000001')
 on conflict (key) do nothing;
+
+update game.feature_flags set enabled = true
+where key = 'tutorial_starter_enabled';
 
 insert into game.players (id, personal_label) values
   ('10000000-0000-4000-8000-000000000001', 'Synthetic Academy Student')

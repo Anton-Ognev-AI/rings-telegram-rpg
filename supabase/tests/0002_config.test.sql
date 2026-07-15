@@ -15,8 +15,11 @@ select is((select resolver_version from game.config_versions where status = 'act
 select is((select payload_sha256 from game.config_versions where status = 'active'),
   'e62656603ca981577373bcbbebcb78d29ad161431e1aa9adcfbb8c2392ff79ef',
   'canonical config hash is pinned');
-select is((select count(*)::integer from game.feature_flags), 6, 'six kill switches are seeded');
-select ok(not exists(select 1 from game.feature_flags where enabled), 'all kill switches default off');
+select is((select count(*)::integer from game.feature_flags), 7,
+  'seven kill switches are seeded after Phase 4A');
+select is((select array_agg(key order by key) from game.feature_flags where enabled),
+  array['tutorial_starter_enabled']::text[],
+  'only the local tutorial starter fixture is enabled');
 select ok(not has_table_privilege('anon', 'game.config_versions', 'select'), 'anon cannot read config');
 select ok(not has_table_privilege('authenticated', 'game.config_versions', 'select'),
   'authenticated cannot read config');
