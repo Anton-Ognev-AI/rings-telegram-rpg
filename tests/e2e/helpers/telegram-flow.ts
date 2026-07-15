@@ -42,15 +42,18 @@ async function prepareDevelopedE2eProfile(sql: Sql, externalId: bigint): Promise
       and tutorial_completed < 2`;
 }
 
-export async function handleWithRestart(
+async function handleWithRestartMode(
   sql: Sql,
   at: string,
   update: NormalizedTelegramUpdate,
-  telegram = new RecordingTelegramPort(),
+  telegram: RecordingTelegramPort,
+  prepareDevelopedProfile: boolean,
 ): Promise<{ result: TelegramHandlerResult; telegram: RecordingTelegramPort }> {
   if (
-    update.kind === "callback" && update.data === "nav:expedition" ||
-    update.kind === "command" && update.command === "expedition"
+    prepareDevelopedProfile && (
+      update.kind === "callback" && update.data === "nav:expedition" ||
+      update.kind === "command" && update.command === "expedition"
+    )
   ) {
     await prepareDevelopedE2eProfile(sql, update.telegramExternalId);
   }
@@ -64,14 +67,32 @@ export async function handleWithRestart(
   return { result: await handleTelegramUpdate(dependencies, update), telegram };
 }
 
+export function handleWithRestart(
+  sql: Sql,
+  at: string,
+  update: NormalizedTelegramUpdate,
+  telegram = new RecordingTelegramPort(),
+): Promise<{ result: TelegramHandlerResult; telegram: RecordingTelegramPort }> {
+  return handleWithRestartMode(sql, at, update, telegram, true);
+}
+
+export function handleProgressionWithRestart(
+  sql: Sql,
+  at: string,
+  update: NormalizedTelegramUpdate,
+  telegram = new RecordingTelegramPort(),
+): Promise<{ result: TelegramHandlerResult; telegram: RecordingTelegramPort }> {
+  return handleWithRestartMode(sql, at, update, telegram, false);
+}
+
 export async function workWithRestart(
   sql: Sql,
   at: string,
   workerId: string,
+  telegram = new RecordingTelegramPort(),
 ): Promise<
   { result: Awaited<ReturnType<typeof processOutboxBatch>>; telegram: RecordingTelegramPort }
 > {
-  const telegram = new RecordingTelegramPort();
   const result = await processOutboxBatch({
     database: new PostgresRpcDatabase(sql),
     telegram,
