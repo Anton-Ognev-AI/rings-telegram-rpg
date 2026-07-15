@@ -1,7 +1,14 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: CORE-LOOP-GATE: Run the master-plan 5–10 tester validation or receive an explicit owner waiver/amendment (`todo`; required before Phase 4 and Parallel Track G)
+- [ ] ID: PHASE-04-DESIGN: Audit and define the supplemental Phase 4 onboarding/starter-build design before implementation (`in_progress`; ADR 046)
+  - [x] P4-D01: Owner amended the pre-Phase-4 tester gate: test after implementation and through Telegram when feasible
+  - [ ] P4-D02: Focused product, architecture, reliability and execution audit
+  - [ ] P4-D03: Agree the private Telegram owner-smoke route and strict remote boundary
+  - [ ] P4-D04: Approve the written supplemental design and detailed TDD implementation plan
+
+## Deferred Validation Gate
+- [ ] ID: CORE-LOOP-TELEGRAM-GATE: Run the 5–10-person core-loop validation on a playable Telegram build (`deferred`, not passed or cancelled; ADR 046)
 
 ## Completed Phases
 - [x] ID: PHASE-03: Telegram fallback-first vertical slice (`approved` locally; ADR 045)

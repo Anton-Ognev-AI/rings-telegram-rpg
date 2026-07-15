@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 3 Telegram fallback-first vertical slice is approved locally in isolated worktree `.worktrees/phase-03-telegram-vertical-slice` (ADR 043–045). The external core-loop tester gate is not complete, so Phase 4 and Parallel Track G have not started; no remote systems changed.
+- Current Phase: Phase 4 supplemental design and focused audit are active after the owner amended the external tester gate (ADR 046). Phase 3 remains approved locally in `.worktrees/phase-03-telegram-vertical-slice`; Phase 4 implementation, Parallel Track G and all remote changes have not started.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -85,7 +85,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Gate 3C and Phase 3 passed locally after corrective council review: migrations 011–013 fence recovery-backed identity deletion from delivery, distinguish immutable tombstone time from current attempts, fail closed after ambiguous reads, and make crash-after-dispatch new sends terminal `delivery_unknown` under a bounded transport deadline. Grace replacement and fault matrices are E2E-proven. Two complete self-contained gates passed (`302.3 s`, `324.3 s`) with `133 + 3` source tests, `283` pgTAP, all regressions/E2E, reconciliation `0/0/0`, zero lint/checksum findings, and 6,000 callbacks across 60 runs at `72.8319/s` and `72.1488/s` with zero errors, duplicates or losses. Final council verdict: `READY` (ADR 045).
 - Full five-advisor council returned `SPLIT_PHASE`: Gate 3A adds missing service-only identity/start/view/outbox/day commands through forward migration 009; Gate 3B builds the local Telegram-shaped run; Gate 3C proves delivery/privacy/grace/load behavior. Direct Edge DML into private `game` tables is forbidden.
 - P01 debt is now explicit Phase 3 rendering acceptance: encounter-specific layouts, post-choice stat/threshold breakdown, HP/combat/XP deltas, visible early accumulation, and a concrete next-day hook. Named canonical teachers remain deferred until lore source verification.
-- Next safe step: owner chooses whether to run the master-plan core-loop gate with 5–10 testers or explicitly waive/amend it. Until that decision, do not start Phase 4 or Parallel Track G. Migrations 001–013 and Phase 1 resolver/config/golden files are locked; do not link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers without separate authorization.
+- Next safe step: complete the focused Phase 4 product/architecture audit, agree the private Telegram test route, and approve a supplemental Phase 4 design before implementation. The 5–10-person external core-loop gate is deferred—not passed or cancelled—until a playable post-implementation Telegram build exists. Migrations 001–013 and Phase 1 resolver/config/golden files remain locked; do not link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers without a separate remote gate.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
