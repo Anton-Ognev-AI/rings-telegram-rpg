@@ -2,8 +2,8 @@
 
 ## Active Task
 - [ ] ID: PHASE-04A: Implement the approved local onboarding and starter-build loop (`in_progress`; ADRs 047–048)
-  - [ ] P4A-00: Isolated worktree and repeated Phase 3 baseline
-  - [ ] P4A-41: Gate 4.1 schema, security and atomic progression
+  - [x] P4A-00: Isolated worktree and repeated Phase 3 baseline → `docs/checkpoints/2026-07-15-phase-04a-baseline.md`
+  - [ ] P4A-41: Gate 4.1 schema, security and atomic progression (`in_progress`)
   - [ ] P4A-42: Gate 4.2 canonical build, cards and routing
   - [ ] P4A-43: Gate 4.3 two-day E2E, balance and repeated verifier
 
