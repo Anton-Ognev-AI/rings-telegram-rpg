@@ -87,6 +87,129 @@ const identity = {
   },
   xpBalance: 0,
 };
+const baseBuild = {
+  selfSnapshot: {
+    maxHp: 40,
+    physical: 5,
+    magical: 5,
+    agility: 5,
+    vitality: 5,
+    defense: 5,
+    vampRateBps: 0,
+    postHeal: 0,
+  },
+  loadoutSnapshot: { progressionConfig: "progression-v1", items: [], rings: [] },
+  breakdown: {
+    physical: [{
+      source: "base",
+      label: "Базова фізична сила",
+      operation: "add",
+      amount: 5,
+      result: 5,
+      bps: null,
+    }],
+    magical: [{
+      source: "base",
+      label: "Базова магічна сила",
+      operation: "add",
+      amount: 5,
+      result: 5,
+      bps: null,
+    }],
+    agility: [{
+      source: "base",
+      label: "Базова спритність",
+      operation: "add",
+      amount: 5,
+      result: 5,
+      bps: null,
+    }],
+    vitality: [{
+      source: "base",
+      label: "Базова живучість",
+      operation: "add",
+      amount: 5,
+      result: 5,
+      bps: null,
+    }],
+    defense: [{
+      source: "base",
+      label: "Базовий захист",
+      operation: "add",
+      amount: 5,
+      result: 5,
+      bps: null,
+    }],
+    maxHp: [{
+      source: "base",
+      label: "Базовий максимум HP",
+      operation: "add",
+      amount: 40,
+      result: 40,
+      bps: null,
+    }],
+    postHeal: [],
+  },
+};
+const training = {
+  masteryCostXp: 20,
+  options: [
+    {
+      stat: "physical",
+      current: 5,
+      next: 6,
+      cost: 20,
+      statDelta: 1,
+      maxHpDelta: 0,
+      defenseDelta: 0,
+    },
+    {
+      stat: "magical",
+      current: 5,
+      next: 6,
+      cost: 20,
+      statDelta: 1,
+      maxHpDelta: 0,
+      defenseDelta: 0,
+    },
+    {
+      stat: "agility",
+      current: 5,
+      next: 6,
+      cost: 20,
+      statDelta: 1,
+      maxHpDelta: 0,
+      defenseDelta: 0,
+    },
+    {
+      stat: "vitality",
+      current: 5,
+      next: 6,
+      cost: 20,
+      statDelta: 1,
+      maxHpDelta: 4,
+      defenseDelta: 0,
+    },
+  ],
+};
+function home(overrides: Readonly<Record<string, unknown>> = {}) {
+  return {
+    status: "ok",
+    playerId,
+    profileVersion: 0,
+    tutorialCompleted: 0,
+    rank: "student",
+    initialTrainingResolved: false,
+    freeXp: 0,
+    pendingOffer: null,
+    activeRunId: null,
+    lastTerminalRunId: null,
+    personalBestStage: null,
+    training,
+    build: baseBuild,
+    ...overrides,
+  };
+}
 const deletionIdentity = {
   status: "ok",
   playerId,
@@ -128,16 +251,19 @@ function dependencies(
   };
 }
 
-Deno.test("/start bootstraps a minimal identity and shows Academy onboarding", async () => {
-  const database = new ScriptedDatabase({ telegram_identity_v1: [identity] });
+Deno.test("/start bootstraps canonical identity and shows guided Academy home", async () => {
+  const database = new ScriptedDatabase({
+    telegram_identity_v2: [identity],
+    player_home_v1: [home()],
+  });
   const telegram = new RecordingTelegramPort();
   const result = await handleTelegramUpdate(
     dependencies(database, telegram),
     { ...commandBase, command: "start" } satisfies NormalizedCommandUpdate,
   );
 
-  assertEquals(result, { statusCode: 200, route: "onboarding" });
-  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v1"]);
+  assertEquals(result, { statusCode: 200, route: "home" });
+  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v2", "player_home_v1"]);
   assertEquals(database.calls[0].args.p_create_if_missing, true);
   const send = telegram.calls.find((call) => call.operation === "sendMessage");
   if (!send || send.operation !== "sendMessage") throw new Error("missing onboarding");
@@ -147,8 +273,8 @@ Deno.test("/start bootstraps a minimal identity and shows Academy onboarding", a
 Deno.test("expedition callback is acknowledged before identity and atomic start", async () => {
   const events: string[] = [];
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [identity],
-    start_run_v2: [{ status: "applied", projection: { run: { id: "run-1" } } }],
+    telegram_identity_v2: [identity],
+    start_run_v3: [{ status: "applied", projection: { run: { id: "run-1" } } }],
   }, events);
   const telegram = new EventTelegram(events);
   const result = await handleTelegramUpdate(dependencies(database, telegram), callbackBase);
@@ -156,36 +282,21 @@ Deno.test("expedition callback is acknowledged before identity and atomic start"
   assertEquals(result.route, "expedition_started");
   assertEquals(events[0], "telegram:answer");
   assertEquals(database.calls.map((call) => call.rpc), [
-    "telegram_identity_v1",
-    "start_run_v2",
+    "telegram_identity_v2",
+    "start_run_v3",
   ]);
   const startArgs = database.calls[1].args;
-  assertEquals(startArgs.p_at, "2026-08-25T07:00:00.000Z");
-  assertEquals(startArgs.p_self_snapshot, {
-    physical: 5,
-    magical: 6,
-    agility: 7,
-    vitality: 8,
-    defense: 9,
-    maxHp: 40,
-    vampRateBps: 0,
-    postHeal: 0,
+  assertEquals(startArgs, {
+    p_player_id: playerId,
+    p_at: "2026-08-25T07:00:00.000Z",
   });
-  assertEquals(startArgs.p_loadout_snapshot, {
-    partyMode: "solo",
-    companion: null,
-    items: [],
-    rings: [],
-  });
-  assertEquals(typeof startArgs.p_self_snapshot_sha256, "string");
-  assertEquals((startArgs.p_self_snapshot_sha256 as string).length, 64);
 });
 
 Deno.test("resume and unknown commands route to a compact safe menu", async () => {
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [identity, identity],
-    resume_v1: [{ status: "ok", run: { id: "run-1" } }, { status: "none" }],
-    request_run_render_v1: [{ status: "applied", runId: "run-1", stateVersion: 2 }],
+    telegram_identity_v2: [identity, identity],
+    player_home_v1: [home({ activeRunId: "run-1" }), home()],
+    request_run_render_v2: [{ status: "applied", runId: "run-1", stateVersion: 2 }],
   });
   const telegram = new RecordingTelegramPort();
 
@@ -194,26 +305,25 @@ Deno.test("resume and unknown commands route to a compact safe menu", async () =
       dependencies(database, telegram),
       { ...commandBase, command: "resume" },
     )).route,
-    "resume",
+    "run_resumed",
   );
   assertEquals(
     (await handleTelegramUpdate(
       dependencies(database, telegram),
       { ...commandBase, updateId: 103n, command: "unknown" },
     )).route,
-    "menu",
+    "home",
   );
   assertEquals(database.calls.map((call) => call.rpc), [
-    "telegram_identity_v1",
-    "resume_v1",
-    "request_run_render_v1",
-    "telegram_identity_v1",
-    "resume_v1",
+    "telegram_identity_v2",
+    "player_home_v1",
+    "request_run_render_v2",
+    "telegram_identity_v2",
+    "player_home_v1",
   ]);
   assertEquals(database.calls[2].args, {
     p_player_id: playerId,
     p_run_id: "run-1",
-    p_request_key: "101",
   });
 });
 
@@ -221,7 +331,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
   for (const status of ["cached", "stale", "rejected"] as const) {
     const events: string[] = [];
     const responses: Record<string, readonly unknown[]> = {
-      telegram_identity_v1: [identity],
+      telegram_identity_v2: [identity],
       resolve_choice_v2: [{
         status,
         reason: status === "rejected" ? "invalid_token" : undefined,
@@ -229,8 +339,8 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
       }],
     };
     if (status !== "rejected") {
-      responses.resume_v1 = [{ status: "ok", run: { id: "run-1" } }];
-      responses.request_run_render_v1 = [{ status: "applied" }];
+      responses.player_home_v1 = [home({ activeRunId: "run-1" })];
+      responses.request_run_render_v2 = [{ status: "applied" }];
     }
     const database = new ScriptedDatabase(responses, events);
     const telegram = new EventTelegram(events);
@@ -243,11 +353,11 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
     assertEquals(result.route, `choice_${status}`);
     assertEquals(
       database.calls.map((call) => call.rpc),
-      status === "rejected" ? ["telegram_identity_v1", "resolve_choice_v2"] : [
-        "telegram_identity_v1",
+      status === "rejected" ? ["telegram_identity_v2", "resolve_choice_v2"] : [
+        "telegram_identity_v2",
         "resolve_choice_v2",
-        "resume_v1",
-        "request_run_render_v1",
+        "player_home_v1",
+        "request_run_render_v2",
       ],
     );
   }
@@ -255,7 +365,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
 
 Deno.test("callback acknowledgement failure does not block the durable choice mutation", async () => {
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [identity],
+    telegram_identity_v2: [identity],
     resolve_choice_v2: [{ status: "applied" }],
   });
   const result = await handleTelegramUpdate(
@@ -265,18 +375,17 @@ Deno.test("callback acknowledgement failure does not block the durable choice mu
 
   assertEquals(result.route, "choice_applied");
   assertEquals(database.calls.map((call) => call.rpc), [
-    "telegram_identity_v1",
+    "telegram_identity_v2",
     "resolve_choice_v2",
   ]);
 });
 
 Deno.test("terminal stale callback repairs the latest owner-bound summary", async () => {
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [identity],
+    telegram_identity_v2: [identity],
     resolve_choice_v2: [{ status: "stale" }],
-    resume_v1: [{ status: "none" }],
-    run_view_v2: [{ status: "ok", run: { id: "terminal-run" } }],
-    request_run_render_v1: [{ status: "applied" }],
+    player_home_v1: [home({ lastTerminalRunId: "terminal-run" })],
+    request_run_render_v2: [{ status: "applied" }],
   });
   const result = await handleTelegramUpdate(
     dependencies(database),
@@ -285,31 +394,27 @@ Deno.test("terminal stale callback repairs the latest owner-bound summary", asyn
 
   assertEquals(result.route, "choice_stale");
   assertEquals(database.calls.map((call) => call.rpc), [
-    "telegram_identity_v1",
+    "telegram_identity_v2",
     "resolve_choice_v2",
-    "resume_v1",
-    "run_view_v2",
-    "request_run_render_v1",
+    "player_home_v1",
+    "request_run_render_v2",
   ]);
-  assertEquals(database.calls[3].args, { p_player_id: playerId, p_run_id: null });
-  assertEquals(database.calls[4].args.p_run_id, "terminal-run");
+  assertEquals(database.calls[3].args.p_run_id, "terminal-run");
 });
 
-Deno.test("expedition never substitutes a developed build for invalid persisted stats", async () => {
+Deno.test("expedition never accepts a client or identity-derived build", async () => {
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [{ ...identity, stats: { ...identity.stats, maxHp: 0 } }],
+    telegram_identity_v2: [{ ...identity, stats: { ...identity.stats, maxHp: 0 } }],
+    start_run_v3: [{ status: "applied", projection: { run: { id: "run-1" } } }],
   });
-  const telegram = new RecordingTelegramPort();
   const result = await handleTelegramUpdate(
-    dependencies(database, telegram),
+    dependencies(database),
     { ...commandBase, command: "expedition" },
   );
 
-  assertEquals(result.route, "expedition_rejected");
-  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v1"]);
-  const send = telegram.calls[0];
-  if (!send || send.operation !== "sendMessage") throw new Error("missing rejection");
-  assertStringIncludes(send.input.text, "характеристики");
+  assertEquals(result.route, "expedition_started");
+  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v2", "start_run_v3"]);
+  assertEquals(Object.keys(database.calls[1].args).sort(), ["p_at", "p_player_id"]);
 });
 
 Deno.test("privacy is always readable and deletion requires explicit confirmation", async () => {
@@ -537,7 +642,7 @@ Deno.test("sink failure keeps confirmation retryable and never finalizes early",
 
 Deno.test("/start exposes a blocked pending deletion instead of onboarding", async () => {
   const database = new ScriptedDatabase({
-    telegram_identity_v1: [{ status: "rejected", reason: "identity_deletion_pending" }],
+    telegram_identity_v2: [{ status: "rejected", reason: "identity_deletion_pending" }],
   });
   const telegram = new RecordingTelegramPort();
   const result = await handleTelegramUpdate(
@@ -546,7 +651,7 @@ Deno.test("/start exposes a blocked pending deletion instead of onboarding", asy
   );
 
   assertEquals(result.route, "identity_pending");
-  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v1"]);
+  assertEquals(database.calls.map((call) => call.rpc), ["telegram_identity_v2"]);
   const send = telegram.calls.find((call) => call.operation === "sendMessage");
   if (!send || send.operation !== "sendMessage") throw new Error("missing pending card");
   assertStringIncludes(send.input.text, "Видалення");

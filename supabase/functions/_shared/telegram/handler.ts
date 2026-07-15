@@ -5,16 +5,9 @@ import {
 } from "../application/delete-identity.ts";
 import type { CommandResult, DatabasePort } from "../application/database-port.ts";
 import { resolveChoice } from "../application/resolve-choice.ts";
-import { requestRunRender } from "../application/request-run-render.ts";
-import { resumeRun } from "../application/resume.ts";
-import { getRunView } from "../application/run-view.ts";
-import { startTelegramRun } from "../application/start-telegram-run.ts";
-import { getTelegramIdentity } from "../application/telegram-identity.ts";
 import { getTelegramDeletionIdentity } from "../application/telegram-deletion-identity.ts";
+import { getTelegramIdentityV2 } from "../application/telegram-identity-v2.ts";
 import type { Clock } from "../infrastructure/clock.ts";
-import { canonicalJson, sha256Hex } from "../domain/canonical-json.ts";
-import { renderMenuCard } from "../render/menu.ts";
-import { renderOnboardingCard } from "../render/onboarding.ts";
 import {
   renderDeletionPrompt,
   renderDeletionRetryCard,
@@ -24,12 +17,8 @@ import { renderCard, type RenderedCard } from "../render/types.ts";
 import { hashCallbackForActor } from "./callback-token.ts";
 import { deriveDeletionCallbackToken, verifyDeletionCallbackToken } from "./deletion-callback.ts";
 import type { TelegramPort } from "./port.ts";
+import { handleCanonicalProfileCallback, routeCanonicalHome } from "./progression-router.ts";
 import type { NormalizedTelegramUpdate } from "./update.ts";
-
-export interface StartBuild {
-  readonly selfSnapshot: Readonly<Record<string, unknown>>;
-  readonly loadoutSnapshot: Readonly<Record<string, unknown>>;
-}
 
 export interface TelegramHandlerDependencies {
   readonly database: DatabasePort;
@@ -37,7 +26,6 @@ export interface TelegramHandlerDependencies {
   readonly clock: Clock;
   readonly deletionSink: IdentityDeletionSink;
   readonly callbackKey: Uint8Array;
-  readonly startBuild?: StartBuild;
   readonly deletionEnabled?: boolean;
 }
 
@@ -46,47 +34,6 @@ export interface TelegramHandlerResult {
   readonly route: string;
 }
 
-const DEFAULT_LOADOUT: StartBuild["loadoutSnapshot"] = {
-  partyMode: "solo",
-  companion: null,
-  items: [],
-  rings: [],
-};
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function persistedStartBuild(identity: CommandResult): StartBuild | null {
-  if (!isRecord(identity.stats)) return null;
-  const names = ["physical", "magical", "agility", "vitality", "defense", "maxHp"] as const;
-  const values: Record<(typeof names)[number], number> = {
-    physical: 0,
-    magical: 0,
-    agility: 0,
-    vitality: 0,
-    defense: 0,
-    maxHp: 0,
-  };
-  for (const name of names) {
-    const value = identity.stats[name];
-    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return null;
-    values[name] = value;
-  }
-  if (values.maxHp === 0) return null;
-  return {
-    selfSnapshot: {
-      ...values,
-      vampRateBps: 0,
-      postHeal: 0,
-    },
-    loadoutSnapshot: DEFAULT_LOADOUT,
-  };
-}
-
-const INVALID_BUILD_CARD = renderCard(
-  "Не вдалося прочитати характеристики учня. Спробуйте ще раз пізніше.",
-);
 const DELETION_PENDING_CARD = renderCard(
   [
     "Видалення ще не завершено",
@@ -110,34 +57,6 @@ function deletionConfirmedAfterError(result: CommandResult, expectedPlayerId: st
 
 function deletionPending(result: CommandResult): boolean {
   return result.status === "rejected" && result.reason === "identity_deletion_pending";
-}
-
-function activeRun(result: CommandResult): boolean {
-  return result.status === "ok" && typeof result.run === "object" && result.run !== null;
-}
-
-function activeRunId(result: CommandResult): string | null {
-  if (!activeRun(result) || !isRecord(result.run)) return null;
-  return typeof result.run.id === "string" ? result.run.id : null;
-}
-
-function resolvedRunId(result: CommandResult): string | null {
-  if (!isRecord(result.result) || !isRecord(result.result.projection)) return null;
-  const run = result.result.projection.run;
-  return isRecord(run) && typeof run.id === "string" ? run.id : null;
-}
-
-async function requestCanonicalCard(
-  dependencies: TelegramHandlerDependencies,
-  player: string,
-  run: string,
-  updateId: bigint,
-): Promise<void> {
-  await requestRunRender(dependencies.database, {
-    playerId: player,
-    runId: run,
-    requestKey: updateId.toString(),
-  });
 }
 
 async function sendCard(
@@ -166,40 +85,22 @@ async function identityFor(
   externalId: bigint,
   create: boolean,
 ): Promise<CommandResult> {
-  return await getTelegramIdentity(dependencies.database, {
+  return await getTelegramIdentityV2(dependencies.database, {
     telegramExternalId: externalId,
     create,
   });
 }
 
-async function showMenu(
+async function routeProgression(
   dependencies: TelegramHandlerDependencies,
   update: NormalizedTelegramUpdate,
-  createIdentity: boolean,
-  route: string,
-): Promise<TelegramHandlerResult> {
-  const identity = await identityFor(dependencies, update.telegramExternalId, createIdentity);
-  const id = playerId(identity);
-  const resumed = id === null
-    ? ({ status: "none" } as CommandResult)
-    : await resumeRun(dependencies.database, id);
-  const run = activeRunId(resumed);
-  if (id !== null && run !== null && route === "resume") {
-    await requestCanonicalCard(dependencies, id, run, update.updateId);
-  }
-  await sendCard(
-    dependencies.telegram,
-    update.chatId,
-    renderMenuCard({ hasActiveRun: activeRun(resumed) }),
-  );
-  return { statusCode: 200, route };
-}
-
-async function startExpedition(
-  dependencies: TelegramHandlerDependencies,
-  update: NormalizedTelegramUpdate,
+  destination: "home" | "expedition" | "resume" | "hero" | "academy" | "help",
 ): Promise<TelegramHandlerResult> {
   const identity = await identityFor(dependencies, update.telegramExternalId, true);
+  if (deletionPending(identity)) {
+    await sendCard(dependencies.telegram, update.chatId, DELETION_PENDING_CARD);
+    return { statusCode: 200, route: "identity_pending" };
+  }
   const id = playerId(identity);
   if (id === null) {
     await sendCard(
@@ -207,36 +108,20 @@ async function startExpedition(
       update.chatId,
       renderCard("Не вдалося відкрити кабінет. Спробуйте ще раз пізніше."),
     );
-    return { statusCode: 200, route: "expedition_rejected" };
+    return { statusCode: 200, route: `${destination}_rejected` };
   }
-
-  const build = dependencies.startBuild ?? persistedStartBuild(identity);
-  if (build === null) {
-    await sendCard(dependencies.telegram, update.chatId, INVALID_BUILD_CARD);
-    return { statusCode: 200, route: "expedition_rejected" };
-  }
-  const result = await startTelegramRun(dependencies.database, {
+  const result = await routeCanonicalHome({
+    database: dependencies.database,
+    telegram: dependencies.telegram,
+    clock: dependencies.clock,
+    callbackKey: dependencies.callbackKey,
+  }, {
     playerId: id,
-    at: dependencies.clock.now().toISOString(),
-    selfSnapshot: build.selfSnapshot,
-    selfSnapshotSha256: await sha256Hex(canonicalJson(build.selfSnapshot)),
-    loadoutSnapshot: build.loadoutSnapshot,
-    loadoutSnapshotSha256: await sha256Hex(canonicalJson(build.loadoutSnapshot)),
+    chatId: update.chatId,
+    updateId: update.updateId,
+    destination,
   });
-  if (result.status === "applied" || result.status === "cached") {
-    await sendCard(
-      dependencies.telegram,
-      update.chatId,
-      renderCard("Експедицію підготовлено. Картка першого етапу вже формується."),
-    );
-    return { statusCode: 200, route: "expedition_started" };
-  }
-  await sendCard(
-    dependencies.telegram,
-    update.chatId,
-    renderCard("Сьогоднішню експедицію зараз не можна розпочати. Перевірте активний прогін."),
-  );
-  return { statusCode: 200, route: "expedition_rejected" };
+  return { statusCode: 200, route: result.route };
 }
 
 async function confirmDeletion(
@@ -409,15 +294,17 @@ async function handleChoice(
     actorPlayerId: id,
   });
   if (result.status === "cached" || result.status === "stale") {
-    const resumed = await resumeRun(dependencies.database, id);
-    let run = resolvedRunId(result) ?? activeRunId(resumed);
-    if (run === null && result.status === "stale") {
-      const latest = await getRunView(dependencies.database, { playerId: id, runId: null });
-      run = activeRunId(latest);
-    }
-    if (run !== null) {
-      await requestCanonicalCard(dependencies, id, run, update.updateId);
-    }
+    await routeCanonicalHome({
+      database: dependencies.database,
+      telegram: dependencies.telegram,
+      clock: dependencies.clock,
+      callbackKey: dependencies.callbackKey,
+    }, {
+      playerId: id,
+      chatId: update.chatId,
+      updateId: update.updateId,
+      destination: "resume",
+    });
     return { statusCode: 200, route: `choice_${result.status}` };
   }
   if (result.status === "applied") return { statusCode: 200, route: "choice_applied" };
@@ -437,11 +324,18 @@ export async function handleTelegramUpdate(
     await acknowledgeCallback(dependencies.telegram, update.callbackQueryId);
     switch (update.data) {
       case "nav:expedition":
-        return await startExpedition(dependencies, update);
+        return await routeProgression(dependencies, update, "expedition");
       case "nav:resume":
-        return await showMenu(dependencies, update, true, "resume");
+        return await routeProgression(dependencies, update, "resume");
       case "nav:menu":
-        return await showMenu(dependencies, update, true, "menu");
+      case "nav:training":
+        return await routeProgression(dependencies, update, "home");
+      case "nav:hero":
+        return await routeProgression(dependencies, update, "hero");
+      case "nav:academy":
+        return await routeProgression(dependencies, update, "academy");
+      case "nav:help":
+        return await routeProgression(dependencies, update, "help");
       case "nav:privacy":
         await sendCard(dependencies.telegram, update.chatId, renderPrivacyCard());
         return { statusCode: 200, route: "privacy" };
@@ -454,33 +348,38 @@ export async function handleTelegramUpdate(
         return { statusCode: 200, route: "deletion_rejected" };
       default:
         if (update.data.startsWith("cb_")) return await handleChoice(dependencies, update);
+        if (update.data.startsWith("pa_")) {
+          const identity = await identityFor(dependencies, update.telegramExternalId, false);
+          const id = playerId(identity);
+          if (id === null) return { statusCode: 200, route: "profile_rejected" };
+          const result = await handleCanonicalProfileCallback({
+            database: dependencies.database,
+            telegram: dependencies.telegram,
+            clock: dependencies.clock,
+            callbackKey: dependencies.callbackKey,
+          }, { playerId: id, update });
+          return { statusCode: 200, route: result.route };
+        }
         if (update.data.startsWith("del_")) {
           return await confirmDeletion(dependencies, update, update.data);
         }
-        return await showMenu(dependencies, update, true, "menu");
+        return await routeProgression(dependencies, update, "home");
     }
   }
 
   switch (update.command) {
-    case "start": {
-      const identity = await identityFor(dependencies, update.telegramExternalId, true);
-      if (deletionPending(identity)) {
-        await sendCard(dependencies.telegram, update.chatId, DELETION_PENDING_CARD);
-        return { statusCode: 200, route: "identity_pending" };
-      }
-      await sendCard(dependencies.telegram, update.chatId, renderOnboardingCard());
-      return { statusCode: 200, route: "onboarding" };
-    }
+    case "start":
+      return await routeProgression(dependencies, update, "home");
     case "expedition":
-      return await startExpedition(dependencies, update);
+      return await routeProgression(dependencies, update, "expedition");
     case "resume":
-      return await showMenu(dependencies, update, true, "resume");
+      return await routeProgression(dependencies, update, "resume");
     case "privacy":
       await sendCard(dependencies.telegram, update.chatId, renderPrivacyCard());
       return { statusCode: 200, route: "privacy" };
     case "delete_me":
       return await showDeletionPrompt(dependencies, update);
     case "unknown":
-      return await showMenu(dependencies, update, true, "menu");
+      return await routeProgression(dependencies, update, "home");
   }
 }

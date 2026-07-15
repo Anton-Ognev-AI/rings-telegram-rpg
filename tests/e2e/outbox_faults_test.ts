@@ -193,7 +193,6 @@ Deno.test("retryable Telegram failures recover to one canonical editable card", 
       const repair = await requestRunRender(database, {
         playerId: scenario.playerId,
         runId: scenario.runId,
-        requestKey: String(900000 + index),
       });
       assertEquals(repair.status, "applied");
       const repairCalls: Array<{ url: string; body: Readonly<Record<string, unknown>> }> = [];
@@ -283,7 +282,6 @@ Deno.test("500 retries stop at ten attempts without losing canonical run state",
       (await requestRunRender(database, {
         playerId: scenario.playerId,
         runId: scenario.runId,
-        requestKey: "910000",
       })).reason,
       "card_unavailable",
     );
@@ -337,7 +335,6 @@ Deno.test("ambiguous new send and permanent rejection are terminal and never bli
         (await requestRunRender(database, {
           playerId: scenario.playerId,
           runId: scenario.runId,
-          requestKey: String(920000 + index),
         })).reason,
         "card_unavailable",
       );
@@ -366,7 +363,6 @@ Deno.test("an ambiguous edit is safely retried against the same canonical messag
       (await requestRunRender(database, {
         playerId: scenario.playerId,
         runId: scenario.runId,
-        requestKey: "930000",
       })).status,
       "applied",
     );

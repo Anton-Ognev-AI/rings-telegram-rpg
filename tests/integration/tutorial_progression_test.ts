@@ -139,6 +139,48 @@ Deno.test("identity v2 initializes canonical tutorial home exactly once", async 
     assertEquals(home.profileVersion, 0);
     assertEquals(home.rank, "student");
     assertEquals(home.pendingOffer, null);
+    assertEquals(home.personalBestStage, null);
+    assertEquals(home.training, {
+      masteryCostXp: 20,
+      options: [
+        {
+          stat: "physical",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "magical",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "agility",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "vitality",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 4,
+          defenseDelta: 0,
+        },
+      ],
+    });
 
     const [counts] = await sql<{ onboarding: number; stats: number }[]>`
       select
@@ -442,6 +484,81 @@ Deno.test("second credited tutorial creates one ordered item and ring offer set"
       { sequence: 1, offer_kind: "tutorial_item", status: "pending" },
       { sequence: 2, offer_kind: "starter_ring", status: "pending" },
     ]);
+    const itemHome = await rpc(sql`
+      select public.player_home_v1(${first.playerId}::uuid) as response
+    `);
+    const itemOffer = itemHome.pendingOffer as {
+      id: string;
+      kind: string;
+      sequence: number;
+      payload: Record<string, unknown>;
+    };
+    assertEquals(itemOffer.kind, "tutorial_item");
+    assertEquals(itemOffer.sequence, 1);
+    assertEquals(itemOffer.payload, {
+      itemKey: "training_armor",
+      slot: "armor",
+      rarity: "ordinary",
+      bonuses: { defense: 2 },
+    });
+
+    const discardToken = "93".repeat(32);
+    const discardContext = "94".repeat(32);
+    assertEquals(
+      (await rpc(sql`select public.prepare_player_action_v1(
+        ${first.playerId}::uuid, ${discardToken}, 1, 7092,
+        ${sql.json({ kind: "discard_item", offerId: itemOffer.id })}::jsonb,
+        ${discardContext}, clock_timestamp() + interval '1 hour'
+      ) as response`)).status,
+      "ok",
+    );
+    assertEquals(
+      (await rpc(sql`select public.resolve_player_action_v1(
+        ${discardToken}, 950000000000000006, ${first.playerId}::uuid,
+        7092, ${discardContext}
+      ) as response`)).status,
+      "applied",
+    );
+    const ringHome = await rpc(sql`
+      select public.player_home_v1(${first.playerId}::uuid) as response
+    `);
+    const ringOffer = ringHome.pendingOffer as {
+      kind: string;
+      sequence: number;
+      payload: { choices: unknown[] };
+    };
+    assertEquals(ringOffer.kind, "starter_ring");
+    assertEquals(ringOffer.sequence, 2);
+    assertEquals(ringOffer.payload.choices, [
+      {
+        kind: "weapon",
+        label: "Кільце зброї",
+        technique: "Точний удар",
+        effectText: "Фізична сила 7 → 8",
+        mainItemLabel: "Навчальний меч",
+      },
+      {
+        kind: "fire",
+        label: "Кільце вогню",
+        technique: "Вогняний імпульс",
+        effectText: "Магічна сила 7 → 8",
+        mainItemLabel: "Учнівський жезл",
+      },
+      {
+        kind: "defense",
+        label: "Кільце захисту",
+        technique: "Стійка варта",
+        effectText: "Захист 5 → 5",
+        mainItemLabel: "Навчальний меч",
+      },
+      {
+        kind: "healing",
+        label: "Кільце лікування",
+        technique: "Відновлення",
+        effectText: "Після бою HP +1",
+        mainItemLabel: "Навчальний меч",
+      },
+    ]);
     const [counts] = await sql<{ credited: number; grants: number; completed: number }[]>`
       select
         (select count(*)::integer from game.tutorial_run_assignments
@@ -625,5 +742,44 @@ Deno.test("starting a new day first credits an eligible expired tutorial", async
       where o.player_id = ${previous.playerId}::uuid
       group by o.player_id`;
     assertEquals(state, { completed: 1, credits: 1, attempts: 1, run_status: "expired" });
+  });
+});
+
+Deno.test("render v2 coalesces one server-derived repair for the current run state", async () => {
+  await withDatabase(async (sql) => {
+    const fixture = await startTutorial(sql, {
+      externalId: 940000000000000009n,
+      at: "2026-08-26T07:00:00Z",
+    });
+    await sql`update game.outbox_messages set status = 'sent'
+      where payload->>'runId' = ${fixture.run.id}`;
+    await sql`insert into game.telegram_run_cards(
+      run_id, player_id, message_id, last_state_version
+    ) values (${fixture.run.id}::uuid, ${fixture.playerId}::uuid, 79001, 0)`;
+    await sql`update game.runs set state_version = 1, stage = 2
+      where id = ${fixture.run.id}::uuid`;
+
+    const requests = await Promise.all(
+      Array.from(
+        { length: 50 },
+        () =>
+          rpc(sql`select public.request_run_render_v2(
+          ${fixture.playerId}::uuid, ${fixture.run.id}::uuid
+        ) as response`),
+      ),
+    );
+    assertEquals(requests.filter((request) => request.status === "applied").length, 1);
+    assertEquals(requests.filter((request) => request.status === "cached").length, 49);
+    assertEquals(
+      requests.every((request) => request.runId === fixture.run.id && request.stateVersion === 1),
+      true,
+    );
+    const [queued] = await sql<{ count: number }[]>`select count(*)::integer
+      from game.outbox_messages
+      where intent_type = 'repair_run_state'
+        and status = 'pending'
+        and payload->>'runId' = ${fixture.run.id}
+        and payload->>'stateVersion' = '1'`;
+    assertEquals(queued.count, 1);
   });
 });

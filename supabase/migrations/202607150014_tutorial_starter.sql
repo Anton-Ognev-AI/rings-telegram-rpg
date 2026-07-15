@@ -575,11 +575,21 @@ set search_path = pg_catalog, game, pg_temp
 as $$
 declare
   onboarding_row game.player_onboarding%rowtype;
+  stats_row game.player_stats%rowtype;
+  stat_progression_row game.player_stat_progression%rowtype;
+  progression_row game.progression_config_versions%rowtype;
   free_xp bigint;
   pending_offer jsonb;
   active_run_id uuid;
   terminal_run_id uuid;
   build_projection jsonb;
+  personal_best_stage integer;
+  training_view jsonb;
+  physical_with_item integer;
+  magical_with_item integer;
+  defense_before_ring integer;
+  combat_bps integer;
+  defense_main_label text;
 begin
   if not exists(select 1 from game.players
     where id = p_player_id and deletion_state = 'active') then
@@ -591,12 +601,19 @@ begin
   end if;
   build_projection := game.player_build_projection_v1(p_player_id);
   if build_projection->>'status' <> 'ok' then return build_projection; end if;
+  select * into strict stats_row from game.player_stats where player_id = p_player_id;
+  select * into strict stat_progression_row from game.player_stat_progression
+  where player_id = p_player_id;
+  select * into strict progression_row from game.progression_config_versions
+  where status = 'active';
+  combat_bps := (progression_row.payload#>>'{blueRing,combatBps}')::integer;
   select balance into strict free_xp from game.xp_accounts where player_id = p_player_id;
   select jsonb_build_object(
     'id', id,
     'kind', offer_kind,
     'sequence', sequence,
-    'sourceRunId', source_run_id
+    'sourceRunId', source_run_id,
+    'payload', payload
   ) into pending_offer
   from game.player_offers
   where player_id = p_player_id and status = 'pending'
@@ -608,6 +625,92 @@ begin
   where player_id = p_player_id
     and status in ('finished_victory', 'finished_contained', 'defeated', 'expired')
   order by finished_at desc nulls last, started_at desc limit 1;
+  select max(s.stage)::integer into personal_best_stage
+  from game.run_stage_results s
+  join game.runs r on r.id = s.run_id
+  where r.player_id = p_player_id;
+
+  training_view := jsonb_build_object(
+    'masteryCostXp', (progression_row.payload#>>'{blueRing,masteryCostXp}')::integer,
+    'options', jsonb_build_array(
+      jsonb_build_object(
+        'stat', 'physical', 'current', stats_row.physical,
+        'next', stats_row.physical + 1,
+        'cost', 20 + 6 * stat_progression_row.physical_purchased
+          + 2 * stat_progression_row.physical_purchased * stat_progression_row.physical_purchased,
+        'statDelta', 1, 'maxHpDelta', 0, 'defenseDelta', 0
+      ),
+      jsonb_build_object(
+        'stat', 'magical', 'current', stats_row.magical,
+        'next', stats_row.magical + 1,
+        'cost', 20 + 6 * stat_progression_row.magical_purchased
+          + 2 * stat_progression_row.magical_purchased * stat_progression_row.magical_purchased,
+        'statDelta', 1, 'maxHpDelta', 0, 'defenseDelta', 0
+      ),
+      jsonb_build_object(
+        'stat', 'agility', 'current', stats_row.agility,
+        'next', stats_row.agility + 1,
+        'cost', 20 + 6 * stat_progression_row.agility_purchased
+          + 2 * stat_progression_row.agility_purchased * stat_progression_row.agility_purchased,
+        'statDelta', 1, 'maxHpDelta', 0, 'defenseDelta', 0
+      ),
+      jsonb_build_object(
+        'stat', 'vitality', 'current', stats_row.vitality,
+        'next', stats_row.vitality + 1,
+        'cost', 20 + 6 * stat_progression_row.vitality_purchased
+          + 2 * stat_progression_row.vitality_purchased * stat_progression_row.vitality_purchased,
+        'statDelta', 1,
+        'maxHpDelta', (progression_row.payload#>>'{vitality,maxHpPerPoint}')::integer,
+        'defenseDelta', case
+          when (stat_progression_row.vitality_purchased + 1)
+            % (progression_row.payload#>>'{vitality,defenseEvery}')::integer = 0 then 1
+          else 0
+        end
+      )
+    )
+  );
+
+  if pending_offer->>'kind' = 'starter_ring' then
+    physical_with_item := stats_row.physical + 2;
+    magical_with_item := stats_row.magical + 2;
+    defense_before_ring := (build_projection#>>'{selfSnapshot,defense}')::integer;
+    defense_main_label := case when stats_row.physical >= stats_row.magical
+      then 'Навчальний меч' else 'Учнівський жезл' end;
+    pending_offer := jsonb_set(
+      pending_offer,
+      '{payload,choices}',
+      jsonb_build_array(
+        jsonb_build_object(
+          'kind', 'weapon', 'label', 'Кільце зброї', 'technique', 'Точний удар',
+          'effectText', format(
+            'Фізична сила %s → %s', physical_with_item,
+            floor(physical_with_item::numeric * (10000 + combat_bps) / 10000)::integer
+          ),
+          'mainItemLabel', 'Навчальний меч'
+        ),
+        jsonb_build_object(
+          'kind', 'fire', 'label', 'Кільце вогню', 'technique', 'Вогняний імпульс',
+          'effectText', format(
+            'Магічна сила %s → %s', magical_with_item,
+            floor(magical_with_item::numeric * (10000 + combat_bps) / 10000)::integer
+          ),
+          'mainItemLabel', 'Учнівський жезл'
+        ),
+        jsonb_build_object(
+          'kind', 'defense', 'label', 'Кільце захисту', 'technique', 'Стійка варта',
+          'effectText', format(
+            'Захист %s → %s', defense_before_ring,
+            floor(defense_before_ring::numeric * (10000 + combat_bps) / 10000)::integer
+          ),
+          'mainItemLabel', defense_main_label
+        ),
+        jsonb_build_object(
+          'kind', 'healing', 'label', 'Кільце лікування', 'technique', 'Відновлення',
+          'effectText', 'Після бою HP +1', 'mainItemLabel', defense_main_label
+        )
+      )
+    );
+  end if;
 
   return jsonb_build_object(
     'status', 'ok',
@@ -620,6 +723,8 @@ begin
     'pendingOffer', pending_offer,
     'activeRunId', active_run_id,
     'lastTerminalRunId', terminal_run_id,
+    'personalBestStage', personal_best_stage,
+    'training', training_view,
     'build', build_projection - 'status'
   );
 end;
@@ -1507,11 +1612,68 @@ $$;
 
 create function public.request_run_render_v2(p_player_id uuid, p_run_id uuid)
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select public.request_run_render_v1($1, $2, 'v2:' || $2::text)
+declare
+  run_row game.runs%rowtype;
+  card_row game.telegram_run_cards%rowtype;
+  repair_number integer;
+  inserted_id uuid;
+begin
+  if p_player_id is null or p_run_id is null then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_render_request');
+  end if;
+  if not exists(select 1 from game.players
+    where id = p_player_id and deletion_state = 'active') then
+    return jsonb_build_object('status', 'rejected', 'reason', 'inactive_player');
+  end if;
+  select * into run_row from game.runs where id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'unknown_run');
+  end if;
+  if run_row.player_id <> p_player_id then
+    return jsonb_build_object('status', 'rejected', 'reason', 'actor_mismatch');
+  end if;
+  if run_row.status = 'abandoned' then
+    return jsonb_build_object('status', 'rejected', 'reason', 'run_not_renderable');
+  end if;
+  select * into card_row from game.telegram_run_cards where run_id = run_row.id;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'card_unavailable');
+  end if;
+  if exists(
+    select 1 from game.outbox_messages o
+    where o.status in ('pending', 'leased')
+      and o.intent_type in ('render_run_state', 'repair_run_state')
+      and o.payload->>'runId' = run_row.id::text
+      and (o.payload->>'stateVersion')::bigint = run_row.state_version
+  ) then
+    return jsonb_build_object(
+      'status', 'cached', 'reason', 'render_pending',
+      'runId', run_row.id, 'stateVersion', run_row.state_version
+    );
+  end if;
+  select count(*)::integer + 1 into repair_number
+  from game.outbox_messages o
+  where o.intent_type = 'repair_run_state'
+    and o.payload->>'runId' = run_row.id::text
+    and (o.payload->>'stateVersion')::bigint = run_row.state_version;
+  insert into game.outbox_messages(logical_key, status, intent_type, payload)
+  values (
+    format(
+      'repair:v2:%s:state:%s:attempt:%s',
+      run_row.id, run_row.state_version, repair_number
+    ),
+    'pending', 'repair_run_state',
+    jsonb_build_object('runId', run_row.id, 'stateVersion', run_row.state_version)
+  ) returning id into inserted_id;
+  return jsonb_build_object(
+    'status', 'applied', 'runId', run_row.id, 'stateVersion', run_row.state_version,
+    'outboxId', inserted_id
+  );
+end;
 $$;
 
 alter table game.progression_config_versions enable row level security;

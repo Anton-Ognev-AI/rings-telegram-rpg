@@ -28,19 +28,6 @@ import { CALLBACK_KEY } from "./helpers/telegram-flow.ts";
 const at = "2026-09-18T07:00:00.000Z";
 const externalIdBase = 1_000_000_000 +
   (crypto.getRandomValues(new Uint32Array(1))[0]! % 100_000_000) * 10;
-const developedBuild: NonNullable<TelegramHandlerDependencies["startBuild"]> = {
-  selfSnapshot: {
-    maxHp: 100,
-    physical: 70,
-    magical: 70,
-    agility: 70,
-    vitality: 70,
-    defense: 0,
-    vampRateBps: 0,
-    postHeal: 0,
-  },
-  loadoutSnapshot: { partyMode: "solo", companion: null, items: [], rings: [] },
-};
 
 function command(externalId: number, text: string, updateId: number) {
   return normalizeTelegramUpdate({
@@ -84,7 +71,6 @@ function dependencies(
     deletionSink,
     clock: new FixedClock(now),
     callbackKey: CALLBACK_KEY,
-    startBuild: developedBuild,
   };
 }
 
@@ -169,7 +155,7 @@ Deno.test("privacy is available before and during a run, while deletion stays ex
 
     assertEquals(
       (await handle(database, sink, command(externalId, "/start", 970302))).result.route,
-      "onboarding",
+      "home",
     );
     assertEquals(
       ["applied", "cached"].includes(String((await publishFallbackDay(database, at)).status)),
@@ -242,7 +228,7 @@ Deno.test("privacy is available before and during a run, while deletion stays ex
 
     assertEquals(
       (await handle(database, sink, command(externalId, "/start", 970309))).result.route,
-      "onboarding",
+      "home",
     );
     const replacement = await linkedIdentity(sql, externalId);
     if (!replacement) throw new Error("missing_replacement_identity");

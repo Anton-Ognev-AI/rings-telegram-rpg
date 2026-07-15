@@ -94,7 +94,7 @@ Deno.test("resume enqueues a fresh canonical edit when no render is already pend
     assertEquals(beforeResume.actionable, 0);
 
     const resumedByNewHandler = await handleWithRestart(sql, at, command("/resume", 950104));
-    assertEquals(resumedByNewHandler.result.route, "resume");
+    assertEquals(resumedByNewHandler.result.route, "run_resumed");
     const durable = await database.call<{
       status: string;
       run: { id: string; stage: number; stateVersion: number };

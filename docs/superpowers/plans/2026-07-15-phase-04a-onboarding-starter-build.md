@@ -394,22 +394,23 @@ function routeCanonicalHome(
 ): Promise<TelegramHandlerResult>;
 ```
 
-- [ ] Write RED routing tests for every priority state and for pending-deletion rejection.
-- [ ] Route `/start`, `/expedition`, `/resume`, static navigation and `pa_` callbacks through
+- [x] Write RED routing tests for every priority state and for pending-deletion rejection.
+- [x] Route `/start`, `/expedition`, `/resume`, static navigation and `pa_` callbacks through
       canonical `player_home_v1`; preserve `cb_` run callbacks and `del_` deletion callbacks.
-- [ ] Replace client-injected start build with `start_run_v3`; retain test-only injection only in
+- [x] Replace client-injected start build with `start_run_v3`; retain test-only injection only in
       explicit E2E helper, never the production handler dependency.
-- [ ] Require profile callbacks to match the canonical run-card message ID before mutation.
-- [ ] Extend `run_view_v2` and the outbox renderer with tutorial/guidance/pending-decision metadata.
-- [ ] Implement `request_run_render_v2` coalescing by run/state; cached/stale callbacks edit one
+- [x] Require profile callbacks to match the canonical run-card message ID before mutation.
+- [x] Extend `run_view_v2` and the outbox renderer with tutorial/guidance/pending-decision metadata.
+- [x] Implement `request_run_render_v2` coalescing by run/state; cached/stale callbacks edit one
       canonical card and never create duplicate reward/profile cards.
-- [ ] Keep direct read-only hero/Academy/help cards compact; stateful item/ring/stat actions must
+- [x] Keep direct read-only hero/Academy/help cards compact; stateful item/ring/stat actions must
       originate from and edit the bound canonical message.
-- [ ] Prove retryable edit failure followed by redelivery applies no second mutation and edits the
+- [x] Prove retryable edit failure followed by redelivery applies no second mutation and edits the
       same message.
 - [ ] Run handler/router/worker tests and all Phase 3 source/E2E regressions. Expected GREEN.
-- [ ] Write `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`, update memory and commit
-      `feat: expose onboarding through canonical Telegram cards`.
+- [x] Write `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md` and update memory. Commit the
+      implementation checkpoint while preserving the explicit verification hold; close this item
+      only after the missing runtime regression is green.
 
 ---
 

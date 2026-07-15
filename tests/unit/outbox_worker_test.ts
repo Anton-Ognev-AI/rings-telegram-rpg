@@ -94,6 +94,7 @@ class WorkerDatabase implements DatabasePort {
       deliveryDeadline: "2026-08-25T07:00:30.000Z",
     },
     private readonly completionResult: CommandResult = { status: "applied" },
+    private readonly playerHome: CommandResult | null = null,
   ) {}
 
   call<T>(rpc: string, args: Readonly<Record<string, unknown>>): Promise<T> {
@@ -103,12 +104,114 @@ class WorkerDatabase implements DatabasePort {
     }
     if (rpc === "run_view_v2") return Promise.resolve(this.view as T);
     if (rpc === "prepare_action_v2") return Promise.resolve({ status: "ok" } as T);
+    if (rpc === "player_home_v1" && this.playerHome !== null) {
+      return Promise.resolve(this.playerHome as T);
+    }
+    if (rpc === "prepare_player_action_v1") return Promise.resolve({ status: "ok" } as T);
     if (rpc === "authorize_outbox_delivery_v2") {
       return Promise.resolve(this.authorization as T);
     }
     if (rpc === "complete_outbox_v1") return Promise.resolve(this.completionResult as T);
     throw new Error(`unexpected_rpc:${rpc}`);
   }
+}
+
+function terminalTutorialView(): TelegramRunView {
+  const view = runView(4, "9001", 3);
+  return {
+    ...view,
+    run: {
+      ...view.run,
+      status: "defeated",
+      phase: "terminal",
+      stage: 4,
+      hp: 0,
+      maxHp: 45,
+      xpEarned: 20,
+    },
+    selfSnapshot: {
+      maxHp: 40,
+      physical: 5,
+      magical: 5,
+      agility: 5,
+      vitality: 5,
+      defense: 5,
+      vampRateBps: 0,
+      postHeal: 0,
+    },
+    lastResolution: { terminal: "defeated" },
+    tutorial: { ordinal: 1, guidance: "full", rescueUsed: false, resultCount: 4 },
+  };
+}
+
+function tutorialHome(): CommandResult {
+  return {
+    status: "ok",
+    playerId: "10000000-0000-4000-8000-000000000001",
+    profileVersion: 0,
+    tutorialCompleted: 1,
+    rank: "student",
+    initialTrainingResolved: false,
+    freeXp: 20,
+    pendingOffer: null,
+    activeRunId: null,
+    lastTerminalRunId: "20000000-0000-4000-8000-000000000001",
+    personalBestStage: 4,
+    training: {
+      masteryCostXp: 20,
+      options: [
+        {
+          stat: "physical",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "magical",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "agility",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 0,
+          defenseDelta: 0,
+        },
+        {
+          stat: "vitality",
+          current: 5,
+          next: 6,
+          cost: 20,
+          statDelta: 1,
+          maxHpDelta: 4,
+          defenseDelta: 0,
+        },
+      ],
+    },
+    build: {
+      selfSnapshot: terminalTutorialView().selfSnapshot,
+      loadoutSnapshot: { progressionConfig: "progression-v1", items: [], rings: [] },
+      breakdown: {
+        physical: [],
+        magical: [],
+        agility: [],
+        vitality: [],
+        defense: [],
+        maxHp: [],
+        postHeal: [],
+      },
+    },
+  };
 }
 
 function deps(database: DatabasePort, telegram: RecordingTelegramPort): ProcessOutboxDependencies {
@@ -185,6 +288,32 @@ Deno.test("repair intent edits a same-version canonical card instead of being su
   assertEquals(result.sent, 1);
   assertEquals(telegram.calls[0].operation, "editMessage");
   assertEquals(completion(database).p_result, "sent");
+});
+
+Deno.test("terminal tutorial repair edits one card and reuses its binding for profile actions", async () => {
+  const database = new WorkerDatabase(
+    leasedMessage("9001", 4, "repair_run_state"),
+    terminalTutorialView(),
+    {
+      status: "ok",
+      telegramExternalId: "700000001",
+      deliveryDeadline: "2026-08-25T07:00:30.000Z",
+    },
+    { status: "applied" },
+    tutorialHome(),
+  );
+  const telegram = new RecordingTelegramPort();
+  const result = await processOutboxBatch(deps(database, telegram), {
+    workerId: "50000000-0000-4000-8000-000000000001",
+    limit: 1,
+    leaseSeconds: 30,
+  });
+
+  assertEquals(result.sent, 1);
+  assertEquals(telegram.calls.map((call) => call.operation), ["editMessage"]);
+  const prepared = database.calls.filter((call) => call.rpc === "prepare_player_action_v1");
+  assertEquals(prepared.length, 5);
+  assertEquals(prepared.every((call) => call.args.p_expected_message_id === "9001"), true);
 });
 
 Deno.test("repair intent without a known card is dead and never blind-sends", async () => {

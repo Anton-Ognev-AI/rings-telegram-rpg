@@ -57,6 +57,12 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${Boolean(args.p_create_if_missing)}::boolean
         ) as response`;
         break;
+      case "telegram_identity_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.telegram_identity_v2(
+          ${stringArgument(args, "p_external_id")}::bigint,
+          ${Boolean(args.p_create_if_missing)}::boolean
+        ) as response`;
+        break;
       case "telegram_deletion_identity_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.telegram_deletion_identity_v1(
           ${stringArgument(args, "p_external_id")}::bigint
@@ -72,6 +78,11 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_at")}::timestamptz
         ) as response`;
         break;
+      case "advance_day_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.advance_day_v2(
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
       case "start_run_v2":
         rows = await this.sql<{ response: unknown }[]>`select public.start_run_v2(
           ${stringArgument(args, "p_player_id")}::uuid,
@@ -80,6 +91,17 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_self_snapshot_sha256")},
           ${this.sql.json(jsonArgument(args, "p_loadout_snapshot"))}::jsonb,
           ${stringArgument(args, "p_loadout_snapshot_sha256")}
+        ) as response`;
+        break;
+      case "start_run_v3":
+        rows = await this.sql<{ response: unknown }[]>`select public.start_run_v3(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_at")}::timestamptz
+        ) as response`;
+        break;
+      case "player_home_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.player_home_v1(
+          ${stringArgument(args, "p_player_id")}::uuid
         ) as response`;
         break;
       case "resume_v1":
@@ -93,11 +115,23 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${args.p_run_id === null ? null : stringArgument(args, "p_run_id")}::uuid
         ) as response`;
         break;
+      case "run_view_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.run_view_v2(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${args.p_run_id === null ? null : stringArgument(args, "p_run_id")}::uuid
+        ) as response`;
+        break;
       case "request_run_render_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.request_run_render_v1(
           ${stringArgument(args, "p_player_id")}::uuid,
           ${stringArgument(args, "p_run_id")}::uuid,
           ${stringArgument(args, "p_request_key")}
+        ) as response`;
+        break;
+      case "request_run_render_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.request_run_render_v2(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_run_id")}::uuid
         ) as response`;
         break;
       case "prepare_action_v1":
@@ -115,11 +149,59 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_expires_at")}::timestamptz
         ) as response`;
         break;
+      case "prepare_action_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.prepare_action_v2(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_run_id")}::uuid,
+          ${stringArgument(args, "p_token_sha256")},
+          ${integerStringArgument(args, "p_expected_state_version")}::bigint,
+          ${numberArgument(args, "p_stage")}::smallint,
+          ${numberArgument(args, "p_exchange")}::smallint,
+          ${stringArgument(args, "p_choice_id")},
+          ${stringArgument(args, "p_context_sha256")},
+          ${this.sql.json(jsonArgument(args, "p_prepared_resolution"))}::jsonb,
+          ${stringArgument(args, "p_resolution_sha256")},
+          ${stringArgument(args, "p_expires_at")}::timestamptz,
+          ${
+          args.p_tutorial_adapter === null
+            ? null
+            : this.sql.json(jsonArgument(args, "p_tutorial_adapter"))
+        }::jsonb
+        ) as response`;
+        break;
       case "resolve_choice_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.resolve_choice_v1(
           ${stringArgument(args, "p_token_sha256")},
           ${stringArgument(args, "p_telegram_update_id")}::bigint,
           ${stringArgument(args, "p_actor_player_id")}::uuid,
+          ${stringArgument(args, "p_context_sha256")}
+        ) as response`;
+        break;
+      case "resolve_choice_v2":
+        rows = await this.sql<{ response: unknown }[]>`select public.resolve_choice_v2(
+          ${stringArgument(args, "p_token_sha256")},
+          ${stringArgument(args, "p_telegram_update_id")}::bigint,
+          ${stringArgument(args, "p_actor_player_id")}::uuid,
+          ${stringArgument(args, "p_context_sha256")}
+        ) as response`;
+        break;
+      case "prepare_player_action_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.prepare_player_action_v1(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_token_sha256")},
+          ${integerStringArgument(args, "p_expected_profile_version")}::bigint,
+          ${integerStringArgument(args, "p_expected_message_id")}::bigint,
+          ${this.sql.json(jsonArgument(args, "p_action"))}::jsonb,
+          ${stringArgument(args, "p_context_sha256")},
+          ${stringArgument(args, "p_expires_at")}::timestamptz
+        ) as response`;
+        break;
+      case "resolve_player_action_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.resolve_player_action_v1(
+          ${stringArgument(args, "p_token_sha256")},
+          ${stringArgument(args, "p_telegram_update_id")}::bigint,
+          ${stringArgument(args, "p_actor_player_id")}::uuid,
+          ${stringArgument(args, "p_callback_message_id")}::bigint,
           ${stringArgument(args, "p_context_sha256")}
         ) as response`;
         break;

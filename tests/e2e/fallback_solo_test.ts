@@ -98,7 +98,7 @@ Deno.test("persisted fake Telegram completes the fallback dungeon through both b
     assertEquals((await publishFallbackDay(database, at)).status, "applied");
     assertEquals((await advanceDay(database, at)).status, "ok");
 
-    assertEquals((await handleWithRestart(sql, at, startUpdate())).result.route, "onboarding");
+    assertEquals((await handleWithRestart(sql, at, startUpdate())).result.route, "home");
     const identity = await database.call<{ status: string; playerId: string }>(
       "telegram_identity_v1",
       { p_external_id: String(telegramId), p_create_if_missing: false },

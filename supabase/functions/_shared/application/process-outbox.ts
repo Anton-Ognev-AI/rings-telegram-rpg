@@ -4,9 +4,11 @@ import { renderResolvedCard, renderStageCard } from "../render/stage-card.ts";
 import { renderSummaryCard } from "../render/summary.ts";
 import type { RenderedCard } from "../render/types.ts";
 import { TelegramDeliveryError, type TelegramPort } from "../telegram/port.ts";
+import { renderCanonicalProgressionCard } from "../telegram/progression-router.ts";
 import type { CommandResult, DatabasePort } from "./database-port.ts";
 import { authorizeOutboxDelivery, completeOutbox, leaseOutbox } from "./outbox.ts";
 import { prepareRunCard, type TelegramRunView } from "./prepare-run-card.ts";
+import { getPlayerHome } from "./player-home.ts";
 import { getRunView } from "./run-view.ts";
 
 const TRANSPORT_AUTHORIZATION_SECONDS = 15;
@@ -133,6 +135,13 @@ async function renderCanonicalCard(
     return lastResolution
       ? renderResolvedCard({ resolution: lastResolution, next: prepared, content: view.content })
       : renderStageCard(prepared);
+  }
+  if (view.tutorial) {
+    const progressionCard = await renderCanonicalProgressionCard(dependencies, {
+      home: await getPlayerHome(dependencies.database, view.run.playerId),
+      view,
+    });
+    if (progressionCard !== null) return progressionCard;
   }
   if (!lastResolution) throw new Error("terminal_run_without_resolution");
   const strongest = lastResolution.outcome === "success" && lastResolution.check
