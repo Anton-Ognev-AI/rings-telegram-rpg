@@ -243,7 +243,7 @@ function adaptTutorialResolution(
 - [x] Keep `resolve_choice_v1`, `prepare_action_v1` and `advance_day_v1` unchanged.
 - [x] Run tutorial adapter unit tests, progression integration and reconciliation. Expected GREEN
       with one credit/grant/offer set under replay.
-- [ ] Commit `feat: credit teacher-assisted tutorial runs`.
+- [x] Commit `feat: credit teacher-assisted tutorial runs`.
 
 ### Task 6: Implement globally idempotent profile actions
 
@@ -275,27 +275,27 @@ interface ResolvePlayerActionInput {
 }
 ```
 
-- [ ] Write RED token tests: distinct `pa_` prefix, opaque HMAC, actor/profile/action/message binding,
+- [x] Write RED token tests: distinct `pa_` prefix, opaque HMAC, actor/profile/action/message binding,
       deterministic retry and `≤64` bytes.
-- [ ] Implement `prepare_player_action_v1` to persist only hashes, normalized action and expected
+- [x] Implement `prepare_player_action_v1` to persist only hashes, normalized action and expected
       profile/message/version binding.
-- [ ] Implement `resolve_player_action_v1` with the same update advisory lock as
+- [x] Implement `resolve_player_action_v1` with the same update advisory lock as
       `resolve_choice_v2`, checks against both processed namespaces, exact actor/message/profile
       validation and cached byte-equivalent results.
-- [ ] Implement stat purchase/defer, item accept/discard, starter ring selection and post-tutorial
+- [x] Implement stat purchase/defer, item accept/discard, starter ring selection and post-tutorial
       mastery purchase atomically.
-- [ ] For vitality, update max HP by 4 and defense on every third purchased vitality point.
-- [ ] For the tutorial item choose talisman only when the first purchased stat was vitality;
+- [x] For vitality, update max HP by 4 and defense on every third purchased vitality point.
+- [x] For the tutorial item choose talisman only when the first purchased stat was vitality;
       otherwise armor. Accept replaces only its slot; discard gives no XP.
-- [ ] Ring selection creates one ordinary blue ring, compatible main item, `investedXp=0`, budget
+- [x] Ring selection creates one ordinary blue ring, compatible main item, `investedXp=0`, budget
       2000 and policy version. Defense/healing ties choose the weapon.
-- [ ] Ring selection sets tutorial `2/2`, rank `Новак` and bumps profile version once.
-- [ ] Mastery costs 20 XP per +1% and never changes the fixed 15% blue combat modifier.
-- [ ] Run 100-duplicate and competing-action tests. Expected one effect, one ledger delta and one
+- [x] Ring selection sets tutorial `2/2`, rank `Новак` and bumps profile version once.
+- [x] Mastery costs 20 XP per +1% and never changes the fixed 15% blue combat modifier.
+- [x] Run 100-duplicate and competing-action tests. Expected one effect, one ledger delta and one
       profile-version increment; cross-namespace replay mutates only one namespace.
-- [ ] Run Gate 4.1 clean reset, upgrade-from-013 fixture, pgTAP, integration, concurrency,
+- [x] Run Gate 4.1 clean reset, upgrade-from-013 fixture, pgTAP, integration, concurrency,
       reconciliation, lint and checksums.
-- [ ] Write `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`, update memory and commit
+- [x] Write `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`, update memory and commit
       `feat: add atomic tutorial progression`.
 
 ---

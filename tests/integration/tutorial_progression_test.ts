@@ -382,6 +382,31 @@ Deno.test("second credited tutorial creates one ordered item and ring offer set"
     await rpc(sql`
       select public.advance_day_v2('2026-08-18T07:00:00Z'::timestamptz) as response
     `);
+    const blocked = await rpc(sql`
+      select public.start_run_v3(
+        ${first.playerId}::uuid, '2026-08-18T07:00:00Z'::timestamptz
+      ) as response
+    `);
+    assertEquals(blocked, {
+      status: "rejected",
+      reason: "initial_training_decision_pending",
+    });
+    const deferToken = "91".repeat(32);
+    const deferContext = "92".repeat(32);
+    assertEquals(
+      (await rpc(sql`select public.prepare_player_action_v1(
+      ${first.playerId}::uuid, ${deferToken}, 0, 7091,
+      '{"kind":"defer_stat"}', ${deferContext},
+      clock_timestamp() + interval '1 hour'
+    ) as response`)).status,
+      "ok",
+    );
+    assertEquals(
+      (await rpc(sql`select public.resolve_player_action_v1(
+      ${deferToken}, 950000000000000005, ${first.playerId}::uuid, 7091, ${deferContext}
+    ) as response`)).status,
+      "applied",
+    );
     const secondStarted = await rpc(sql`
       select public.start_run_v3(
         ${first.playerId}::uuid, '2026-08-18T07:00:00Z'::timestamptz
@@ -522,5 +547,83 @@ Deno.test("expiry credits only three-result tutorials and abandon never credits"
       grants: 0,
       run_status: "abandoned",
     });
+
+    await rpc(sql`
+      select public.publish_fallback_day_v1('2026-08-20T08:00:00Z'::timestamptz) as response
+    `);
+    await rpc(sql`
+      select public.advance_day_v2('2026-08-20T08:00:00Z'::timestamptz) as response
+    `);
+    for (const previous of [tooShort, abandoned]) {
+      const retried = await rpc(sql`select public.start_run_v3(
+        ${previous.playerId}::uuid, '2026-08-20T08:00:00Z'::timestamptz
+      ) as response`);
+      assertEquals(retried.status, "applied");
+      const retriedRunId = String((retried.projection as { run: { id: string } }).run.id);
+      assertEquals(retriedRunId === previous.run.id, false);
+      const [attempts] = await sql<{ count: number; ordinal_sum: number }[]>`select
+        count(*)::integer, sum(tutorial_ordinal)::integer as ordinal_sum
+        from game.tutorial_run_assignments where player_id = ${previous.playerId}::uuid`;
+      assertEquals(attempts, { count: 2, ordinal_sum: 2 });
+    }
+  });
+});
+
+Deno.test("starting a new day first credits an eligible expired tutorial", async () => {
+  await withDatabase(async (sql) => {
+    const previous = await startTutorial(sql, {
+      externalId: 940000000000000008n,
+      at: "2026-08-24T07:00:00Z",
+    });
+    for (let stage = 1; stage <= 3; stage++) {
+      const stored = {
+        resolverVersion: "v1",
+        stage,
+        exchange: null,
+        choiceId: `implicit-expiry-${stage}`,
+        outcome: "neutral",
+        hp: { before: 45, damage: 0, vampHeal: 0, postHeal: 0, after: 45 },
+        bossHp: null,
+        xp: { before: 0, delta: 0, after: 0 },
+        terminal: null,
+        nextStage: stage + 1,
+        nextExchange: null,
+      };
+      await sql`insert into game.run_stage_results(
+        run_id, stage, exchange, choice_id, resolution, resolution_sha256
+      ) values (
+        ${previous.run.id}::uuid, ${stage}::smallint, 0, ${`implicit-expiry-${stage}`},
+        ${sql.json(stored)}::jsonb, ${"f".repeat(64)}
+      )`;
+    }
+    await sql`update game.runs set stage = 4, state_version = 3
+      where id = ${previous.run.id}::uuid`;
+    await rpc(sql`
+      select public.publish_fallback_day_v1('2026-08-25T08:00:00Z'::timestamptz) as response
+    `);
+
+    const nextStart = await rpc(sql`select public.start_run_v3(
+      ${previous.playerId}::uuid, '2026-08-25T08:00:00Z'::timestamptz
+    ) as response`);
+    assertEquals(nextStart, {
+      status: "rejected",
+      reason: "initial_training_decision_pending",
+    });
+    const [state] = await sql<{
+      completed: number;
+      credits: number;
+      attempts: number;
+      run_status: string;
+    }[]>`select
+      o.tutorial_completed::integer as completed,
+      count(a.credited_at)::integer as credits,
+      count(a.run_id)::integer as attempts,
+      max(r.status::text) as run_status
+      from game.player_onboarding o
+      join game.tutorial_run_assignments a on a.player_id = o.player_id
+      join game.runs r on r.id = a.run_id
+      where o.player_id = ${previous.playerId}::uuid
+      group by o.player_id`;
+    assertEquals(state, { completed: 1, credits: 1, attempts: 1, run_status: "expired" });
   });
 });

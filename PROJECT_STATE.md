@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 4A Gate 4.1 is active after a clean isolated Phase 3 baseline at `91c9a58`; source and all 21 full-verifier steps passed locally. Phase 4T remote actions, Parallel Track G and external validation remain gated and have not started.
+- Current Phase: Phase 4A Gate 4.1 is approved locally; Gate 4.2 canonical build projection, cards and routing is active. Phase 4T remote actions, Parallel Track G and external validation remain gated and have not started.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -30,8 +30,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/superpowers/plans/2026-07-15-phase-04a-onboarding-starter-build.md`: Detailed Gate 4.0–4.3 TDD plan with server-authoritative build projection (Status: council-approved for autonomous local execution; ADR 048)
 - `docs/superpowers/plans/2026-07-15-phase-04t-private-owner-smoke.md`: Separate local-readiness and remote-gated private Telegram plan (Status: approved for local preparation only; remote actions still require explicit approval; ADR 048)
 - `docs/checkpoints/2026-07-15-phase-04a-baseline.md`: Phase 4A worktree, repeated Phase 3 verifier and locked SHA-256 inventory (Status: approved baseline)
+- `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`: Atomic tutorial/stat/item/ring progression, local upgrade-from-013 and council evidence (Status: approved locally; ADR 049)
 - `recovery-control/` and `scripts/recovery/`: Non-PII tombstone store and restore replay tooling (Status: approved locally; production provisioning deferred)
-- `supabase/migrations/SHA256SUMS`: Canonical locked migration manifest for migrations 001–013 (Status: approved; later changes require a new forward migration)
+- `supabase/migrations/SHA256SUMS`: Canonical manifest for migrations 001–014; migrations 001–013 are locked and migration 014 remains the active planned Phase 4 forward migration until Gates 4.2–4.3 finish
 - `supabase/migrations/202607120001_foundation.sql` … `202607120004_content.sql`: Private normalized Gate 2A schema (Status: approved)
 - `supabase/tests/0001_foundation_security.test.sql` … `0004_content.test.sql`: 59 pgTAP assertions (Status: approved)
 - `scripts/db/`: Loopback-only DB guard, direct local pgTAP runner, content seed and checksum tooling (Status: approved for local use)
@@ -89,8 +90,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Gate 3C and Phase 3 passed locally after corrective council review: migrations 011–013 fence recovery-backed identity deletion from delivery, distinguish immutable tombstone time from current attempts, fail closed after ambiguous reads, and make crash-after-dispatch new sends terminal `delivery_unknown` under a bounded transport deadline. Grace replacement and fault matrices are E2E-proven. Two complete self-contained gates passed (`302.3 s`, `324.3 s`) with `133 + 3` source tests, `283` pgTAP, all regressions/E2E, reconciliation `0/0/0`, zero lint/checksum findings, and 6,000 callbacks across 60 runs at `72.8319/s` and `72.1488/s` with zero errors, duplicates or losses. Final council verdict: `READY` (ADR 045).
 - Full five-advisor council returned `SPLIT_PHASE`: Gate 3A adds missing service-only identity/start/view/outbox/day commands through forward migration 009; Gate 3B builds the local Telegram-shaped run; Gate 3C proves delivery/privacy/grace/load behavior. Direct Edge DML into private `game` tables is forbidden.
 - P01 debt is now explicit Phase 3 rendering acceptance: encounter-specific layouts, post-choice stat/threshold breakdown, HP/combat/XP deltas, visible early accumulation, and a concrete next-day hook. Named canonical teachers remain deferred until lore source verification.
-- Phase 4 supplemental design now splits local Phase 4A from private remote Phase 4T, fixes migration numbering at `014+`, defines the two-run state machine, teacher rescue, stat/item/ring starter build, useful menu and owner-only no-cron smoke topology. Self-review, master/v1.1 traceability and five-advisor council returned `APPROVE_WITH_SMALL_CHANGES`; the corrected written spec still awaits owner review before planning or implementation.
-- Next safe step: owner reviews the written Phase 4 supplemental design. After approval, create the detailed TDD plan; do not create the Phase 4 worktree or implementation before that review. The 5–10-person external core-loop gate remains deferred—not passed or cancelled—until a playable post-implementation Telegram build exists. Migrations 001–013 and Phase 1 resolver/config/golden files remain locked; do not link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers without a separate remote gate.
+- Gate 4.1 passed locally after TDD and a five-role council correction pass. Migration 014 now owns deny-by-default normalized tutorial/progression state, pinned `progression-v1`, retryable uncredited tutorial attempts with one credited ordinal, scheduler-delay-safe credit, opaque actor/message/profile-bound actions, cross-namespace update locking and atomic stat/item/ring/mastery mutations. Evidence: 40 migration pgTAP assertions, 13 focused integration tests, 2 concurrency tests including 100 duplicates, reconciliation `0/0/0`, zero DB lint/checksum findings and an upgrade-from-013 preservation proof (ADR 049).
+- Next safe step: Gate 4.2 Task 7 makes migration 014's projection the single authority for equipment/ring combat values and exact contribution breakdown, then Tasks 8–9 add guided cards and the canonical Telegram router. The 5–10-person external core-loop gate remains deferred—not passed or cancelled—until a playable post-implementation Telegram build exists. Migrations 001–013 and Phase 1 resolver/config/golden files remain locked; do not link Supabase, deploy, register Telegram webhooks, load real secrets, or invite testers without a separate remote gate.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame

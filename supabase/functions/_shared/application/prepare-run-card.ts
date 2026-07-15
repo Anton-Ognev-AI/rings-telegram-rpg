@@ -2,7 +2,6 @@ import type { DungeonContentV1, StageV1 } from "../contracts/content.ts";
 import type {
   CompanionSnapshot,
   PartySnapshot,
-  ResolutionV1,
   RunStateV1,
   SelfSnapshot,
   TerminalResult,

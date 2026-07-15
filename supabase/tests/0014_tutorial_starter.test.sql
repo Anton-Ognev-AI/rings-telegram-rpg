@@ -1,5 +1,5 @@
 begin;
-select plan(34);
+select plan(40);
 
 select has_table('game', 'progression_config_versions', 'progression config table exists');
 select has_table('game', 'player_onboarding', 'player onboarding table exists');
@@ -45,6 +45,19 @@ select has_function('game', 'credit_tutorial_run_v1', 'private tutorial credit h
 select ok(not has_function_privilege(
   'service_role', 'game.credit_tutorial_run_v1(uuid,timestamp with time zone)', 'execute'
 ), 'service role cannot execute the private tutorial credit helper');
+select has_column('game', 'player_onboarding', 'initial_training_resolved_at',
+  'guided stat decision is persisted even when deferred');
+select has_function('game', 'normalize_player_action_v1',
+  'private profile action normalizer exists');
+select has_function('game', 'guard_player_action_token',
+  'profile token immutability guard exists');
+select has_trigger('game', 'player_action_tokens', 'player_action_tokens_guard',
+  'profile action token bindings are immutable after preparation');
+select ok(not has_function_privilege(
+  'service_role', 'game.normalize_player_action_v1(jsonb)', 'execute'
+) and not has_function_privilege(
+  'service_role', 'game.guard_player_action_token()', 'execute'
+), 'service role cannot execute private profile action helpers');
 
 select is((select count(*)::integer
   from pg_catalog.pg_proc p
@@ -107,6 +120,15 @@ select col_is_unique('game', 'processed_player_actions', 'telegram_update_id',
   'profile update IDs are unique in their namespace');
 select col_is_unique('game', 'player_equipment', array['player_id', 'slot']::name[],
   'equipment has one current item per slot');
+select ok(exists(
+  select 1 from pg_catalog.pg_index i
+  join pg_catalog.pg_class c on c.oid = i.indexrelid
+  join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'game'
+    and c.relname = 'tutorial_run_assignments_one_credit_idx'
+    and i.indisunique
+    and pg_get_expr(i.indpred, i.indrelid) = '(credited_at IS NOT NULL)'
+), 'tutorial attempts may repeat but each ordinal can be credited only once');
 select col_is_unique('game', 'player_offers',
   array['player_id', 'source_run_id', 'sequence']::name[],
   'tutorial offers have stable order');
