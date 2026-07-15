@@ -232,6 +232,340 @@ begin
 end;
 $$;
 
+create function game.player_build_projection_v1(p_player_id uuid)
+returns jsonb
+language plpgsql
+stable
+set search_path = pg_catalog, game, pg_temp
+as $$
+declare
+  stats_row game.player_stats%rowtype;
+  stat_progression_row game.player_stat_progression%rowtype;
+  config_row game.progression_config_versions%rowtype;
+  equipment_row record;
+  ring_row game.player_rings%rowtype;
+  ring_present boolean := false;
+  main_item_key text := null;
+  physical_item integer := 0;
+  magical_item integer := 0;
+  defense_item integer := 0;
+  max_hp_item integer := 0;
+  combat_bps integer;
+  max_hp_per_vitality integer;
+  defense_every integer;
+  base_physical integer;
+  base_magical integer;
+  base_agility integer;
+  base_vitality integer;
+  base_defense integer;
+  base_max_hp integer;
+  physical_value integer;
+  magical_value integer;
+  defense_value integer;
+  max_hp_value integer;
+  post_heal_value integer := 0;
+  items_view jsonb := '[]'::jsonb;
+  rings_view jsonb := '[]'::jsonb;
+  physical_breakdown jsonb;
+  magical_breakdown jsonb;
+  agility_breakdown jsonb;
+  vitality_breakdown jsonb;
+  defense_breakdown jsonb;
+  max_hp_breakdown jsonb;
+  post_heal_breakdown jsonb := '[]'::jsonb;
+begin
+  select * into stats_row from game.player_stats where player_id = p_player_id;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+  end if;
+  select * into stat_progression_row from game.player_stat_progression
+  where player_id = p_player_id;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+  end if;
+  select * into config_row from game.progression_config_versions where status = 'active';
+  if not found or config_row.version <> 'progression-v1'
+    or config_row.payload_sha256 <>
+      '45be4ebedf0ff823cae2f8bfd364794986b1a1e401a646563f6db3d9fdc0f5dd'
+  then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_progression_config');
+  end if;
+  combat_bps := (config_row.payload#>>'{blueRing,combatBps}')::integer;
+  max_hp_per_vitality := (config_row.payload#>>'{vitality,maxHpPerPoint}')::integer;
+  defense_every := (config_row.payload#>>'{vitality,defenseEvery}')::integer;
+
+  for equipment_row in
+    select slot, item_key, rarity, bonuses
+    from game.player_equipment
+    where player_id = p_player_id
+    order by case slot when 'main' then 1 when 'armor' then 2 else 3 end
+  loop
+    if equipment_row.rarity <> 'ordinary' then
+      return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+    end if;
+    case equipment_row.item_key
+      when 'training_sword' then
+        if equipment_row.slot <> 'main'
+          or equipment_row.bonuses <> '{"physical":2}'::jsonb then
+          return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+        end if;
+        main_item_key := equipment_row.item_key;
+        physical_item := 2;
+      when 'apprentice_focus' then
+        if equipment_row.slot <> 'main'
+          or equipment_row.bonuses <> '{"magical":2}'::jsonb then
+          return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+        end if;
+        main_item_key := equipment_row.item_key;
+        magical_item := 2;
+      when 'training_armor' then
+        if equipment_row.slot <> 'armor'
+          or equipment_row.bonuses <> '{"defense":2}'::jsonb then
+          return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+        end if;
+        defense_item := 2;
+      when 'student_talisman' then
+        if equipment_row.slot <> 'talisman'
+          or equipment_row.bonuses <> '{"maxHp":4}'::jsonb then
+          return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+        end if;
+        max_hp_item := 4;
+      else
+        return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+    end case;
+    items_view := items_view || jsonb_build_array(jsonb_build_object(
+      'slot', equipment_row.slot,
+      'itemKey', equipment_row.item_key,
+      'rarity', equipment_row.rarity,
+      'label', case equipment_row.item_key
+        when 'training_sword' then 'Навчальний меч'
+        when 'apprentice_focus' then 'Учнівський жезл'
+        when 'training_armor' then 'Навчальний обладунок'
+        else 'Учнівський талісман'
+      end,
+      'bonuses', equipment_row.bonuses
+    ));
+  end loop;
+
+  select * into ring_row from game.player_rings where player_id = p_player_id;
+  ring_present := found;
+  if ring_present then
+    if ring_row.progression_config_id <> config_row.id
+      or ring_row.color <> 'blue'
+      or ring_row.rarity <> 'ordinary'
+      or ring_row.blue_budget <> 2000
+      or (ring_row.ring_kind = 'weapon' and main_item_key <> 'training_sword')
+      or (ring_row.ring_kind = 'fire' and main_item_key <> 'apprentice_focus')
+      or (ring_row.ring_kind in ('defense', 'healing')
+        and (main_item_key is null
+          or main_item_key not in ('training_sword', 'apprentice_focus')))
+    then
+      return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+    end if;
+    rings_view := jsonb_build_array(jsonb_build_object(
+      'kind', ring_row.ring_kind,
+      'color', ring_row.color,
+      'rarity', ring_row.rarity,
+      'label', case ring_row.ring_kind
+        when 'weapon' then 'Кільце зброї'
+        when 'fire' then 'Кільце вогню'
+        when 'defense' then 'Кільце захисту'
+        else 'Кільце лікування'
+      end,
+      'masteryPercent', ring_row.mastery_percent,
+      'investedXp', ring_row.invested_xp,
+      'blueBudget', ring_row.blue_budget,
+      'combatBps', case when ring_row.ring_kind = 'healing' then 0 else combat_bps end
+    ));
+  elsif main_item_key is not null then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+  end if;
+
+  base_physical := stats_row.physical - stat_progression_row.physical_purchased;
+  base_magical := stats_row.magical - stat_progression_row.magical_purchased;
+  base_agility := stats_row.agility - stat_progression_row.agility_purchased;
+  base_vitality := stats_row.vitality - stat_progression_row.vitality_purchased;
+  base_defense := stats_row.defense
+    - floor(stat_progression_row.vitality_purchased::numeric / defense_every)::integer;
+  base_max_hp := stats_row.max_hp
+    - stat_progression_row.vitality_purchased * max_hp_per_vitality;
+  if least(
+    base_physical, base_magical, base_agility, base_vitality, base_defense, base_max_hp
+  ) < 0 or base_max_hp = 0 then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_build');
+  end if;
+
+  physical_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базова фізична сила', 'operation', 'add',
+    'amount', base_physical, 'result', base_physical, 'bps', null
+  ));
+  if stat_progression_row.physical_purchased > 0 then
+    physical_breakdown := physical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'purchased', 'label', 'Тренування фізичної сили', 'operation', 'add',
+      'amount', stat_progression_row.physical_purchased,
+      'result', stats_row.physical, 'bps', null
+    ));
+  end if;
+  physical_value := stats_row.physical + physical_item;
+  if physical_item > 0 then
+    physical_breakdown := physical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'item:training_sword', 'label', 'Навчальний меч', 'operation', 'add',
+      'amount', physical_item, 'result', physical_value, 'bps', null
+    ));
+  end if;
+  if ring_present and ring_row.ring_kind = 'weapon' then
+    physical_item := floor(physical_value::numeric * (10000 + combat_bps) / 10000)::integer
+      - physical_value;
+    physical_value := physical_value + physical_item;
+    physical_breakdown := physical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'ring:weapon', 'label', 'Кільце зброї', 'operation', 'multiply',
+      'amount', physical_item, 'result', physical_value, 'bps', combat_bps
+    ));
+  end if;
+
+  magical_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базова магічна сила', 'operation', 'add',
+    'amount', base_magical, 'result', base_magical, 'bps', null
+  ));
+  if stat_progression_row.magical_purchased > 0 then
+    magical_breakdown := magical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'purchased', 'label', 'Тренування магічної сили', 'operation', 'add',
+      'amount', stat_progression_row.magical_purchased,
+      'result', stats_row.magical, 'bps', null
+    ));
+  end if;
+  magical_value := stats_row.magical + magical_item;
+  if magical_item > 0 then
+    magical_breakdown := magical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'item:apprentice_focus', 'label', 'Учнівський жезл', 'operation', 'add',
+      'amount', magical_item, 'result', magical_value, 'bps', null
+    ));
+  end if;
+  if ring_present and ring_row.ring_kind = 'fire' then
+    magical_item := floor(magical_value::numeric * (10000 + combat_bps) / 10000)::integer
+      - magical_value;
+    magical_value := magical_value + magical_item;
+    magical_breakdown := magical_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'ring:fire', 'label', 'Кільце вогню', 'operation', 'multiply',
+      'amount', magical_item, 'result', magical_value, 'bps', combat_bps
+    ));
+  end if;
+
+  agility_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базова спритність', 'operation', 'add',
+    'amount', base_agility, 'result', base_agility, 'bps', null
+  ));
+  if stat_progression_row.agility_purchased > 0 then
+    agility_breakdown := agility_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'purchased', 'label', 'Тренування спритності', 'operation', 'add',
+      'amount', stat_progression_row.agility_purchased,
+      'result', stats_row.agility, 'bps', null
+    ));
+  end if;
+
+  vitality_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базова живучість', 'operation', 'add',
+    'amount', base_vitality, 'result', base_vitality, 'bps', null
+  ));
+  if stat_progression_row.vitality_purchased > 0 then
+    vitality_breakdown := vitality_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'purchased', 'label', 'Тренування живучості', 'operation', 'add',
+      'amount', stat_progression_row.vitality_purchased,
+      'result', stats_row.vitality, 'bps', null
+    ));
+  end if;
+
+  defense_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базовий захист', 'operation', 'add',
+    'amount', base_defense, 'result', base_defense, 'bps', null
+  ));
+  defense_value := base_defense;
+  if stat_progression_row.vitality_purchased >= defense_every then
+    physical_item := floor(
+      stat_progression_row.vitality_purchased::numeric / defense_every
+    )::integer;
+    defense_value := defense_value + physical_item;
+    defense_breakdown := defense_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'vitality', 'label', 'Бонус живучості до захисту', 'operation', 'add',
+      'amount', physical_item, 'result', defense_value, 'bps', null
+    ));
+  end if;
+  defense_value := stats_row.defense + defense_item;
+  if defense_item > 0 then
+    defense_breakdown := defense_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'item:training_armor', 'label', 'Навчальний обладунок', 'operation', 'add',
+      'amount', defense_item, 'result', defense_value, 'bps', null
+    ));
+  end if;
+  if ring_present and ring_row.ring_kind = 'defense' then
+    defense_item := floor(defense_value::numeric * (10000 + combat_bps) / 10000)::integer
+      - defense_value;
+    defense_value := defense_value + defense_item;
+    defense_breakdown := defense_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'ring:defense', 'label', 'Кільце захисту', 'operation', 'multiply',
+      'amount', defense_item, 'result', defense_value, 'bps', combat_bps
+    ));
+  end if;
+
+  max_hp_breakdown := jsonb_build_array(jsonb_build_object(
+    'source', 'base', 'label', 'Базове здоров’я', 'operation', 'add',
+    'amount', base_max_hp, 'result', base_max_hp, 'bps', null
+  ));
+  max_hp_value := base_max_hp;
+  if stat_progression_row.vitality_purchased > 0 then
+    magical_item := stat_progression_row.vitality_purchased * max_hp_per_vitality;
+    max_hp_value := max_hp_value + magical_item;
+    max_hp_breakdown := max_hp_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'vitality', 'label', 'Здоров’я від живучості', 'operation', 'add',
+      'amount', magical_item, 'result', max_hp_value, 'bps', null
+    ));
+  end if;
+  max_hp_value := stats_row.max_hp + max_hp_item;
+  if max_hp_item > 0 then
+    max_hp_breakdown := max_hp_breakdown || jsonb_build_array(jsonb_build_object(
+      'source', 'item:student_talisman', 'label', 'Учнівський талісман', 'operation', 'add',
+      'amount', max_hp_item, 'result', max_hp_value, 'bps', null
+    ));
+  end if;
+
+  if ring_present and ring_row.ring_kind = 'healing' then
+    post_heal_value := 1;
+    post_heal_breakdown := jsonb_build_array(jsonb_build_object(
+      'source', 'ring:healing', 'label', 'Кільце лікування', 'operation', 'add',
+      'amount', 1, 'result', 1, 'bps', null
+    ));
+  end if;
+
+  return jsonb_build_object(
+    'status', 'ok',
+    'selfSnapshot', jsonb_build_object(
+      'maxHp', max_hp_value,
+      'physical', physical_value,
+      'magical', magical_value,
+      'agility', stats_row.agility,
+      'vitality', stats_row.vitality,
+      'defense', defense_value,
+      'vampRateBps', 0,
+      'postHeal', post_heal_value
+    ),
+    'loadoutSnapshot', jsonb_build_object(
+      'progressionConfig', config_row.version,
+      'items', items_view,
+      'rings', rings_view
+    ),
+    'breakdown', jsonb_build_object(
+      'physical', physical_breakdown,
+      'magical', magical_breakdown,
+      'agility', agility_breakdown,
+      'vitality', vitality_breakdown,
+      'defense', defense_breakdown,
+      'maxHp', max_hp_breakdown,
+      'postHeal', post_heal_breakdown
+    )
+  );
+end;
+$$;
+
 create function public.player_home_v1(p_player_id uuid)
 returns jsonb
 language plpgsql
@@ -245,6 +579,7 @@ declare
   pending_offer jsonb;
   active_run_id uuid;
   terminal_run_id uuid;
+  build_projection jsonb;
 begin
   if not exists(select 1 from game.players
     where id = p_player_id and deletion_state = 'active') then
@@ -254,6 +589,8 @@ begin
   if not found then
     return jsonb_build_object('status', 'rejected', 'reason', 'onboarding_not_initialized');
   end if;
+  build_projection := game.player_build_projection_v1(p_player_id);
+  if build_projection->>'status' <> 'ok' then return build_projection; end if;
   select balance into strict free_xp from game.xp_accounts where player_id = p_player_id;
   select jsonb_build_object(
     'id', id,
@@ -282,7 +619,8 @@ begin
     'freeXp', free_xp,
     'pendingOffer', pending_offer,
     'activeRunId', active_run_id,
-    'lastTerminalRunId', terminal_run_id
+    'lastTerminalRunId', terminal_run_id,
+    'build', build_projection - 'status'
   );
 end;
 $$;
@@ -295,8 +633,8 @@ set search_path = pg_catalog, game, pg_temp
 as $$
 declare
   onboarding_row game.player_onboarding%rowtype;
-  stats_row game.player_stats%rowtype;
   progression_row game.progression_config_versions%rowtype;
+  build_projection jsonb;
   teacher_snapshot jsonb;
   self_snapshot jsonb;
   loadout_snapshot jsonb;
@@ -308,6 +646,8 @@ declare
   tutorial_guidance text;
   group_max_hp integer;
   expired_tutorial_run_id uuid;
+  run_projection jsonb;
+  returned_build jsonb;
 begin
   if p_at is null then
     return jsonb_build_object('status', 'rejected', 'reason', 'invalid_time');
@@ -354,7 +694,6 @@ begin
       'status', 'rejected', 'reason', 'initial_training_decision_pending'
     );
   end if;
-  select * into strict stats_row from game.player_stats where player_id = p_player_id;
   select * into progression_row from game.progression_config_versions where status = 'active';
   if not found or progression_row.version <> 'progression-v1'
     or progression_row.payload_sha256 <>
@@ -362,40 +701,29 @@ begin
   then
     return jsonb_build_object('status', 'rejected', 'reason', 'invalid_progression_config');
   end if;
-
-  self_snapshot := jsonb_build_object(
-    'maxHp', stats_row.max_hp,
-    'physical', stats_row.physical,
-    'magical', stats_row.magical,
-    'agility', stats_row.agility,
-    'vitality', stats_row.vitality,
-    'defense', stats_row.defense,
-    'vampRateBps', 0,
-    'postHeal', 0
-  );
+  build_projection := game.player_build_projection_v1(p_player_id);
+  if build_projection->>'status' <> 'ok' then return build_projection; end if;
+  self_snapshot := build_projection->'selfSnapshot';
   if onboarding_row.tutorial_completed < 2 then
     tutorial_ordinal := onboarding_row.tutorial_completed + 1;
     tutorial_guidance := case tutorial_ordinal when 1 then 'full' else 'light' end;
     teacher_snapshot := progression_row.payload->'teacher';
-    group_max_hp := stats_row.max_hp + (teacher_snapshot->>'maxHp')::integer;
-    loadout_snapshot := jsonb_build_object(
+    group_max_hp := (self_snapshot->>'maxHp')::integer
+      + (teacher_snapshot->>'maxHp')::integer;
+    loadout_snapshot := (build_projection->'loadoutSnapshot') || jsonb_build_object(
       'partyMode', 'tutorial',
       'companion', teacher_snapshot,
-      'items', '[]'::jsonb,
-      'rings', '[]'::jsonb,
-      'progressionConfig', progression_row.version,
-      'guidance', tutorial_guidance
+      'guidance', tutorial_guidance,
+      'buildBreakdown', build_projection->'breakdown'
     );
   else
     tutorial_ordinal := null;
     teacher_snapshot := null;
-    group_max_hp := stats_row.max_hp;
-    loadout_snapshot := jsonb_build_object(
+    group_max_hp := (self_snapshot->>'maxHp')::integer;
+    loadout_snapshot := (build_projection->'loadoutSnapshot') || jsonb_build_object(
       'partyMode', 'solo',
       'companion', null,
-      'items', '[]'::jsonb,
-      'rings', '[]'::jsonb,
-      'progressionConfig', progression_row.version
+      'buildBreakdown', build_projection->'breakdown'
     );
   end if;
   self_hash := encode(extensions.digest(convert_to(self_snapshot::text, 'UTF8'), 'sha256'), 'hex');
@@ -419,7 +747,18 @@ begin
       progression_row.id, teacher_snapshot
     ) on conflict (run_id) do nothing;
   end if;
-  return jsonb_set(start_result, '{projection}', game.run_projection_v1(result_run_id));
+  run_projection := game.run_projection_v1(result_run_id);
+  returned_build := jsonb_build_object(
+    'selfSnapshot', run_projection->'selfSnapshot',
+    'loadoutSnapshot', jsonb_build_object(
+      'progressionConfig', run_projection#>'{loadout,progressionConfig}',
+      'items', run_projection#>'{loadout,items}',
+      'rings', run_projection#>'{loadout,rings}'
+    ),
+    'breakdown', run_projection#>'{loadout,buildBreakdown}'
+  );
+  return jsonb_set(start_result, '{projection}', run_projection)
+    || jsonb_build_object('build', returned_build);
 end;
 $$;
 
@@ -1191,6 +1530,7 @@ revoke all on game.progression_config_versions, game.player_onboarding,
   game.processed_player_actions from public, anon, authenticated, service_role;
 
 alter function public.telegram_identity_v2(bigint, boolean) owner to postgres;
+alter function game.player_build_projection_v1(uuid) owner to postgres;
 alter function public.player_home_v1(uuid) owner to postgres;
 alter function public.start_run_v3(uuid, timestamptz) owner to postgres;
 alter function public.run_view_v2(uuid, uuid) owner to postgres;
@@ -1221,6 +1561,8 @@ revoke all on function public.telegram_identity_v2(bigint, boolean),
   from public, anon, authenticated;
 
 revoke all on function game.credit_tutorial_run_v1(uuid, timestamptz)
+  from public, anon, authenticated, service_role;
+revoke all on function game.player_build_projection_v1(uuid)
   from public, anon, authenticated, service_role;
 revoke all on function game.normalize_player_action_v1(jsonb),
   game.guard_player_action_token()

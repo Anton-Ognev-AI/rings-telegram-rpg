@@ -327,18 +327,18 @@ interface CanonicalBuildView {
 }
 ```
 
-- [ ] Treat the server projection inside migration 014 as the single mechanics authority. Extend
+- [x] Treat the server projection inside migration 014 as the single mechanics authority. Extend
       the Task 4 database vectors for all four stat effects, armor/talisman, four rings, compatible
       main selection, equipment requirements and flooring.
-- [ ] Return the canonical projection and exact contribution breakdown from `player_home_v1` and
+- [x] Return the canonical projection and exact contribution breakdown from `player_home_v1` and
       `start_run_v3`; TypeScript validates/parses this result but never recomputes combat values.
-- [ ] In SQL project weapon ring as `floor(physicalFlat * 1.15)` only with a physical weapon; fire
+- [x] In SQL project weapon ring as `floor(physicalFlat * 1.15)` only with a physical weapon; fire
       ring as `floor(magicalFlat * 1.15)` only with a focus; defense ring as
       `floor(defenseFlat * 1.15)`; healing ring as `postHeal + 1`.
-- [ ] Keep flat values and multipliers separately visible with exact source labels; reject malformed
+- [x] Keep flat values and multipliers separately visible with exact source labels; reject malformed
       canonical breakdowns rather than inventing defaults.
-- [ ] Run focused unit tests and Deno check. Expected GREEN.
-- [ ] Commit `feat: expose canonical build breakdown`.
+- [x] Run focused unit tests and Deno check. Expected GREEN.
+- [x] Commit `feat: expose canonical build breakdown`.
 
 ### Task 8: Render tutorial, offer, hero, Academy and help cards
 

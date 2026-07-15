@@ -1,5 +1,5 @@
 begin;
-select plan(40);
+select plan(42);
 
 select has_table('game', 'progression_config_versions', 'progression config table exists');
 select has_table('game', 'player_onboarding', 'player onboarding table exists');
@@ -45,6 +45,11 @@ select has_function('game', 'credit_tutorial_run_v1', 'private tutorial credit h
 select ok(not has_function_privilege(
   'service_role', 'game.credit_tutorial_run_v1(uuid,timestamp with time zone)', 'execute'
 ), 'service role cannot execute the private tutorial credit helper');
+select has_function('game', 'player_build_projection_v1',
+  'private canonical build projection exists');
+select ok(not has_function_privilege(
+  'service_role', 'game.player_build_projection_v1(uuid)', 'execute'
+), 'service role cannot bypass public home/start build projections');
 select has_column('game', 'player_onboarding', 'initial_training_resolved_at',
   'guided stat decision is persisted even when deferred');
 select has_function('game', 'normalize_player_action_v1',

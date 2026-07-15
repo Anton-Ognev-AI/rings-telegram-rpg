@@ -23,7 +23,7 @@
     "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
     "test:db:deletion": "deno test --allow-env --allow-net --allow-read tests/integration/deletion_restore_test.ts",
     "test:db:phase3a": "deno test --allow-env --allow-net tests/integration/telegram_commands_test.ts tests/integration/outbox_delivery_test.ts",
-    "test:db:phase4a": "deno test --allow-env --allow-net tests/integration/tutorial_progression_test.ts tests/integration/player_action_atomicity_test.ts",
+    "test:db:phase4a": "deno test --allow-env --allow-net tests/integration/tutorial_progression_test.ts tests/integration/player_action_atomicity_test.ts tests/integration/starter_build_projection_test.ts",
     "test:db:phase4a:concurrency": "deno test --allow-env --allow-net tests/integration/player_action_concurrency_test.ts",
     "test:db:upgrade013": "deno run --allow-env --allow-net --allow-run --allow-read --allow-write scripts/db/verify-upgrade-013.ts",
     "test:db": "npm run test:db:unit && npm run test:db:integration",
