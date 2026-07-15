@@ -227,21 +227,21 @@ function adaptTutorialResolution(
 ): ResolutionV1;
 ```
 
-- [ ] Write RED tests proving only tutorial run 1, only one lethal prepared first/second choice and
+- [x] Write RED tests proving only tutorial run 1, only one lethal prepared first/second choice and
       only fewer than two earlier results can receive rescue.
-- [ ] Assert rescue output is nonterminal, restores `max(1, ceil(maxHp * 0.5))`, records
+- [x] Assert rescue output is nonterminal, restores `max(1, ceil(maxHp * 0.5))`, records
       `tutorial.teacherRescue` and `tutorial.teacherRestore`, and leaves ordinary resolutions
       byte-identical.
-- [ ] Implement `prepare_action_v2` validation against assignment/config/current result count; the
+- [x] Implement `prepare_action_v2` validation against assignment/config/current result count; the
       client cannot forge or broaden the adapter.
-- [ ] Implement `resolve_choice_v2` as a wrapper around locked v1 mechanics plus one transaction-
+- [x] Implement `resolve_choice_v2` as a wrapper around locked v1 mechanics plus one transaction-
       scoped advisory lock for Telegram update ID and exactly-once tutorial terminal credit.
-- [ ] Implement `advance_day_v2` to call v1 lifecycle and then credit only expired tutorial runs
+- [x] Implement `advance_day_v2` to call v1 lifecycle and then credit only expired tutorial runs
       having at least three persisted results.
-- [ ] On first credit, request idempotent cap-subject training grant of 20 XP. On second credit,
+- [x] On first credit, request idempotent cap-subject training grant of 20 XP. On second credit,
       create exactly two ordered offers; do neither on abandon.
-- [ ] Keep `resolve_choice_v1`, `prepare_action_v1` and `advance_day_v1` unchanged.
-- [ ] Run tutorial adapter unit tests, progression integration and reconciliation. Expected GREEN
+- [x] Keep `resolve_choice_v1`, `prepare_action_v1` and `advance_day_v1` unchanged.
+- [x] Run tutorial adapter unit tests, progression integration and reconciliation. Expected GREEN
       with one credit/grant/offer set under replay.
 - [ ] Commit `feat: credit teacher-assisted tutorial runs`.
 

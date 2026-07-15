@@ -5,5 +5,5 @@ export function publishFallbackDay(database: DatabasePort, at: string): Promise<
 }
 
 export function advanceDay(database: DatabasePort, at: string): Promise<CommandResult> {
-  return database.call<CommandResult>("advance_day_v1", { p_at: at });
+  return database.call<CommandResult>("advance_day_v2", { p_at: at });
 }

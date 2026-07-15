@@ -1,5 +1,5 @@
 begin;
-select plan(32);
+select plan(34);
 
 select has_table('game', 'progression_config_versions', 'progression config table exists');
 select has_table('game', 'player_onboarding', 'player onboarding table exists');
@@ -41,6 +41,10 @@ select has_function('public', 'advance_day_v2', 'tutorial-aware lifecycle exists
 select has_function('public', 'prepare_player_action_v1', 'profile action preparation exists');
 select has_function('public', 'resolve_player_action_v1', 'profile action resolution exists');
 select has_function('public', 'request_run_render_v2', 'coalesced render repair exists');
+select has_function('game', 'credit_tutorial_run_v1', 'private tutorial credit helper exists');
+select ok(not has_function_privilege(
+  'service_role', 'game.credit_tutorial_run_v1(uuid,timestamp with time zone)', 'execute'
+), 'service role cannot execute the private tutorial credit helper');
 
 select is((select count(*)::integer
   from pg_catalog.pg_proc p

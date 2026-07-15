@@ -7,7 +7,10 @@ import type {
   SelfSnapshot,
   TerminalResult,
 } from "../contracts/domain.ts";
+import { canonicalJson, sha256Hex } from "../domain/canonical-json.ts";
 import { resolveAndHash } from "../domain/resolver-registry.ts";
+import type { TutorialResolutionV1 } from "../progression/contracts.ts";
+import { adaptTutorialResolution } from "../progression/tutorial-adapter.ts";
 import { deriveCallbackToken, type DerivedCallbackToken } from "../telegram/callback-token.ts";
 import type { CommandResult, DatabasePort } from "./database-port.ts";
 import { prepareAction } from "./prepare-action.ts";
@@ -45,13 +48,19 @@ export interface TelegramRunView {
     readonly messageId: string;
     readonly lastStateVersion: number;
   } | null;
+  readonly tutorial?: {
+    readonly ordinal: 1 | 2;
+    readonly guidance: "full" | "light";
+    readonly rescueUsed: boolean;
+    readonly resultCount: number;
+  } | null;
 }
 
 export interface PreparedCardChoice extends DerivedCallbackToken {
   readonly choiceId: string;
   readonly label: string;
   readonly callbackData: string;
-  readonly resolution: ResolutionV1;
+  readonly resolution: TutorialResolutionV1;
   readonly resolutionSha256: string;
 }
 
@@ -169,6 +178,20 @@ export async function prepareRunCard(
       choiceId: choice.id,
     };
     const replay = await resolveAndHash({ content: view.content, party, state, command });
+    const resolution = adaptTutorialResolution(
+      replay.resolution,
+      view.tutorial
+        ? {
+          tutorialOrdinal: view.tutorial.ordinal,
+          rescueUsed: view.tutorial.rescueUsed,
+          earlierResultCount: view.tutorial.resultCount,
+          maxHp: view.run.maxHp,
+        }
+        : null,
+    );
+    const resolutionSha256 = resolution === replay.resolution
+      ? replay.hash
+      : await sha256Hex(canonicalJson(resolution));
     const token = await deriveCallbackToken(callbackKey, {
       playerId: view.run.playerId,
       runId: view.run.id,
@@ -186,9 +209,10 @@ export async function prepareRunCard(
       exchange: exchange ?? 0,
       choiceId: choice.id,
       contextSha256: token.contextSha256,
-      preparedResolution: replay.resolution as unknown as Readonly<Record<string, unknown>>,
-      resolutionSha256: replay.hash,
+      preparedResolution: resolution as unknown as Readonly<Record<string, unknown>>,
+      resolutionSha256,
       expiresAt: view.cycle.graceEndsAt,
+      tutorialAdapter: resolution.tutorial ?? null,
     });
     if (!["ok", "cached"].includes((result as CommandResult).status)) {
       throw new Error("prepare_action_rejected");
@@ -198,8 +222,8 @@ export async function prepareRunCard(
       choiceId: choice.id,
       label: choice.label,
       callbackData: token.raw,
-      resolution: replay.resolution,
-      resolutionSha256: replay.hash,
+      resolution,
+      resolutionSha256,
     });
   }
   return { view, stage, party, state, choices };

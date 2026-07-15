@@ -94,14 +94,14 @@ Deno.test("application commands use one narrow RPC each", async () => {
 
   assertEquals(database.calls.map((call) => call.rpc), [
     "start_run_v1",
-    "prepare_action_v1",
-    "resolve_choice_v1",
+    "prepare_action_v2",
+    "resolve_choice_v2",
     "resume_v1",
     "telegram_identity_v1",
     "publish_fallback_day_v1",
-    "advance_day_v1",
+    "advance_day_v2",
     "start_run_v2",
-    "run_view_v1",
+    "run_view_v2",
     "lease_outbox_v3",
     "authorize_outbox_delivery_v2",
     "complete_outbox_v1",

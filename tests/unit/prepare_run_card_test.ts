@@ -68,7 +68,7 @@ Deno.test("prepareRunCard resolves and persists every visible choice", async () 
 
   assertEquals(prepared.choices.length, stageChoices.length);
   assertEquals(database.calls.length, prepared.choices.length);
-  assertEquals(database.calls.every((call) => call.rpc === "prepare_action_v1"), true);
+  assertEquals(database.calls.every((call) => call.rpc === "prepare_action_v2"), true);
   assertEquals(prepared.state.stage, 1);
   assertEquals(prepared.party.mode, "solo");
 
@@ -90,10 +90,61 @@ Deno.test("prepareRunCard resolves and persists every visible choice", async () 
   assertEquals(firstArgs.p_stage, 1);
   assertEquals(firstArgs.p_exchange, 0);
   assertEquals(firstArgs.p_expires_at, view.cycle.graceEndsAt);
+  assertEquals(firstArgs.p_tutorial_adapter, null);
   assertEquals(
     (firstArgs.p_prepared_resolution as { outcome: string }).outcome,
     "success",
   );
+});
+
+Deno.test("prepareRunCard applies and persists only the canonical teacher rescue", async () => {
+  const database = new RecordingDatabase();
+  const tutorialView: TelegramRunView = {
+    ...view,
+    run: { ...view.run, hp: 1, maxHp: 45 },
+    selfSnapshot: {
+      maxHp: 40,
+      physical: 0,
+      magical: 0,
+      agility: 0,
+      vitality: 0,
+      defense: 0,
+      vampRateBps: 0,
+      postHeal: 0,
+    },
+    loadout: {
+      partyMode: "tutorial",
+      companion: { maxHp: 5, physical: 4, magical: 4, agility: 4, defense: 2 },
+      items: [],
+      rings: [],
+    },
+    tutorial: {
+      ordinal: 1,
+      guidance: "full",
+      rescueUsed: false,
+      resultCount: 0,
+    },
+  };
+
+  const prepared = await prepareRunCard(
+    database,
+    tutorialView,
+    new TextEncoder().encode("0123456789abcdef0123456789abcdef"),
+  );
+  const rescued = prepared.choices.filter((choice) => choice.resolution.tutorial?.teacherRescue);
+
+  assertEquals(rescued.length > 0, true);
+  for (const choice of rescued) {
+    assertEquals(choice.resolution.hp.after, 23);
+    assertEquals(choice.resolution.terminal, null);
+    assertEquals(choice.resolution.nextStage, 2);
+    const call = database.calls.find((entry) => entry.args.p_choice_id === choice.choiceId)!;
+    assertEquals(call.args.p_tutorial_adapter, {
+      teacherRescue: true,
+      teacherRestore: 23,
+    });
+    assertEquals(call.args.p_prepared_resolution, choice.resolution);
+  }
 });
 
 Deno.test("prepareRunCard accepts idempotently cached prepared choices after restart", async () => {

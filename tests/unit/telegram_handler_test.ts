@@ -222,7 +222,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
     const events: string[] = [];
     const responses: Record<string, readonly unknown[]> = {
       telegram_identity_v1: [identity],
-      resolve_choice_v1: [{
+      resolve_choice_v2: [{
         status,
         reason: status === "rejected" ? "invalid_token" : undefined,
         result: status === "cached" ? { projection: { run: { id: "run-1" } } } : undefined,
@@ -243,9 +243,9 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
     assertEquals(result.route, `choice_${status}`);
     assertEquals(
       database.calls.map((call) => call.rpc),
-      status === "rejected" ? ["telegram_identity_v1", "resolve_choice_v1"] : [
+      status === "rejected" ? ["telegram_identity_v1", "resolve_choice_v2"] : [
         "telegram_identity_v1",
-        "resolve_choice_v1",
+        "resolve_choice_v2",
         "resume_v1",
         "request_run_render_v1",
       ],
@@ -256,7 +256,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
 Deno.test("callback acknowledgement failure does not block the durable choice mutation", async () => {
   const database = new ScriptedDatabase({
     telegram_identity_v1: [identity],
-    resolve_choice_v1: [{ status: "applied" }],
+    resolve_choice_v2: [{ status: "applied" }],
   });
   const result = await handleTelegramUpdate(
     dependencies(database, new FailingAnswerTelegram()),
@@ -266,16 +266,16 @@ Deno.test("callback acknowledgement failure does not block the durable choice mu
   assertEquals(result.route, "choice_applied");
   assertEquals(database.calls.map((call) => call.rpc), [
     "telegram_identity_v1",
-    "resolve_choice_v1",
+    "resolve_choice_v2",
   ]);
 });
 
 Deno.test("terminal stale callback repairs the latest owner-bound summary", async () => {
   const database = new ScriptedDatabase({
     telegram_identity_v1: [identity],
-    resolve_choice_v1: [{ status: "stale" }],
+    resolve_choice_v2: [{ status: "stale" }],
     resume_v1: [{ status: "none" }],
-    run_view_v1: [{ status: "ok", run: { id: "terminal-run" } }],
+    run_view_v2: [{ status: "ok", run: { id: "terminal-run" } }],
     request_run_render_v1: [{ status: "applied" }],
   });
   const result = await handleTelegramUpdate(
@@ -286,9 +286,9 @@ Deno.test("terminal stale callback repairs the latest owner-bound summary", asyn
   assertEquals(result.route, "choice_stale");
   assertEquals(database.calls.map((call) => call.rpc), [
     "telegram_identity_v1",
-    "resolve_choice_v1",
+    "resolve_choice_v2",
     "resume_v1",
-    "run_view_v1",
+    "run_view_v2",
     "request_run_render_v1",
   ]);
   assertEquals(database.calls[3].args, { p_player_id: playerId, p_run_id: null });

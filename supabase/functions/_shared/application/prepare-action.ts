@@ -12,13 +12,14 @@ export interface PrepareActionInput {
   readonly preparedResolution: Readonly<Record<string, unknown>>;
   readonly resolutionSha256: string;
   readonly expiresAt: string;
+  readonly tutorialAdapter?: Readonly<Record<string, unknown>> | null;
 }
 
 export function prepareAction(
   database: DatabasePort,
   input: PrepareActionInput,
 ): Promise<CommandResult> {
-  return database.call<CommandResult>("prepare_action_v1", {
+  return database.call<CommandResult>("prepare_action_v2", {
     p_player_id: input.playerId,
     p_run_id: input.runId,
     p_token_sha256: input.tokenSha256,
@@ -30,5 +31,6 @@ export function prepareAction(
     p_prepared_resolution: input.preparedResolution,
     p_resolution_sha256: input.resolutionSha256,
     p_expires_at: input.expiresAt,
+    p_tutorial_adapter: input.tutorialAdapter ?? null,
   });
 }

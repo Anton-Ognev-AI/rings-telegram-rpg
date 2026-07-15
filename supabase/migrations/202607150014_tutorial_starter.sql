@@ -386,12 +386,29 @@ $$;
 
 create function public.run_view_v2(p_player_id uuid, p_run_id uuid default null)
 returns jsonb
-language sql
+language plpgsql
 security definer
 stable
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select public.run_view_v1($1, $2)
+declare
+  base_view jsonb;
+  selected_run_id uuid;
+  tutorial_view jsonb;
+begin
+  base_view := public.run_view_v1(p_player_id, p_run_id);
+  if base_view->>'status' <> 'ok' then return base_view; end if;
+  selected_run_id := (base_view#>>'{run,id}')::uuid;
+  select jsonb_build_object(
+    'ordinal', a.tutorial_ordinal,
+    'guidance', a.guidance,
+    'rescueUsed', a.rescue_used,
+    'resultCount', (select count(*)::integer from game.run_stage_results s
+      where s.run_id = a.run_id)
+  ) into tutorial_view
+  from game.tutorial_run_assignments a where a.run_id = selected_run_id;
+  return base_view || jsonb_build_object('tutorial', tutorial_view);
+end;
 $$;
 
 create function public.prepare_action_v2(
@@ -409,14 +426,189 @@ create function public.prepare_action_v2(
   p_tutorial_adapter jsonb default null
 )
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select case when $12 is null
-    then public.prepare_action_v1($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    else jsonb_build_object('status', 'rejected', 'reason', 'tutorial_adapter_not_implemented')
-  end
+declare
+  run_row game.runs%rowtype;
+  assignment_row game.tutorial_run_assignments%rowtype;
+  earlier_results integer;
+  expected_restore integer;
+  expected_next_stage integer;
+  expected_next_exchange integer;
+begin
+  if p_tutorial_adapter is null then
+    if p_prepared_resolution ? 'tutorial' then
+      return jsonb_build_object('status', 'rejected', 'reason', 'invalid_tutorial_adapter');
+    end if;
+    return public.prepare_action_v1(
+      p_player_id, p_run_id, p_token_sha256, p_expected_state_version, p_stage,
+      p_exchange, p_choice_id, p_context_sha256, p_prepared_resolution,
+      p_resolution_sha256, p_expires_at
+    );
+  end if;
+
+  select * into run_row from game.runs where id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'unknown_run');
+  end if;
+  select * into assignment_row from game.tutorial_run_assignments
+  where run_id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_tutorial_adapter');
+  end if;
+  select count(*)::integer into earlier_results from game.run_stage_results
+  where run_id = p_run_id;
+
+  expected_restore := greatest(1, (run_row.max_hp + 1) / 2);
+  if p_tutorial_adapter is distinct from jsonb_build_object(
+      'teacherRescue', true, 'teacherRestore', expected_restore
+    )
+    or p_prepared_resolution->'tutorial' is distinct from p_tutorial_adapter
+    or p_prepared_resolution#>>'{tutorial,teacherRescue}' <> 'true'
+    or (p_prepared_resolution#>>'{tutorial,teacherRestore}')::integer <> expected_restore
+    or (p_prepared_resolution#>>'{hp,after}')::integer <> expected_restore
+    or p_prepared_resolution->'terminal' is distinct from 'null'::jsonb
+    or (p_prepared_resolution#>>'{hp,damage}')::integer <
+      (p_prepared_resolution#>>'{hp,before}')::integer
+      + (p_prepared_resolution#>>'{hp,vampHeal}')::integer
+    or (p_prepared_resolution#>>'{hp,postHeal}')::integer <> 0
+  then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_tutorial_adapter');
+  end if;
+
+  if assignment_row.tutorial_ordinal <> 1
+    or assignment_row.rescue_used
+    or earlier_results > 1
+  then
+    return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_rescue_unavailable');
+  end if;
+  if p_stage < 10 then
+    expected_next_stage := p_stage + 1;
+    expected_next_exchange := null;
+  elsif p_stage = 10 and p_exchange = 1 then
+    expected_next_stage := 10;
+    expected_next_exchange := 2;
+  else
+    return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_rescue_unavailable');
+  end if;
+  if (p_prepared_resolution->>'nextStage')::integer <> expected_next_stage
+    or coalesce((p_prepared_resolution->>'nextExchange')::integer, 0)
+      <> coalesce(expected_next_exchange, 0)
+  then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_tutorial_adapter');
+  end if;
+
+  return public.prepare_action_v1(
+    p_player_id, p_run_id, p_token_sha256, p_expected_state_version, p_stage,
+    p_exchange, p_choice_id, p_context_sha256, p_prepared_resolution,
+    p_resolution_sha256, p_expires_at
+  );
+exception
+  when invalid_text_representation or numeric_value_out_of_range or null_value_not_allowed then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_tutorial_adapter');
+end;
+$$;
+
+create function game.credit_tutorial_run_v1(p_run_id uuid, p_at timestamptz)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, game, pg_temp
+as $$
+declare
+  assignment_row game.tutorial_run_assignments%rowtype;
+  run_row game.runs%rowtype;
+  onboarding_row game.player_onboarding%rowtype;
+  result_count integer;
+  resolved_reason text;
+  grant_result jsonb;
+  item_key text;
+  item_slot text;
+  item_bonuses jsonb;
+begin
+  if p_at is null then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_time');
+  end if;
+  select * into assignment_row from game.tutorial_run_assignments
+  where run_id = p_run_id for update;
+  if not found then return jsonb_build_object('status', 'none'); end if;
+  if assignment_row.credited_at is not null then
+    return jsonb_build_object(
+      'status', 'cached', 'ordinal', assignment_row.tutorial_ordinal,
+      'reason', assignment_row.credit_reason
+    );
+  end if;
+  select * into strict run_row from game.runs where id = p_run_id for update;
+  select count(*)::integer into result_count from game.run_stage_results where run_id = p_run_id;
+
+  if run_row.status in ('finished_victory', 'finished_contained') then
+    resolved_reason := 'natural_terminal';
+  elsif run_row.status = 'defeated' and run_row.hp = 0 then
+    resolved_reason := 'hp_zero';
+  elsif run_row.status = 'expired' and result_count >= 3 then
+    resolved_reason := 'eligible_expiry';
+  else
+    return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_credit_ineligible');
+  end if;
+
+  select * into strict onboarding_row from game.player_onboarding
+  where player_id = assignment_row.player_id for update;
+  if assignment_row.tutorial_ordinal = 1 then
+    if onboarding_row.tutorial_completed <> 0 then
+      return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_order_mismatch');
+    end if;
+    grant_result := game.apply_xp_delta_v1(
+      run_row.player_id, run_row.cycle_id, 20, true, 'tutorial_completion', run_row.id,
+      'first_tutorial_training_grant', run_row.config_version_id
+    );
+    update game.player_onboarding set tutorial_completed = 1
+    where player_id = run_row.player_id;
+  else
+    if onboarding_row.tutorial_completed <> 1 then
+      return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_order_mismatch');
+    end if;
+    if onboarding_row.first_purchased_stat = 'vitality' then
+      item_key := 'student_talisman';
+      item_slot := 'talisman';
+      item_bonuses := jsonb_build_object('maxHp', 4);
+    else
+      item_key := 'training_armor';
+      item_slot := 'armor';
+      item_bonuses := jsonb_build_object('defense', 2);
+    end if;
+    insert into game.player_offers(
+      player_id, source_run_id, sequence, offer_kind, payload
+    ) values (
+      run_row.player_id, run_row.id, 1, 'tutorial_item',
+      jsonb_build_object(
+        'itemKey', item_key, 'slot', item_slot,
+        'rarity', 'ordinary', 'bonuses', item_bonuses
+      )
+    ) on conflict (player_id, source_run_id, sequence) do nothing;
+    insert into game.player_offers(
+      player_id, source_run_id, sequence, offer_kind, payload
+    ) values (
+      run_row.player_id, run_row.id, 2, 'starter_ring',
+      jsonb_build_object(
+        'color', 'blue', 'rarity', 'ordinary',
+        'choices', jsonb_build_array('weapon', 'fire', 'defense', 'healing')
+      )
+    ) on conflict (player_id, source_run_id, sequence) do nothing;
+  end if;
+
+  update game.tutorial_run_assignments set
+    credited_at = p_at,
+    credit_reason = resolved_reason,
+    result_count_at_credit = result_count
+  where run_id = p_run_id;
+  return jsonb_build_object(
+    'status', 'applied', 'ordinal', assignment_row.tutorial_ordinal,
+    'reason', resolved_reason, 'resultCount', result_count,
+    'grant', grant_result
+  );
+end;
 $$;
 
 create function public.resolve_choice_v2(
@@ -426,20 +618,76 @@ create function public.resolve_choice_v2(
   p_context_sha256 text
 )
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select public.resolve_choice_v1($1, $2, $3, $4)
+declare
+  resolved jsonb;
+  token_row game.action_tokens%rowtype;
+  rescue_marked integer;
+begin
+  perform pg_advisory_xact_lock(
+    hashtextextended('telegram_update:' || p_telegram_update_id::text, 0)
+  );
+  if exists(select 1 from game.processed_player_actions
+    where telegram_update_id = p_telegram_update_id) then
+    return jsonb_build_object('status', 'rejected', 'reason', 'update_id_conflict');
+  end if;
+
+  resolved := public.resolve_choice_v1(
+    p_token_sha256, p_telegram_update_id, p_actor_player_id, p_context_sha256
+  );
+  if resolved->>'status' not in ('applied', 'cached') then return resolved; end if;
+  select * into strict token_row from game.action_tokens where token_sha256 = p_token_sha256;
+
+  if resolved->>'status' = 'applied'
+    and token_row.prepared_resolution#>>'{tutorial,teacherRescue}' = 'true'
+  then
+    update game.tutorial_run_assignments set
+      rescue_used = true,
+      rescue_used_at = clock_timestamp()
+    where run_id = token_row.run_id
+      and tutorial_ordinal = 1
+      and not rescue_used;
+    get diagnostics rescue_marked = row_count;
+    if rescue_marked <> 1 then
+      raise exception 'tutorial rescue state mismatch' using errcode = '55000';
+    end if;
+  end if;
+  perform game.credit_tutorial_run_v1(token_row.run_id, clock_timestamp());
+  return resolved;
+end;
 $$;
 
 create function public.advance_day_v2(p_at timestamptz)
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select public.advance_day_v1($1)
+declare
+  advanced jsonb;
+  candidate record;
+  credits integer := 0;
+  credit_result jsonb;
+begin
+  advanced := public.advance_day_v1(p_at);
+  if advanced->>'status' <> 'ok' then return advanced; end if;
+  for candidate in
+    select a.run_id
+    from game.tutorial_run_assignments a
+    join game.runs r on r.id = a.run_id
+    where a.credited_at is null
+      and r.status = 'expired'
+      and (select count(*) from game.run_stage_results s where s.run_id = r.id) >= 3
+    order by a.created_at, a.run_id
+  loop
+    credit_result := game.credit_tutorial_run_v1(candidate.run_id, p_at);
+    if credit_result->>'status' = 'applied' then credits := credits + 1; end if;
+  end loop;
+  return advanced || jsonb_build_object('tutorialCredits', credits);
+end;
 $$;
 
 create function public.prepare_player_action_v1(
@@ -505,6 +753,7 @@ alter function public.run_view_v2(uuid, uuid) owner to postgres;
 alter function public.prepare_action_v2(
   uuid, uuid, text, bigint, smallint, smallint, text, text, jsonb, text, timestamptz, jsonb
 ) owner to postgres;
+alter function game.credit_tutorial_run_v1(uuid, timestamptz) owner to postgres;
 alter function public.resolve_choice_v2(text, bigint, uuid, text) owner to postgres;
 alter function public.advance_day_v2(timestamptz) owner to postgres;
 alter function public.prepare_player_action_v1(
@@ -524,6 +773,9 @@ revoke all on function public.telegram_identity_v2(bigint, boolean),
   public.resolve_player_action_v1(text, bigint, uuid, bigint, text),
   public.request_run_render_v2(uuid, uuid)
   from public, anon, authenticated;
+
+revoke all on function game.credit_tutorial_run_v1(uuid, timestamptz)
+  from public, anon, authenticated, service_role;
 
 grant execute on function public.telegram_identity_v2(bigint, boolean),
   public.player_home_v1(uuid), public.start_run_v3(uuid, timestamptz),
