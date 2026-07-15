@@ -1,13 +1,20 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-04-DESIGN: Audit and define the supplemental Phase 4 onboarding/starter-build design before implementation (`in_progress`; ADR 046)
+- [ ] ID: PHASE-04A: Implement the approved local onboarding and starter-build loop (`in_progress`; ADRs 047–048)
+  - [ ] P4A-00: Isolated worktree and repeated Phase 3 baseline
+  - [ ] P4A-41: Gate 4.1 schema, security and atomic progression
+  - [ ] P4A-42: Gate 4.2 canonical build, cards and routing
+  - [ ] P4A-43: Gate 4.3 two-day E2E, balance and repeated verifier
+
+## Completed Phase 4 Planning
+- [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)
   - [x] P4-D01: Owner amended the pre-Phase-4 tester gate: test after implementation and through Telegram when feasible
   - [x] P4-D02: Focused product, architecture, reliability and execution audit
   - [x] P4-D03: Recommended private owner-only Telegram staging boundary recorded as separate Phase 4T
   - [x] P4-D04: Supplemental design written, master/v1.1-traced, self-reviewed and council-corrected
-  - [ ] P4-D05: Owner written review of the supplemental design
-  - [ ] P4-D06: Detailed TDD implementation plan after design approval
+  - [x] P4-D05: Owner approved the supplemental design in writing (ADR 047)
+  - [x] P4-D06: Separate detailed TDD plans for Phase 4A and locally prepared/remote-gated Phase 4T (ADR 048)
 
 ## Deferred Validation Gate
 - [ ] ID: CORE-LOOP-TELEGRAM-GATE: Run the 5–10-person core-loop validation on a playable Telegram build (`deferred`, not passed or cancelled; ADR 046)

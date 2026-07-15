@@ -1,12 +1,15 @@
 # Phase 4 Onboarding, Starter Build and Private Owner-Smoke Design
 
-**Status:** draft for written owner review
+**Status:** approved for detailed planning and autonomous local implementation
 
 **Date:** 2026-07-15
 
 **Depends on:** Phase 3 approved and fast-forwarded into `main` at `b7dc200`
 
 **Owner direction:** implement first, then validate through Telegram when feasible (ADR 046)
+
+**Owner approval:** approved in writing on 2026-07-15, including the temporary four-action menu
+and the separate remote approval gate (ADR 047)
 
 ## 1. Decision Summary
 
@@ -279,8 +282,9 @@ All tables enable RLS and revoke direct access from `public`, `anon`, `authentic
 `progression-v1` contains the exact constants in sections 4.2–4.6: stat formula and cap, vitality
 HP/defense steps, `20 XP` tutorial grant, both item effects, all four ring effects, blue budget,
 teacher snapshot and rescue ratio. Its payload and SHA-256 are immutable after activation. The
-existing feature-flag catalog gains `tutorial_starter_enabled`; it is enabled only in local Phase 4
-fixtures and remains disabled at the start of any later remote migration.
+existing feature-flag catalog gains `tutorial_starter_enabled`; migration `014` creates it disabled,
+the local seed enables it for Phase 4 fixtures, and it remains disabled at the start of any later
+remote migration.
 
 New or versioned service RPCs are:
 
@@ -310,7 +314,9 @@ tokens remain compatible because v2 wraps the locked v1 resolver.
 5. group max HP and the immutable self/loadout hashes.
 
 The progression config ID is pinned inside the loadout snapshot. Later config changes cannot rewrite
-an active run.
+an active run. This database projection is the single mechanics authority. TypeScript contracts may
+validate and render the returned contribution breakdown, but they do not independently recompute
+effective combat values.
 
 ## 7. Telegram/Application Boundaries
 
@@ -416,8 +422,9 @@ machine running the smoke runner must remain on during the test.
 
 Before webhook registration, a separate forward migration `015` and runbook must provide:
 
-- `request_run_render_v2` deployment and duplicate-repair coalescing so cached callbacks do not
-  generate one edit per replay;
+- verification and deployment of migration `014`'s `request_run_render_v2` duplicate-repair
+  coalescing so cached callbacks do not generate one edit per replay; migration `015` does not
+  redefine the normal v2 contract unless a failing readiness test requires a forward correction;
 - an operator-only `delivery_unknown` reconciliation command with two explicit decisions:
   `confirm_delivered(message_id)` or `confirm_not_delivered_and_requeue`; no automatic blind retry;
 - staging deletion sink provisioning and isolated backup restore + tombstone replay smoke;

@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 4 supplemental design and focused audit are active after the owner amended the external tester gate (ADR 046). Phase 3 remains approved locally in `.worktrees/phase-03-telegram-vertical-slice`; Phase 4 implementation, Parallel Track G and all remote changes have not started.
+- Current Phase: Phase 4A local implementation is active after owner approval and council-corrected TDD planning (ADRs 047–048). Phase 4T remote actions, Parallel Track G and external validation remain gated and have not started.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -26,7 +26,9 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/checkpoints/2026-07-13-phase-02.md`: Final persistence/deletion/recovery/checksum evidence (Status: approved)
 - `docs/superpowers/specs/2026-07-13-phase-03-telegram-fallback-vertical-slice-design.md`: Council-corrected Phase 3 design with blocking Gates 3A/3B/3C (Status: approved for autonomous local implementation)
 - `docs/superpowers/plans/2026-07-13-phase-03-telegram-fallback-vertical-slice.md`: Detailed Phase 3 TDD plan (Status: approved for autonomous local execution)
-- `docs/superpowers/specs/2026-07-15-phase-04-onboarding-starter-owner-smoke-design.md`: Supplemental Phase 4A local onboarding/starter-build and Phase 4T private owner-smoke design (Status: council-ready draft; awaiting written owner review)
+- `docs/superpowers/specs/2026-07-15-phase-04-onboarding-starter-owner-smoke-design.md`: Supplemental Phase 4A local onboarding/starter-build and Phase 4T private owner-smoke design (Status: owner-approved for detailed planning and autonomous local implementation; ADR 047)
+- `docs/superpowers/plans/2026-07-15-phase-04a-onboarding-starter-build.md`: Detailed Gate 4.0–4.3 TDD plan with server-authoritative build projection (Status: council-approved for autonomous local execution; ADR 048)
+- `docs/superpowers/plans/2026-07-15-phase-04t-private-owner-smoke.md`: Separate local-readiness and remote-gated private Telegram plan (Status: approved for local preparation only; remote actions still require explicit approval; ADR 048)
 - `recovery-control/` and `scripts/recovery/`: Non-PII tombstone store and restore replay tooling (Status: approved locally; production provisioning deferred)
 - `supabase/migrations/SHA256SUMS`: Canonical locked migration manifest for migrations 001–013 (Status: approved; later changes require a new forward migration)
 - `supabase/migrations/202607120001_foundation.sql` … `202607120004_content.sql`: Private normalized Gate 2A schema (Status: approved)
