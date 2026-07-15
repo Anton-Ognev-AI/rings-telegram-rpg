@@ -1,6 +1,7 @@
 import type { PreparedRunCard } from "../application/prepare-run-card.ts";
 import type { DungeonContentV1, EncounterType, Stat } from "../contracts/content.ts";
 import type { ResolutionV1 } from "../contracts/domain.ts";
+import type { TutorialResolutionV1 } from "../progression/contracts.ts";
 import { renderCard, type RenderedCard, truncatePlainText } from "./types.ts";
 
 const STAT_LABELS: Readonly<Record<Stat, string>> = {
@@ -19,7 +20,31 @@ const ENCOUNTER_LABELS: Readonly<Record<EncounterType, string>> = {
   combat: "Бойова практика",
 };
 
+const TUTORIAL_LESSONS: Readonly<Record<EncounterType, string>> = {
+  exploration: "Урок спостережливості",
+  research: "Урок аналізу",
+  social: "Урок взаємодії",
+  hazard: "Урок обережності",
+  pursuit: "Урок швидких рішень",
+  combat: "Бойовий урок",
+};
+
+const FULL_GUIDANCE: Readonly<Record<EncounterType, string>> = {
+  exploration: "Порада викладача: зіставте сліди й деталі сцени, перш ніж діяти.",
+  research: "Порада викладача: шукайте причинний зв’язок, а не найгучнішу відповідь.",
+  social: "Порада викладача: намір співрозмовника важливіший за красиві слова.",
+  hazard: "Порада викладача: спершу визначте джерело небезпеки, потім рухайтесь.",
+  pursuit: "Порада викладача: швидкість корисна лише разом із правильним напрямком.",
+  combat:
+    "Порада викладача: оцініть загрозу й оберіть характеристику, на яку справді спирається дія.",
+};
+
 function heading(prepared: PreparedRunCard): string {
+  if (prepared.view.tutorial) {
+    return `Навчання ${prepared.view.tutorial.ordinal}/2 · ${
+      TUTORIAL_LESSONS[prepared.stage.encounterType]
+    }`;
+  }
   if (prepared.stage.number === 5) return "Мінібос · бойовий іспит";
   if (prepared.stage.number === 10) {
     return `Фінальне випробування · фаза ${prepared.view.run.exchange ?? 1}`;
@@ -54,6 +79,13 @@ function stageLines(prepared: PreparedRunCard, compact: boolean): string[] {
     `HP: ${prepared.state.hp}/${prepared.view.run.maxHp} · XP: ${prepared.state.xp}`,
     ...(prepared.stage.number === 10 && visibleBossHp !== null
       ? [`HP боса: ${visibleBossHp}`]
+      : []),
+    ...(prepared.view.tutorial
+      ? [
+        prepared.view.tutorial.guidance === "full"
+          ? FULL_GUIDANCE[prepared.stage.encounterType]
+          : "Орієнтир викладача: спостереження підказує шлях, але не гарантує результат.",
+      ]
       : []),
     "",
     truncatePlainText(scene(prepared), sceneLimit),
@@ -116,6 +148,12 @@ export function resolutionLines(
     `Вампіризм: +${resolution.hp.vampHeal} · Відновлення: +${resolution.hp.postHeal}`,
     `XP: +${resolution.xp.delta} (${resolution.xp.after})`,
   );
+  const tutorial = (resolution as TutorialResolutionV1).tutorial;
+  if (tutorial?.teacherRescue) {
+    lines.push(
+      `Втручання викладача: +${tutorial.teacherRestore} HP. Це одноразове навчальне порятування, не магія кільця й не звичайне лікування.`,
+    );
+  }
   if (resolution.bossHp) {
     lines.push(
       `Шкода босу: ${resolution.bossHp.ownerDamage} · HP боса: ${resolution.bossHp.before} → ${resolution.bossHp.after}`,

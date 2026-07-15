@@ -16,6 +16,10 @@ export interface SummaryCardInput {
   };
   readonly lastResolution?: ResolutionV1;
   readonly content?: DungeonContentV1;
+  readonly tutorial?: {
+    readonly completed: 0 | 1 | 2;
+    readonly nextAction: "training" | "item" | "ring" | "next_tutorial";
+  };
 }
 
 const RESULT_LABELS: Readonly<Record<TerminalResult, string>> = {
@@ -44,10 +48,17 @@ export function renderSummaryCard(input: SummaryCardInput): RenderedCard {
     const copy = input.content ? outcomeCopy(input.content, input.lastResolution) : null;
     lines.push("", ...resolutionLines(input.lastResolution, copy));
   }
-  lines.push(
-    "",
-    "Сьогоднішній XP і прогрес збережено.",
-    "Нове випробування Академії відкриється завтра о 09:00.",
-  );
+  lines.push("", "Сьогоднішній XP і прогрес збережено.");
+  if (input.tutorial) {
+    const next = {
+      training: "Наступний крок: оберіть перше тренування характеристик.",
+      item: "Наступний крок: вирішіть, чи прийняти навчальний предмет.",
+      ring: "Наступний крок: оберіть перше синє магічне кільце.",
+      next_tutorial: "Наступний крок: друга навчальна експедиція відкриється у новому дні.",
+    }[input.tutorial.nextAction];
+    lines.push(`Навчання: ${input.tutorial.completed}/2.`, next);
+  } else {
+    lines.push("Нове випробування Академії відкриється завтра о 09:00.");
+  }
   return renderCard(lines.join("\n"), [[staticButton("До кабінету", "nav:menu")]]);
 }

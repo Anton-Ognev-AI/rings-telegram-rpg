@@ -361,16 +361,16 @@ interface CanonicalBuildView {
 - Completed menu: `Експедиція / Герой / Академія / Допомога`.
 - Stateful cards expose prepared opaque actions; read-only cards use static navigation callbacks.
 
-- [ ] Write RED semantic/snapshot tests for tutorial `0/2`, `1/2`, `2/2`, exact XP/stat forecast,
+- [x] Write RED semantic/snapshot tests for tutorial `0/2`, `1/2`, `2/2`, exact XP/stat forecast,
       item comparison, ring comparison, hero breakdown, Academy goal and help/privacy controls.
-- [ ] Add encounter-specific lesson headings and `full` versus `light` guidance from canonical run
+- [x] Add encounter-specific lesson headings and `full` versus `light` guidance from canonical run
       metadata; do not invent named teachers.
-- [ ] Explain teacher rescue separately from healing/ring arithmetic.
-- [ ] Keep first meaningful choice within two messages/taps and do not front-load a long manual.
-- [ ] Never show `Напарник`, reminders, breakthrough or other nonfunctional tabs.
-- [ ] Assert all text/callback limits, HTML escaping, one keyboard, and no pre-choice answer leak.
-- [ ] Run render tests and full `npm run verify`. Expected GREEN.
-- [ ] Commit `feat: render guided Academy progression`.
+- [x] Explain teacher rescue separately from healing/ring arithmetic.
+- [x] Keep first meaningful choice within two messages/taps and do not front-load a long manual.
+- [x] Never show `Напарник`, reminders, breakthrough or other nonfunctional tabs.
+- [x] Assert all text/callback limits, HTML escaping, one keyboard, and no pre-choice answer leak.
+- [x] Run render tests and full `npm run verify`. Expected GREEN.
+- [x] Commit `feat: render guided Academy progression`.
 
 ### Task 9: Add the focused canonical router without bloating the handler
 
