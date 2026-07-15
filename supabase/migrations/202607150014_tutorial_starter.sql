@@ -195,30 +195,193 @@ create function public.telegram_identity_v2(
   p_create_if_missing boolean
 )
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select jsonb_build_object('status', 'rejected', 'reason', 'phase4_not_implemented')
+declare
+  identity_result jsonb;
+  target_player_id uuid;
+  onboarding_row game.player_onboarding%rowtype;
+begin
+  identity_result := public.telegram_identity_v1(p_external_id, p_create_if_missing);
+  if identity_result->>'status' <> 'ok' then return identity_result; end if;
+
+  target_player_id := (identity_result->>'playerId')::uuid;
+  insert into game.player_onboarding(player_id) values (target_player_id)
+  on conflict (player_id) do nothing;
+  insert into game.player_stat_progression(player_id) values (target_player_id)
+  on conflict (player_id) do nothing;
+  select * into strict onboarding_row from game.player_onboarding
+  where player_id = target_player_id;
+
+  return identity_result || jsonb_build_object(
+    'tutorialCompleted', onboarding_row.tutorial_completed,
+    'profileVersion', onboarding_row.profile_version,
+    'rank', onboarding_row.academy_rank
+  );
+end;
 $$;
 
 create function public.player_home_v1(p_player_id uuid)
 returns jsonb
-language sql
+language plpgsql
 security definer
 stable
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select jsonb_build_object('status', 'rejected', 'reason', 'phase4_not_implemented')
+declare
+  onboarding_row game.player_onboarding%rowtype;
+  free_xp bigint;
+  pending_offer jsonb;
+  active_run_id uuid;
+  terminal_run_id uuid;
+begin
+  if not exists(select 1 from game.players
+    where id = p_player_id and deletion_state = 'active') then
+    return jsonb_build_object('status', 'rejected', 'reason', 'inactive_player');
+  end if;
+  select * into onboarding_row from game.player_onboarding where player_id = p_player_id;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'onboarding_not_initialized');
+  end if;
+  select balance into strict free_xp from game.xp_accounts where player_id = p_player_id;
+  select jsonb_build_object(
+    'id', id,
+    'kind', offer_kind,
+    'sequence', sequence,
+    'sourceRunId', source_run_id
+  ) into pending_offer
+  from game.player_offers
+  where player_id = p_player_id and status = 'pending'
+  order by created_at, sequence limit 1;
+  select id into active_run_id from game.runs
+  where player_id = p_player_id and status = 'active'
+  order by started_at desc limit 1;
+  select id into terminal_run_id from game.runs
+  where player_id = p_player_id
+    and status in ('finished_victory', 'finished_contained', 'defeated', 'expired')
+  order by finished_at desc nulls last, started_at desc limit 1;
+
+  return jsonb_build_object(
+    'status', 'ok',
+    'playerId', p_player_id,
+    'profileVersion', onboarding_row.profile_version,
+    'tutorialCompleted', onboarding_row.tutorial_completed,
+    'rank', onboarding_row.academy_rank,
+    'freeXp', free_xp,
+    'pendingOffer', pending_offer,
+    'activeRunId', active_run_id,
+    'lastTerminalRunId', terminal_run_id
+  );
+end;
 $$;
 
 create function public.start_run_v3(p_player_id uuid, p_at timestamptz)
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = pg_catalog, game, pg_temp
 as $$
-  select jsonb_build_object('status', 'rejected', 'reason', 'phase4_not_implemented')
+declare
+  onboarding_row game.player_onboarding%rowtype;
+  stats_row game.player_stats%rowtype;
+  progression_row game.progression_config_versions%rowtype;
+  teacher_snapshot jsonb;
+  self_snapshot jsonb;
+  loadout_snapshot jsonb;
+  self_hash text;
+  loadout_hash text;
+  start_result jsonb;
+  result_run_id uuid;
+  tutorial_ordinal smallint;
+  tutorial_guidance text;
+  group_max_hp integer;
+begin
+  if p_at is null then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_time');
+  end if;
+  if not exists(select 1 from game.feature_flags
+    where key = 'tutorial_starter_enabled' and enabled) then
+    return jsonb_build_object('status', 'rejected', 'reason', 'tutorial_starter_disabled');
+  end if;
+  if not exists(select 1 from game.players
+    where id = p_player_id and deletion_state = 'active') then
+    return jsonb_build_object('status', 'rejected', 'reason', 'inactive_player');
+  end if;
+
+  select * into onboarding_row from game.player_onboarding
+  where player_id = p_player_id for update;
+  if not found then
+    return jsonb_build_object('status', 'rejected', 'reason', 'onboarding_not_initialized');
+  end if;
+  select * into strict stats_row from game.player_stats where player_id = p_player_id;
+  select * into progression_row from game.progression_config_versions where status = 'active';
+  if not found or progression_row.version <> 'progression-v1'
+    or progression_row.payload_sha256 <>
+      '45be4ebedf0ff823cae2f8bfd364794986b1a1e401a646563f6db3d9fdc0f5dd'
+  then
+    return jsonb_build_object('status', 'rejected', 'reason', 'invalid_progression_config');
+  end if;
+
+  self_snapshot := jsonb_build_object(
+    'maxHp', stats_row.max_hp,
+    'physical', stats_row.physical,
+    'magical', stats_row.magical,
+    'agility', stats_row.agility,
+    'vitality', stats_row.vitality,
+    'defense', stats_row.defense,
+    'vampRateBps', 0,
+    'postHeal', 0
+  );
+  if onboarding_row.tutorial_completed < 2 then
+    tutorial_ordinal := onboarding_row.tutorial_completed + 1;
+    tutorial_guidance := case tutorial_ordinal when 1 then 'full' else 'light' end;
+    teacher_snapshot := progression_row.payload->'teacher';
+    group_max_hp := stats_row.max_hp + (teacher_snapshot->>'maxHp')::integer;
+    loadout_snapshot := jsonb_build_object(
+      'partyMode', 'tutorial',
+      'companion', teacher_snapshot,
+      'items', '[]'::jsonb,
+      'rings', '[]'::jsonb,
+      'progressionConfig', progression_row.version,
+      'guidance', tutorial_guidance
+    );
+  else
+    tutorial_ordinal := null;
+    teacher_snapshot := null;
+    group_max_hp := stats_row.max_hp;
+    loadout_snapshot := jsonb_build_object(
+      'partyMode', 'solo',
+      'companion', null,
+      'items', '[]'::jsonb,
+      'rings', '[]'::jsonb,
+      'progressionConfig', progression_row.version
+    );
+  end if;
+  self_hash := encode(extensions.digest(convert_to(self_snapshot::text, 'UTF8'), 'sha256'), 'hex');
+  loadout_hash := encode(
+    extensions.digest(convert_to(loadout_snapshot::text, 'UTF8'), 'sha256'), 'hex'
+  );
+
+  start_result := public.start_run_v2(
+    p_player_id, p_at, self_snapshot, self_hash, loadout_snapshot, loadout_hash
+  );
+  if start_result->>'status' not in ('applied', 'cached') then return start_result; end if;
+  result_run_id := (start_result#>>'{projection,run,id}')::uuid;
+
+  if tutorial_ordinal is not null then
+    update game.runs set hp = group_max_hp, max_hp = group_max_hp
+    where id = result_run_id and max_hp <> group_max_hp;
+    insert into game.tutorial_run_assignments(
+      run_id, player_id, tutorial_ordinal, guidance, progression_config_id, teacher_snapshot
+    ) values (
+      result_run_id, p_player_id, tutorial_ordinal, tutorial_guidance,
+      progression_row.id, teacher_snapshot
+    ) on conflict (run_id) do nothing;
+  end if;
+  return jsonb_set(start_result, '{projection}', game.run_projection_v1(result_run_id));
+end;
 $$;
 
 create function public.run_view_v2(p_player_id uuid, p_run_id uuid default null)
@@ -373,4 +536,3 @@ grant execute on function public.telegram_identity_v2(bigint, boolean),
   public.resolve_player_action_v1(text, bigint, uuid, bigint, text),
   public.request_run_render_v2(uuid, uuid)
   to service_role;
-
