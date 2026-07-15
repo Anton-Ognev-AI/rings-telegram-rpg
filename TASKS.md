@@ -5,7 +5,7 @@
   - [x] P4-D01: Owner amended the pre-Phase-4 tester gate: test after implementation and through Telegram when feasible
   - [x] P4-D02: Focused product, architecture, reliability and execution audit
   - [x] P4-D03: Recommended private owner-only Telegram staging boundary recorded as separate Phase 4T
-  - [x] P4-D04: Supplemental design written, self-reviewed and council-corrected
+  - [x] P4-D04: Supplemental design written, master/v1.1-traced, self-reviewed and council-corrected
   - [ ] P4-D05: Owner written review of the supplemental design
   - [ ] P4-D06: Detailed TDD implementation plan after design approval
 

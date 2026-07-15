@@ -14,7 +14,8 @@ Phase 4 is split into two sequential deliverables:
 
 1. **Phase 4A — local onboarding and starter build.** Two actually played tutorial runs,
    teacher assistance, one guided stat purchase, one tutorial item, one starter ring, a canonical
-   build snapshot and useful progressive menus. It is implemented and fully verified locally.
+   build snapshot and useful progressive menus. It is not complete until implemented and fully
+   verified locally.
 2. **Phase 4T — private Telegram owner-smoke.** A separate staging Supabase application, separate
    staging recovery store and a separate private bot restricted to the owner. It starts only after
    Phase 4A passes and after a separate remote approval for project creation/linking, migrations,
@@ -499,3 +500,42 @@ is acceptable for owner-only staging and must be rehearsed before external teste
   counterfactual resolver comparison proves it.
 - The partner button should appear only when Phase 6 makes invitation—including a friend who has
   never started the bot—functional end to end.
+
+## 14. Requirement Traceability
+
+| Authoritative requirement | Design evidence | Coverage |
+|---|---|---|
+| Two actually played tutorial runs, persistent `0/2 → 1/2 → 2/2` | Sections 4.2, 4.4 and 5 | complete |
+| Teacher snapshot, contextual lessons and one rescue | Sections 2, 4.2 and 6 | complete |
+| Rescue guarantees three meaningful choices | Section 4.2 and Gate 4.2 | complete; first/second-choice lethal paths only |
+| Natural terminal, HP-zero and eligible expiry completion | Sections 4.2, 4.4, 5 and Gate 4.3 | complete |
+| Start-only and explicit abandon do not count | Sections 4.2, 5, 8 and Gate 4.3 | complete |
+| First guided XP purchase after run 1 | Sections 4.2–4.3 | complete; player may explicitly defer |
+| Existing stat price and 30-point cap | Section 4.3 | exact ADR 027 formula |
+| Guaranteed armor/talisman decision after run 2 | Sections 4.4–4.5 | complete after every valid terminal |
+| No inventory; replace/discard semantics | Sections 4.5 and 6 | complete |
+| Four equal-budget blue starter rings, no vampirism | Section 4.6 and Gates 4.2–4.3 | complete |
+| Compatible ordinary weapon/focus | Section 4.6 | complete and deterministic |
+| Stat/item/ring changes do not mutate an active run | Sections 3, 4.3–4.6 and 6 | complete |
+| Random item/ring offers disabled in tutorial run 1 | Sections 1 and 4.2 | complete; random drops are outside all Phase 4 |
+| Menu grows from two to four useful actions | Sections 4.1 and 4.7 | complete |
+| Do not show empty/remote locked systems | Section 4.7 | complete |
+| Canonical resume and idempotent transitions | Sections 5–8 and Gates 4.1–4.3 | complete |
+| First choice within two messages/taps | Sections 2 and 4.1 | complete |
+| External test after implementation through Telegram | Sections 1 and 10 | complete per ADR 046 |
+| No premature public launch | Sections 10–12 | complete; owner-only staging and separate remote gate |
+
+### 14.1 Deliberate Supplemental Decisions
+
+ADR 029 showed `Напарник` in the four-button post-tutorial menu, while the same ADR and master
+acceptance prohibit empty locked systems. Partnership and invite behavior belong to Phase 6. This
+design resolves the conflict by using the fourth useful Phase 4 button for `Допомога`; Phase 6 adds
+`Напарник` only when it works end to end. Written approval of this spec approves that temporary menu
+revision.
+
+ADR 029 mentions opt-in reminders after the first run, but reminders are not in master Phase 4 scope
+and remain a later phase. Phase 4 may show the next 09:00 return hook, but it does not request or send
+reminders.
+
+No master Phase 4 scope or acceptance item remains uncovered after these two explicit phase-boundary
+clarifications.
