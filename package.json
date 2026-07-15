@@ -18,6 +18,7 @@
     "db:reconcile": "deno run --allow-env --allow-net scripts/db/reconcile.ts",
     "db:recovery:bootstrap": "deno run --allow-env --allow-net --allow-read scripts/recovery/local-recovery-database.ts",
     "load:callbacks": "deno run --allow-env --allow-net scripts/load-callbacks.ts",
+    "simulate:starter": "deno run scripts/simulate-starter-builds.ts",
     "test:db:unit": "deno run --allow-env --allow-net --allow-read scripts/db/run-pgtap.ts",
     "test:db:integration": "deno test --allow-env --allow-net tests/integration/start_resume_test.ts tests/integration/action_atomicity_test.ts tests/integration/reconciliation_test.ts",
     "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
@@ -28,7 +29,8 @@
     "test:db:upgrade013": "deno run --allow-env --allow-net --allow-run --allow-read --allow-write scripts/db/verify-upgrade-013.ts",
     "test:db": "npm run test:db:unit && npm run test:db:integration",
     "verify:phase2": "npm run verify && npm run test:db && npm run test:db:concurrency && npm run test:db:deletion && npm run db:reconcile && npm run db:lint && deno run --allow-read scripts/db/migration-checksums.ts --verify",
-    "verify:phase3": "deno run --allow-env --allow-read --allow-write --allow-run scripts/verify-phase3.ts"
+    "verify:phase3": "deno run --allow-env --allow-read --allow-write --allow-run scripts/verify-phase3.ts",
+    "verify:phase4a": "deno run --allow-env --allow-read --allow-write --allow-run scripts/verify-phase4a.ts"
   },
   "devDependencies": {
     "deno": "^2.9.2",
