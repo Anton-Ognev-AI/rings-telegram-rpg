@@ -326,6 +326,9 @@ async function runTwoDayScenario(
     discarded_offers: number;
     tutorial_grants: number;
     tutorial_grant_xp: number;
+    equipment: number;
+    main_item: string | null;
+    ring_kind: string | null;
     rings: number;
     profile_actions: number;
     cards: number;
@@ -350,6 +353,12 @@ async function runTwoDayScenario(
       (select coalesce(sum(x.delta), 0)::integer from game.xp_ledger x
         where x.player_id = o.player_id
           and x.source_type = 'tutorial_completion') as tutorial_grant_xp,
+      (select count(*)::integer from game.player_equipment e
+        where e.player_id = o.player_id) as equipment,
+      (select e.item_key from game.player_equipment e
+        where e.player_id = o.player_id and e.slot = 'main') as main_item,
+      (select pr.ring_kind from game.player_rings pr
+        where pr.player_id = o.player_id) as ring_kind,
       (select count(*)::integer from game.player_rings
         where player_id = o.player_id) as rings,
       (select count(*)::integer from game.processed_player_actions
@@ -374,6 +383,9 @@ async function runTwoDayScenario(
     discarded_offers: itemDecision === "discard" ? 1 : 0,
     tutorial_grants: 1,
     tutorial_grant_xp: 20,
+    equipment: itemDecision === "accept" ? 2 : 1,
+    main_item: "training_sword",
+    ring_kind: "weapon",
     rings: 1,
     profile_actions: 3,
     cards: 2,

@@ -298,7 +298,13 @@ export async function executePhase4Verification(
   await runtime.verifyLocalPreflight();
   const environment = localVerificationEnvironment(inheritedEnvironment);
   const profile = await runtime.makeProfile();
-  const isolatedEnvironment = { ...environment, HOME: profile, USERPROFILE: profile };
+  const isolatedEnvironment = {
+    ...environment,
+    DO_NOT_TRACK: "1",
+    SUPABASE_TELEMETRY_DISABLED: "1",
+    HOME: profile,
+    USERPROFILE: profile,
+  };
   let failure: unknown;
   let stackAttempted = false;
   try {

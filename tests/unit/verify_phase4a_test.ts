@@ -105,8 +105,14 @@ Deno.test("Phase 4 verifier always stops the attempted stack and removes its pro
       events.push(`remove:${path}`);
       return Promise.resolve();
     },
-    runStep: (step: VerificationStep) => {
+    runStep: (step: VerificationStep, _environment, isolatedEnvironment) => {
       events.push(step.label);
+      if (step.label === "start local Supabase") {
+        assertEquals(isolatedEnvironment.DO_NOT_TRACK, "1");
+        assertEquals(isolatedEnvironment.SUPABASE_TELEMETRY_DISABLED, "1");
+        assertEquals(isolatedEnvironment.HOME, "C:/synthetic/phase4-profile");
+        assertEquals(isolatedEnvironment.USERPROFILE, "C:/synthetic/phase4-profile");
+      }
       if (step.label === "source verification") {
         return Promise.reject(new Error("synthetic_failure"));
       }
