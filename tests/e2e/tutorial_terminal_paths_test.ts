@@ -76,7 +76,8 @@ Deno.test("tutorial expiry credits three results but not start-only, short, or a
     await seedNeutralResults(sql, tooShort, 2);
     await seedNeutralResults(sql, eligible, 3);
     await seedNeutralResults(sql, naturalTerminal, 3);
-    await sql`update game.runs set status = 'finished_victory', hp = 10
+    await sql`update game.runs set status = 'finished_victory', hp = 10,
+        finished_at = ${at}::timestamptz
       where id = ${naturalTerminal.runId}::uuid`;
     const [naturalCredit] = await sql<{ result: Record<string, unknown> }[]>`select
       game.credit_tutorial_run_v1(

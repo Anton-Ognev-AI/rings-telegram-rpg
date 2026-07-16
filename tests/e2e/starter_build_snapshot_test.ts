@@ -38,7 +38,7 @@ const cases: readonly SnapshotCase[] = [
     externalId: 920000603n,
     ring: "defense",
     main: "training_sword",
-    support: "student_talisman",
+    support: "training_armor",
     physical: 6,
     magical: 5,
   },
@@ -46,7 +46,7 @@ const cases: readonly SnapshotCase[] = [
     externalId: 920000604n,
     ring: "healing",
     main: "apprentice_focus",
-    support: "training_armor",
+    support: "student_talisman",
     physical: 5,
     magical: 6,
   },
@@ -131,10 +131,13 @@ Deno.test("all four starter rings affect run three while two earlier snapshots r
         self_snapshot: SelfSnapshot;
         self_sha: string;
         loadout_sha: string;
-      }[]>`select id, self_snapshot, self_snapshot_sha256 as self_sha,
-          loadout_snapshot_sha256 as loadout_sha
-        from game.runs where id in (${first.run.id}::uuid, ${second.run.id}::uuid)
-        order by started_at`;
+      }[]>`select r.id, s.snapshot as self_snapshot, s.snapshot_sha256 as self_sha,
+          l.snapshot_sha256 as loadout_sha
+        from game.runs r
+        join game.run_self_snapshots s on s.run_id = r.id
+        join game.run_loadout_versions l on l.run_id = r.id and l.version = 1
+        where r.id in (${first.run.id}::uuid, ${second.run.id}::uuid)
+        order by r.started_at`;
 
       await sql`update game.player_onboarding set
           tutorial_completed = 2, academy_rank = 'novice'
@@ -156,26 +159,49 @@ Deno.test("all four starter rings affect run three while two earlier snapshots r
         self_snapshot: SelfSnapshot;
         self_sha: string;
         loadout_sha: string;
-      }[]>`select id, self_snapshot, self_snapshot_sha256 as self_sha,
-          loadout_snapshot_sha256 as loadout_sha
-        from game.runs where id in (${first.run.id}::uuid, ${second.run.id}::uuid)
-        order by started_at`;
+      }[]>`select r.id, s.snapshot as self_snapshot, s.snapshot_sha256 as self_sha,
+          l.snapshot_sha256 as loadout_sha
+        from game.runs r
+        join game.run_self_snapshots s on s.run_id = r.id
+        join game.run_loadout_versions l on l.run_id = r.id and l.version = 1
+        where r.id in (${first.run.id}::uuid, ${second.run.id}::uuid)
+        order by r.started_at`;
       assertEquals(afterBuild, beforeBuild);
       assertEquals(first.selfSnapshot, beforeBuild[0]?.self_snapshot);
       assertEquals(second.selfSnapshot, beforeBuild[1]?.self_snapshot);
       assertNotEquals(third.selfSnapshot, second.selfSnapshot);
       assertEquals(third.loadout.rings.map((ring) => ring.kind), [fixture.ring]);
-      assertEquals(third.loadout.items.some((item) => item.itemKey === fixture.main), true);
-      assertEquals(third.loadout.items.some((item) => item.itemKey === fixture.support), true);
+      assertEquals(
+        third.loadout.items.some((item) => item.itemKey === fixture.main),
+        true,
+        `${fixture.ring}: main item missing from run-three loadout`,
+      );
+      assertEquals(
+        third.loadout.items.some((item) => item.itemKey === fixture.support),
+        true,
+        `${fixture.ring}: support item missing from run-three loadout`,
+      );
 
       if (fixture.ring === "weapon") {
-        assertEquals(third.selfSnapshot.physical > second.selfSnapshot.physical, true);
+        assertEquals(
+          third.selfSnapshot.physical > second.selfSnapshot.physical,
+          true,
+          "weapon: physical projection did not increase",
+        );
       } else if (fixture.ring === "fire") {
-        assertEquals(third.selfSnapshot.magical > second.selfSnapshot.magical, true);
+        assertEquals(
+          third.selfSnapshot.magical > second.selfSnapshot.magical,
+          true,
+          "fire: magical projection did not increase",
+        );
       } else if (fixture.ring === "defense") {
-        assertEquals(third.selfSnapshot.defense > second.selfSnapshot.defense, true);
+        assertEquals(
+          third.selfSnapshot.defense > second.selfSnapshot.defense,
+          true,
+          "defense: defense projection did not increase",
+        );
       } else {
-        assertEquals(third.selfSnapshot.postHeal, 1);
+        assertEquals(third.selfSnapshot.postHeal, 1, "healing: post-heal projection is missing");
       }
     }
   });

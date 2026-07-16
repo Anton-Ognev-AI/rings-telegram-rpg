@@ -264,7 +264,7 @@ Deno.test("discard gives no compensation and a defensive ring uses the tie-break
   await withDatabase(async (sql) => {
     const fixture = await createFixture(sql, {
       playerId: "94000000-0000-4000-8000-000000000016",
-      cycleId: "2026-08-23",
+      cycleId: "2026-11-23",
       telegramId: 940000000000000016n,
     });
     await rpc(sql`
@@ -344,14 +344,14 @@ Deno.test("one Telegram update cannot mutate run and profile namespaces", async 
   await withDatabase(async (sql) => {
     const fixture = await createFixture(sql, {
       playerId: "94000000-0000-4000-8000-000000000015",
-      cycleId: "2026-08-22",
+      cycleId: "2026-11-22",
       telegramId: 940000000000000015n,
     });
     await rpc(sql`
       select public.telegram_identity_v2(940000000000000015::bigint, false) as response
     `);
     await sql`select game.apply_xp_delta_v1(
-      ${fixture.playerId}::uuid, '2026-08-22', 20, false, 'test_grant',
+      ${fixture.playerId}::uuid, '2026-11-22', 20, false, 'test_grant',
       '94000000-0000-4000-8000-000000000016'::uuid, 'cross_namespace_fixture',
       '00000000-0000-4000-8000-000000000001'::uuid
     )`;

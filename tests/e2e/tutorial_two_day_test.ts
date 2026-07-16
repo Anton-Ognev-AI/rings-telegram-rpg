@@ -393,10 +393,12 @@ async function runTwoDayScenario(
   });
 
   const snapshots = await sql<{ physical: number }[]>`select
-        (self_snapshot->>'physical')::integer as physical
-      from game.runs where player_id = ${identity.playerId}::uuid
-      order by started_at`;
-  assertEquals(snapshots, [{ physical: 5 }, { physical: 6 }]);
+        (s.snapshot->>'physical')::integer as physical
+      from game.runs r
+      join game.run_self_snapshots s on s.run_id = r.id
+      where r.player_id = ${identity.playerId}::uuid
+      order by r.started_at`;
+  assertEquals([...snapshots], [{ physical: 5 }, { physical: 6 }]);
 
   const terminalRuns = await sql<{
     status: string;
