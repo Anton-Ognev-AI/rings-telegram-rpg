@@ -8,7 +8,7 @@ Deno.test("content seed validates and seals the reviewed fallback", async () => 
   assertEquals(record.externalId, "case-001-day-01");
   assertEquals(
     record.payloadSha256,
-    "9f136eb4d007c6c6b112aaece1f996906b8dad893318ebcc1e95d376b8e84851",
+    "9000f0cebc29e6483b80de0bf8cf09c6f926821d317c17890654bc343fbb1c81",
   );
   assertEquals(record.validationStatus, "fallback_validated");
   assertEquals(record.cycleId, "2026-07-13");

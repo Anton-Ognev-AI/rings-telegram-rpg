@@ -61,11 +61,14 @@ the old debt. Full local verification re-pins only the authorized fallback check
 
 **Files:**
 
+- Modify only the canonical fallback payload-hash expectation in
+  `tests/unit/seed_content_test.ts`.
 - Modify only the fallback hash entry in `scripts/verify-phase4a.ts`.
 
 1. Run the content validator, balance simulator, golden replay test and property determinism test.
 2. Confirm baseline and full dominance are both `[]` and the golden full-run hash is unchanged.
-3. Calculate the new fallback SHA-256 and replace only its existing verifier entry.
+3. Calculate the new canonical payload hash and fallback file SHA-256; replace only their existing
+   test/verifier expectations.
 4. Run source verification and confirm all forbidden files are byte-identical.
 5. Commit the tested implementation.
 

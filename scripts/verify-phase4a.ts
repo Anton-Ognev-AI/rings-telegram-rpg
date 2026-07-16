@@ -75,7 +75,7 @@ const LOCKED_BASELINE: Readonly<Record<string, string>> = {
   "content/schemas/dungeon-v1.schema.json":
     "7a28ba23b3045c895c8edf90c594afb07f6ea91aef10b1bbf943ab50c3312162",
   "content/fallback/case-001/day-01.json":
-    "1a898630afcd321f46573f1c3523fda182cbba854825ebd1ba3c2a3214ab32bb",
+    "6117820754d541ce901f9af70f4a73edae5974f1dd907b960e03cb495b9ac12c",
   "tests/fixtures/replays/v1/golden-full-run.json":
     "6d4deedc9d9e9aebe0943b30d2a142edfe84c4e21728ef6d8f69a193e48b4626",
   "tests/fixtures/replays/v1/golden-full-run.result.json":

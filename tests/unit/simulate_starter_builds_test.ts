@@ -1,10 +1,48 @@
 import { assertEquals, assertNotEquals, assertThrows } from "jsr:@std/assert@1.0.19";
+import fallbackJson from "../../content/fallback/case-001/day-01.json" with { type: "json" };
 import {
   assertNoPairwiseRingDominance,
   baselineRingDominancePairs,
   pairwiseDominancePairs,
+  scoreInformedCheckChoice,
+  selectInformedChoice,
   simulateStarterBuildMatrix,
+  simulateStarterBuildMatrixForContent,
 } from "../../scripts/simulate-starter-builds.ts";
+import type {
+  ChoiceV1,
+  DungeonContentV1,
+} from "../../supabase/functions/_shared/contracts/content.ts";
+import type {
+  PartySnapshot,
+  RunStateV1,
+} from "../../supabase/functions/_shared/contracts/domain.ts";
+import { resolveChoiceV1 } from "../../supabase/functions/_shared/domain/resolvers/v1/resolver.ts";
+
+const fallback = fallbackJson as DungeonContentV1;
+
+function fireParty(): PartySnapshot {
+  return {
+    mode: "solo",
+    self: {
+      maxHp: 40,
+      physical: 5,
+      magical: 9,
+      agility: 5,
+      vitality: 5,
+      defense: 7,
+      vampRateBps: 0,
+      postHeal: 0,
+    },
+    companion: null,
+  };
+}
+
+function stageThreeChoices(): readonly ChoiceV1[] {
+  const choices = fallback.stages[2]?.choices;
+  if (!choices) throw new Error("missing_stage_three_choices");
+  return choices;
+}
 
 Deno.test("starter balance matrix covers 72 unique terminal archetype contexts", async () => {
   const first = await simulateStarterBuildMatrix();
@@ -131,14 +169,77 @@ Deno.test("actual starter diagnostics separate the full gate from baseline evide
   const reports = await simulateStarterBuildMatrix();
   assertEquals(pairwiseDominancePairs(reports), []);
   const baselinePairs = baselineRingDominancePairs(reports);
-  assertEquals(baselinePairs, [
-    { dominant: "weapon", dominated: "fire" },
-    { dominant: "defense", dominated: "fire" },
-    { dominant: "healing", dominated: "fire" },
-  ]);
+  assertEquals(baselinePairs, []);
   assertThrows(
     () => baselineRingDominancePairs(reports.slice(1)),
     Error,
     "incomplete_starter_balance_matrix",
   );
+});
+
+Deno.test("policy correction alone preserves the exact old fallback balance debt", async () => {
+  const unpatched: DungeonContentV1 = {
+    ...structuredClone(fallback),
+    stages: fallback.stages.map((stage) =>
+      stage.number === 3
+        ? {
+          ...structuredClone(stage),
+          choices: stage.choices?.map((choice) =>
+            choice.id === "s3-magical"
+              ? { ...choice, tacticalModifier: "standard" as const }
+              : { ...choice }
+          ),
+        }
+        : structuredClone(stage)
+    ),
+  };
+
+  const reports = await simulateStarterBuildMatrixForContent(unpatched);
+  assertEquals(pairwiseDominancePairs(reports), []);
+  assertEquals(baselineRingDominancePairs(reports), [
+    { dominant: "weapon", dominated: "fire" },
+    { dominant: "defense", dominated: "fire" },
+    { dominant: "healing", dominated: "fire" },
+  ]);
+});
+
+Deno.test("informed choice score has parity with the resolver threshold", () => {
+  const magical = stageThreeChoices().find((choice) => choice.id === "s3-magical");
+  if (!magical) throw new Error("missing_s3_magical_check");
+  const party = fireParty();
+  const state: RunStateV1 = {
+    stage: 3,
+    exchange: null,
+    hp: 40,
+    bossHp: null,
+    xp: 0,
+    vampHealedStage: 0,
+    vampHealedRun: 0,
+    terminal: null,
+  };
+  const resolution = resolveChoiceV1({
+    content: fallback,
+    party,
+    state,
+    command: { resolverVersion: "v1", stage: 3, exchange: null, choiceId: magical.id },
+  });
+  if (!resolution.check) throw new Error("missing_resolver_check");
+  assertEquals(
+    scoreInformedCheckChoice(magical, party, 3),
+    resolution.check.totalPower - resolution.check.threshold,
+  );
+});
+
+Deno.test("informed and mixed-alternative choices are build-aware with stable array ties", () => {
+  const choices = stageThreeChoices();
+  const best = selectInformedChoice(choices, fireParty(), 3);
+  assertEquals(best.id, "s3-magical");
+  assertEquals(selectInformedChoice(choices, fireParty(), 3, best.id).id, "s3-physical");
+
+  const physical = choices.find((choice) => choice.id === "s3-physical");
+  if (!physical || physical.kind !== "check") throw new Error("missing_s3_physical_check");
+  const first = { ...physical, id: "z-first" };
+  const second = { ...physical, id: "a-second" };
+  assertEquals(selectInformedChoice([first, second], fireParty(), 3).id, "z-first");
+  assertEquals(selectInformedChoice([second, first], fireParty(), 3).id, "a-second");
 });

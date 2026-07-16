@@ -139,7 +139,7 @@
           "rationale": "Руни керують пошкодженим тілом сторожа.",
           "stat": "magical",
           "tier": "standard",
-          "tacticalModifier": "standard",
+          "tacticalModifier": "counter",
           "copy": {
             "success": "Ритм рун рветься, конструкція завмирає.",
             "neutral": "Руни слабшають.",

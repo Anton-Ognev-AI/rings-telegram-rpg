@@ -68,6 +68,7 @@ Allowed:
 - `content/fallback/case-001/day-01.json`;
 - `scripts/simulate-starter-builds.ts`;
 - `tests/unit/simulate_starter_builds_test.ts`;
+- only the canonical fallback payload-hash expectation in `tests/unit/seed_content_test.ts`;
 - only the fallback SHA entry in `scripts/verify-phase4a.ts`;
 - this design, the focused plan/checkpoint and project memory.
 
@@ -90,7 +91,8 @@ The final proof must cover:
 - best and alternate selection use actual resolver threshold parity and stable array-order ties;
 - the schema validator and golden full-run hash
   `1d63be460b0517de00bbd2c6ce2bc34e4236992d6d16d7252d2ec210ac20a3b0` stay green;
-- only the fallback SHA in the Phase 4A locked baseline is repinned after the content test is green;
+- only the fallback byte SHA and its canonical seed payload-hash expectation are repinned after the
+  content test is green;
 - two independent complete `verify:phase4a` runs pass.
 
 After the checkpoint the fallback is re-locked. Remote Supabase, bot secrets, deploy and webhook

@@ -16,6 +16,7 @@ import { canonicalJson, sha256Hex } from "../supabase/functions/_shared/domain/c
 import { validateDungeonContentV1 } from "../supabase/functions/_shared/domain/content-validator.ts";
 import { resolveAndHash } from "../supabase/functions/_shared/domain/resolver-registry.ts";
 import { aggregateParty } from "../supabase/functions/_shared/domain/resolvers/v1/party.ts";
+import { CONFIG_V1 } from "../supabase/functions/_shared/domain/resolvers/v1/config.ts";
 import { advanceStateV1 } from "../supabase/functions/_shared/domain/resolvers/v1/resolver.ts";
 
 export type StarterRing = "weapon" | "fire" | "defense" | "healing";
@@ -57,9 +58,12 @@ function projectChoice(choice: ChoiceV1, archetype: StarterArchetype): ChoiceV1 
     : { ...choice };
 }
 
-function projectContent(archetype: StarterArchetype): DungeonContentV1 {
-  const cloned = structuredClone(content);
-  const projected: DungeonContentV1 = archetype === "baseline" ? content : {
+function projectContent(
+  sourceContent: DungeonContentV1,
+  archetype: StarterArchetype,
+): DungeonContentV1 {
+  const cloned = structuredClone(sourceContent);
+  const projected: DungeonContentV1 = archetype === "baseline" ? sourceContent : {
     ...cloned,
     stages: cloned.stages.map((stage) => ({
       ...stage,
@@ -84,10 +88,6 @@ function projectContent(archetype: StarterArchetype): DungeonContentV1 {
   }
   return projected;
 }
-
-const contentByArchetype = new Map(
-  archetypes.map((archetype) => [archetype, projectContent(archetype)] as const),
-);
 
 function ringSelf(ring: StarterRing): SelfSnapshot {
   const base: SelfSnapshot = {
@@ -146,12 +146,34 @@ function choicesFor(
     : stage.choices ?? [];
 }
 
-function correctChoice(choices: readonly ChoiceV1[]): ChoiceV1 {
-  const choice =
-    choices.find((candidate) =>
-      candidate.kind === "check" && candidate.tacticalModifier === "counter"
-    ) ?? choices.find((candidate) => candidate.kind === "check") ??
-      choices.find((candidate) => candidate.kind === "neutral");
+export function scoreInformedCheckChoice(
+  choice: ChoiceV1,
+  snapshot: PartySnapshot,
+  stageNumber: number,
+): number | null {
+  if (choice.kind !== "check" || !choice.stat || !choice.tier || !choice.tacticalModifier) {
+    return null;
+  }
+  const stageThreshold = CONFIG_V1.stageThresholds[stageNumber - 1];
+  if (stageThreshold === undefined) throw new Error(`invalid_informed_stage:${stageNumber}`);
+  const threshold = stageThreshold + CONFIG_V1.tierDelta[choice.tier] +
+    CONFIG_V1.tacticalBandDelta[choice.tacticalModifier];
+  return aggregateParty(snapshot).total[choice.stat] - threshold;
+}
+
+export function selectInformedChoice(
+  choices: readonly ChoiceV1[],
+  snapshot: PartySnapshot,
+  stageNumber: number,
+  excludedChoiceId?: string,
+): ChoiceV1 {
+  const rankedChecks = choices.flatMap((choice, index) => {
+    if (choice.id === excludedChoiceId) return [];
+    const margin = scoreInformedCheckChoice(choice, snapshot, stageNumber);
+    return margin === null ? [] : [{ choice, index, margin }];
+  }).sort((left, right) => right.margin - left.margin || left.index - right.index);
+  const choice = rankedChecks[0]?.choice ??
+    choices.find((candidate) => candidate.kind === "neutral");
   if (!choice) throw new Error("missing_correct_policy_choice");
   return choice;
 }
@@ -160,8 +182,10 @@ function choose(
   choices: readonly ChoiceV1[],
   policy: StarterPolicy,
   resolutionIndex: number,
+  snapshot: PartySnapshot,
+  stageNumber: number,
 ): ChoiceV1 {
-  if (policy === "correct") return correctChoice(choices);
+  if (policy === "correct") return selectInformedChoice(choices, snapshot, stageNumber);
   const neutral = choices.find((candidate) => candidate.kind === "neutral");
   if (policy === "attrition") {
     const choice = neutral ?? choices.find((candidate) => candidate.kind === "trap") ??
@@ -169,10 +193,9 @@ function choose(
     if (!choice) throw new Error("missing_attrition_policy_choice");
     return choice;
   }
-  if (resolutionIndex % 2 === 0) return correctChoice(choices);
-  const correct = correctChoice(choices);
-  return choices.find((candidate) => candidate.id !== correct.id && candidate.kind === "check") ??
-    neutral ?? correct;
+  const correct = selectInformedChoice(choices, snapshot, stageNumber);
+  if (resolutionIndex % 2 === 0) return correct;
+  return selectInformedChoice(choices, snapshot, stageNumber, correct.id) ?? neutral ?? correct;
 }
 
 function emptySuccessfulChecks(): Record<Stat, number> {
@@ -180,13 +203,12 @@ function emptySuccessfulChecks(): Record<Stat, number> {
 }
 
 async function simulate(
+  scenarioContent: DungeonContentV1,
   archetype: StarterArchetype,
   ring: StarterRing,
   policy: StarterPolicy,
   partyMode: StarterPartyMode,
 ): Promise<StarterSimulationReport> {
-  const scenarioContent = contentByArchetype.get(archetype);
-  if (!scenarioContent) throw new Error(`missing_starter_archetype:${archetype}`);
   const snapshot = party(ring, partyMode);
   let state: RunStateV1 = {
     stage: 1,
@@ -203,7 +225,13 @@ async function simulate(
   const successfulChecks = emptySuccessfulChecks();
 
   while (state.terminal === null && state.stage <= 10) {
-    const selected = choose(choicesFor(scenarioContent, state), policy, resolutions.length);
+    const selected = choose(
+      choicesFor(scenarioContent, state),
+      policy,
+      resolutions.length,
+      snapshot,
+      state.stage,
+    );
     const command: ChoiceCommandV1 = {
       resolverVersion: "v1",
       stage: state.stage,
@@ -241,18 +269,34 @@ async function simulate(
   };
 }
 
-export async function simulateStarterBuildMatrix(): Promise<readonly StarterSimulationReport[]> {
+export async function simulateStarterBuildMatrixForContent(
+  sourceContent: DungeonContentV1,
+): Promise<readonly StarterSimulationReport[]> {
+  const contentByArchetype = new Map(
+    archetypes.map((archetype) =>
+      [
+        archetype,
+        projectContent(sourceContent, archetype),
+      ] as const
+    ),
+  );
   const reports: StarterSimulationReport[] = [];
   for (const archetype of archetypes) {
+    const scenarioContent = contentByArchetype.get(archetype);
+    if (!scenarioContent) throw new Error(`missing_starter_archetype:${archetype}`);
     for (const partyMode of partyModes) {
       for (const policy of policies) {
         for (const ring of rings) {
-          reports.push(await simulate(archetype, ring, policy, partyMode));
+          reports.push(await simulate(scenarioContent, archetype, ring, policy, partyMode));
         }
       }
     }
   }
   return reports;
+}
+
+export async function simulateStarterBuildMatrix(): Promise<readonly StarterSimulationReport[]> {
+  return await simulateStarterBuildMatrixForContent(content);
 }
 
 function terminalScore(terminal: TerminalResult | null): number {
