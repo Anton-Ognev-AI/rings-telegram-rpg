@@ -149,21 +149,21 @@ npm run staging:preflight -- --staging --project-ref <exact-ref>
 npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-remote]
 ```
 
-- [ ] Both commands are offline/dry-run by default. Network access is impossible unless a future
+- [x] Both commands are offline/dry-run by default. Network access is impossible unless a future
       approved invocation supplies `--execute-remote`.
-- [ ] Read the allowed staging project ref only from explicit local CLI input plus a local
+- [x] Read the allowed staging project ref only from explicit local CLI input plus a local
       non-repository confirmation source; never infer it from production or Git state.
-- [ ] In remote mode, require the exact CLI project ref to match the non-repository confirmation
+- [x] In remote mode, require the exact CLI project ref to match the non-repository confirmation
       value; never read or print `.env` or any credential.
-- [ ] Refuse absent `--staging`, unknown/project-ref mismatch, production-like denylist entries,
+- [x] Refuse absent `--staging`, unknown/project-ref mismatch, production-like denylist entries,
       dirty migration order/checksums, missing Phase 4 flags, repository secrets or a linked
       different project.
-- [ ] Runner publishes/opens fallback day once through the internal endpoint, then calls the remote
+- [x] Runner publishes/opens fallback day once through the internal endpoint, then calls the remote
       worker every two seconds until Ctrl+C; it does not advance/reset the day repeatedly.
-- [ ] Print only redacted aggregate status/counts and exit nonzero on auth/project mismatch.
-- [ ] Unit-test HTTP through an injected fake; no test may require network or credentials.
-- [ ] Run dry-run preflight/runner tests and full local verification.
-- [ ] Commit `feat: add guarded owner-smoke runner`.
+- [x] Print only redacted aggregate status/counts and exit nonzero on auth/project mismatch.
+- [x] Unit-test HTTP through an injected fake; no test may require network or credentials.
+- [x] Run dry-run preflight/runner tests and full local source verification.
+- [x] Commit `feat: add guarded owner-smoke runner`.
 
 ### Task 4: Write staging deployment, deletion and rollback runbooks
 
