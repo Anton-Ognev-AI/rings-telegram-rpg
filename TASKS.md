@@ -8,8 +8,8 @@
   - [x] P4A-43: Gate 4.3 two-day E2E, strict pairwise balance and repeated verifier (`approved` locally; two 31-step runs green; baseline fire dominance still blocks Phase 4T owner-smoke; ADRs 051–053) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`
 
 ## Next Gated Work
-- [ ] ID: PHASE-04-BALANCE: Apply the owner-unlocked focused fallback balance amendment (`in_progress`; exact fallback unlock granted 2026-07-16; council `APPROVE_WITH_SMALL_CHANGES`; ADR 054)
-- [ ] ID: PHASE-04T: Private Telegram owner-smoke (`not_started`; depends on PHASE-04-BALANCE and separate remote authorization; ADRs 046–048, 052–053)
+- [x] ID: PHASE-04-BALANCE: Focused fallback balance amendment (`approved` locally; baseline/full dominance `[]`; two complete 31-step verifiers green; fallback re-locked; ADRs 054–055) → `docs/checkpoints/2026-07-16-phase-04-balance.md`
+- [ ] ID: PHASE-04T: Private Telegram owner-smoke (`in_progress` for Gate 4T.0 local readiness only; remote authorization still absent; ADRs 046–048, 052–055)
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)
