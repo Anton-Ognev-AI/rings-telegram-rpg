@@ -40,7 +40,7 @@ through the existing `simulate:starter` entrypoint.
   `StarterArchetype = "baseline" | "martial" | "arcane"`,
   `StarterSimulationReport.archetype`, and 72 reports from `simulateStarterBuildMatrix()`.
 
-- [ ] **Step 1: Write the failing matrix-shape test**
+- [x] **Step 1: Write the failing matrix-shape test**
 
 Replace the first unit test with assertions that run the real simulator twice, require 72 reports,
 three archetypes, terminal results and 72 unique dimension keys:
@@ -65,7 +65,7 @@ Deno.test("starter balance matrix covers 72 unique terminal archetype contexts",
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -75,7 +75,7 @@ npm run deno -- test tests/unit/simulate_starter_builds_test.ts
 
 Expected: FAIL because reports have no `archetype` and the matrix length is 24.
 
-- [ ] **Step 3: Add the minimal archetype projection**
+- [x] **Step 3: Add the minimal archetype projection**
 
 Import `validateDungeonContentV1`, add the type/dimension, and project every ordinary and boss choice
 without mutating the imported fallback:
@@ -103,11 +103,17 @@ function projectContent(archetype: StarterArchetype): DungeonContentV1 {
     ...cloned,
     stages: cloned.stages.map((stage) => ({
       ...stage,
-      choices: stage.choices?.map((choice) => projectChoice(choice, archetype)),
-      bossExchanges: stage.bossExchanges?.map((exchange) => ({
-        ...exchange,
-        choices: exchange.choices.map((choice) => projectChoice(choice, archetype)),
-      })),
+      ...(stage.choices
+        ? { choices: stage.choices.map((choice) => projectChoice(choice, archetype)) }
+        : {}),
+      ...(stage.bossExchanges
+        ? {
+          bossExchanges: stage.bossExchanges.map((exchange) => ({
+            ...exchange,
+            choices: exchange.choices.map((choice) => projectChoice(choice, archetype)),
+          })),
+        }
+        : {}),
     })),
   } as DungeonContentV1;
   const validation = validateDungeonContentV1(projected);
@@ -121,11 +127,11 @@ function projectContent(archetype: StarterArchetype): DungeonContentV1 {
 Add `archetype` to `StarterSimulationReport`, pass projected content into `choicesFor` and
 `resolveAndHash`, and wrap the existing matrix loops in `for (const archetype of archetypes)`.
 
-- [ ] **Step 4: Run the focused test and verify GREEN**
+- [x] **Step 4: Run the focused test and verify GREEN**
 
 Run the same focused test. Expected: both tests PASS and the deterministic matrix has 72 rows.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```text
 git add scripts/simulate-starter-builds.ts tests/unit/simulate_starter_builds_test.ts
@@ -148,7 +154,7 @@ git commit -m "test: simulate three starter dungeon archetypes"
   `RingDominancePair`, `validateStarterBalanceMatrix`, `pairwiseDominancePairs`, and
   `assertNoPairwiseRingDominance`.
 
-- [ ] **Step 1: Write RED tests for pairwise detection and fail-closed validation**
+- [x] **Step 1: Write RED tests for pairwise detection and fail-closed validation**
 
 Add a test helper that clones a complete real matrix and makes weapon strictly better than fire in
 every shared context, then add these assertions:
@@ -160,6 +166,7 @@ Deno.test("pairwise gate reports the exact dominant and dominated ring", async (
       ? {
         ...report,
         lastCompletedStage: 10,
+        terminal: "victory" as const,
         remainingHp: 99,
         xp: 999,
         successfulChecks: { physical: 99, magical: 99, agility: 99, vitality: 99 },
@@ -168,6 +175,7 @@ Deno.test("pairwise gate reports the exact dominant and dominated ring", async (
       ? {
         ...report,
         lastCompletedStage: 1,
+        terminal: "defeated" as const,
         remainingHp: 0,
         xp: 0,
         successfulChecks: { physical: 0, magical: 0, agility: 0, vitality: 0 },
@@ -199,11 +207,11 @@ Deno.test("pairwise gate rejects missing, duplicate, or active matrix rows", asy
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Expected: type/check failure because the pairwise API does not exist.
 
-- [ ] **Step 3: Implement exact matrix validation**
+- [x] **Step 3: Implement exact matrix validation**
 
 Build `reportKeyFrom(archetype, partyMode, policy, ring)` plus `reportKey(report)`, then build the
 expected 72 keys from the four known dimensions, reject non-terminal reports and compare the actual
@@ -228,7 +236,7 @@ export function validateStarterBalanceMatrix(
 }
 ```
 
-- [ ] **Step 4: Implement pairwise comparison across 18 shared contexts**
+- [x] **Step 4: Implement pairwise comparison across 18 shared contexts**
 
 ```ts
 export interface RingDominancePair {
@@ -268,11 +276,11 @@ export function pairwiseDominancePairs(
 Implement the comparison through one internal `dominancePairsForArchetypes` helper so the baseline
 diagnostic can reuse exactly the same two-ring comparator with a different validated key domain.
 
-- [ ] **Step 5: Run the focused test and verify GREEN**
+- [x] **Step 5: Run the focused test and verify GREEN**
 
 Expected: all matrix, detection and invalid-shape tests PASS.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```text
 git add scripts/simulate-starter-builds.ts tests/unit/simulate_starter_builds_test.ts
@@ -300,17 +308,17 @@ git commit -m "test: reject pairwise starter ring dominance"
   `{ reports, dominancePairs, baselineDominancePairs }`, and durable project-state evidence without
   changing the runtime hold.
 
-- [ ] **Step 1: Add a RED test for actual diagnostics**
+- [x] **Step 1: Add a RED test for actual diagnostics**
 
 Assert that the full matrix has no pairwise dominance, while the baseline diagnostic remains
 explicitly computable through `baselineRingDominancePairs`. The helper filters `baseline`, validates
 exactly 24 unique terminal baseline keys, then uses the same two-ring comparator as the full gate.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Expected: failure because baseline diagnostics and the stricter assertion are not wired.
 
-- [ ] **Step 3: Implement the canonical result object**
+- [x] **Step 3: Implement the canonical result object**
 
 ```ts
 const reports = await simulateStarterBuildMatrix();
@@ -323,7 +331,7 @@ console.log(canonicalJson({ reports, dominancePairs, baselineDominancePairs }));
 Keep the baseline pairs diagnostic only in Gate 4.3; document them as a Phase 4T owner-smoke
 blocker and never suppress them from output.
 
-- [ ] **Step 4: Run focused and complete source verification**
+- [x] **Step 4: Run focused and complete source verification**
 
 Run:
 
@@ -338,12 +346,12 @@ Expected: focused tests, simulation, 165+new unit tests and 3 property tests PAS
 findings. If the actual full matrix reports dominance, stop and record the exact pairs instead of
 changing production numbers or weakening the gate.
 
-- [ ] **Step 5: Update the plan, checkpoint and memory**
+- [x] **Step 5: Update the plan, checkpoint and memory**
 
 Record the owner decision, council verdict, 72-cell result, baseline diagnostic, commands, runtime
 hold and exact next safe step. Do not mark Gate 4.2, Gate 4.3 or Phase 4A approved.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 ```text
 git add scripts/simulate-starter-builds.ts tests/unit/simulate_starter_builds_test.ts \
@@ -354,6 +362,8 @@ git commit -m "test: enforce multi-archetype ring balance"
 
 ## Completion Boundary
 
-This delta is source-complete after Task 3 passes and is committed. Phase 4A remains under the
-existing Docker/database verification hold until `npm run verify:phase4a` passes twice from clean
-resets.
+This delta is source-complete: the 72-cell full matrix has zero dominance pairs, while the baseline
+diagnostic records `weapon > fire`, `defense > fire` and `healing > fire`. `npm run verify` passes
+with 168 unit and 3 property tests. Phase 4A remains under the existing Docker/database verification
+hold until `npm run verify:phase4a` passes twice from clean resets; the non-empty baseline diagnostic
+separately blocks Phase 4T owner-smoke until an owner-approved gameplay-balance amendment.

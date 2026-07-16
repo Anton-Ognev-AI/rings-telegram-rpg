@@ -1,6 +1,7 @@
 import { assertEquals, assertNotEquals, assertThrows } from "jsr:@std/assert@1.0.19";
 import {
   assertNoPairwiseRingDominance,
+  baselineRingDominancePairs,
   pairwiseDominancePairs,
   simulateStarterBuildMatrix,
 } from "../../scripts/simulate-starter-builds.ts";
@@ -121,6 +122,22 @@ Deno.test("pairwise gate rejects missing, duplicate, or active matrix rows", asy
   } as unknown as (typeof reports)[number];
   assertThrows(
     () => pairwiseDominancePairs([unknownArchetype, ...reports.slice(1)]),
+    Error,
+    "incomplete_starter_balance_matrix",
+  );
+});
+
+Deno.test("actual starter diagnostics separate the full gate from baseline evidence", async () => {
+  const reports = await simulateStarterBuildMatrix();
+  assertEquals(pairwiseDominancePairs(reports), []);
+  const baselinePairs = baselineRingDominancePairs(reports);
+  assertEquals(baselinePairs, [
+    { dominant: "weapon", dominated: "fire" },
+    { dominant: "defense", dominated: "fire" },
+    { dominant: "healing", dominated: "fire" },
+  ]);
+  assertThrows(
+    () => baselineRingDominancePairs(reports.slice(1)),
     Error,
     "incomplete_starter_balance_matrix",
   );

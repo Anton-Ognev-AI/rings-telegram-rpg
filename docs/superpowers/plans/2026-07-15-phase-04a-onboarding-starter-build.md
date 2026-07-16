@@ -416,10 +416,13 @@ function routeCanonicalHome(
 
 ## Gate 4.3 — Two-Day E2E, Balance and Full Regression
 
-**Implementation checkpoint (2026-07-15):** Tasks 10–11 source is complete in commits `f982392`,
-`fa096fa` and `12f48b6`; source verification and the 24-cell simulation are green. The acceptance
-checkboxes below remain open because local Docker/database runtime and the two required clean full
-verifier passes are unavailable. See `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`.
+**Implementation checkpoint (updated 2026-07-16):** Tasks 10–11 source is complete. The original
+two-day/verifier commits are `f982392`, `fa096fa` and `12f48b6`; the council-corrected balance delta
+is `813156a`, `acb984c` and `c62d219`. Source verification (`168 + 3`) and the 72-cell strict
+pairwise matrix are green. The acceptance checkboxes below remain open because local Docker/database
+runtime and the two required clean full verifier passes are unavailable. The separate baseline
+diagnostic blocks Phase 4T owner-smoke. See
+`docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`.
 
 ### Task 10: Prove the two-cycle progression loop end to end
 
@@ -461,14 +464,15 @@ verifier passes are unavailable. See `docs/checkpoints/2026-07-15-phase-04a-gate
 **Interfaces:**
 
 - Simulation matrix: four rings × `correct`, `mixed`, `attrition` policies × tutorial/ordinary
-  build snapshots.
+  build snapshots × validated baseline/martial/arcane test-only content views.
 - Verifier is local-only, refuses `supabase/.temp/project-ref`, manages isolated CLI profile and
   always stops local Supabase in `finally`.
 
 - [ ] Write RED verifier tests for remote-link refusal, non-loopback DB refusal, cleanup and the
       complete ordered command list.
-- [ ] Compare depth, terminal state, HP, XP and successful-check distribution for each starter ring;
-      fail if one ring strictly dominates all others across all three policies.
+- [x] Compare depth, terminal state, HP, XP and successful-check distribution for each starter ring;
+      fail closed if any ring pairwise-dominates another across the complete 72-cell matrix. Keep the
+      non-empty 24-cell baseline diagnostic visible as a Phase 4T blocker.
 - [ ] Add `verify:phase4a` without editing historical `verify:phase3` or its fixed `283 pgTAP` label.
 - [ ] Run Phase 4 verification twice from a clean reset. It must include Phase 3 source, database,
       concurrency, deletion, Telegram E2E, lifecycle, delivery-fault and load regressions, then all

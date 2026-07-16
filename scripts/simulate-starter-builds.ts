@@ -379,6 +379,15 @@ export function pairwiseDominancePairs(
   return dominancePairsForArchetypes(reports, archetypes);
 }
 
+export function baselineRingDominancePairs(
+  reports: readonly StarterSimulationReport[],
+): readonly RingDominancePair[] {
+  return dominancePairsForArchetypes(
+    reports.filter((report) => report.archetype === "baseline"),
+    ["baseline"],
+  );
+}
+
 export function assertNoPairwiseRingDominance(
   reports: readonly StarterSimulationReport[],
 ): void {
@@ -413,6 +422,8 @@ export function assertNoStrictRingDominance(
 
 if (import.meta.main) {
   const reports = await simulateStarterBuildMatrix();
-  assertNoStrictRingDominance(reports);
-  console.log(canonicalJson(reports));
+  const dominancePairs = pairwiseDominancePairs(reports);
+  assertNoPairwiseRingDominance(reports);
+  const baselineDominancePairs = baselineRingDominancePairs(reports);
+  console.log(canonicalJson({ reports, dominancePairs, baselineDominancePairs }));
 }
