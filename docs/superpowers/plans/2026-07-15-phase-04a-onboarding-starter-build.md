@@ -54,15 +54,15 @@ tokens, fake Telegram/database adapters, local Supabase CLI.
 - Consumes: clean `main` containing the approved Phase 4 spec and plans.
 - Produces: isolated branch, source hash inventory and reproducible pre-change verification.
 
-- [ ] Confirm `git status --short --branch` is clean and `.worktrees` is ignored.
-- [ ] Create `.worktrees/phase-04-onboarding-starter-build` from `main` on
+- [x] Confirm `git status --short --branch` is clean and `.worktrees` is ignored.
+- [x] Create `.worktrees/phase-04-onboarding-starter-build` from `main` on
       `codex/phase-04-onboarding-starter-build`.
-- [ ] Run `npm ci`, then `npm run verify`. Expected: Phase 3 source suite is green.
-- [ ] Run `npm run verify:phase3`. Expected: all 21 historical steps pass; remote-link guard stays
+- [x] Run `npm ci`, then `npm run verify`. Expected: Phase 3 source suite is green.
+- [x] Run `npm run verify:phase3`. Expected: all 21 historical steps pass; remote-link guard stays
       active and local Supabase is stopped in `finally`.
-- [ ] Record SHA-256 values for migrations 001–013, resolver `v1`, config, schema, fallback content,
+- [x] Record SHA-256 values for migrations 001–013, resolver `v1`, config, schema, fallback content,
       golden replay and `scripts/verify-phase3.ts` in the baseline checkpoint.
-- [ ] Commit `docs: record Phase 4A baseline`.
+- [x] Commit `docs: record Phase 4A baseline`.
 
 ---
 
@@ -96,20 +96,20 @@ type ProfileAction =
   | { kind: "train_ring_mastery" };
 ```
 
-- [ ] Write pgTAP RED assertions for table existence, RLS, revoked table DML, immutable config,
+- [x] Write pgTAP RED assertions for table existence, RLS, revoked table DML, immutable config,
       valid enums/checks, one item per `(player, slot)`, one starter ring, ordered offers and exact
       RPC grants.
-- [ ] Specify that reserved `black`, `flesh` and `vampirism` ring kinds cannot be inserted by the
+- [x] Specify that reserved `black`, `flesh` and `vampirism` ring kinds cannot be inserted by the
       Phase 4 catalog path.
-- [ ] Write RED integration cases for `0/2 → 1/2 → 2/2`, natural/HP-zero/eligible-expiry credit,
+- [x] Write RED integration cases for `0/2 → 1/2 → 2/2`, natural/HP-zero/eligible-expiry credit,
       and no credit for start-only, explicit abandon or expiry below three persisted results.
-- [ ] Write RED atomicity cases for the `20 XP` cap-subject training grant, stat price
+- [x] Write RED atomicity cases for the `20 XP` cap-subject training grant, stat price
       `20 + 6n + 2n²`, 30-point cap, negative cap-exempt ledger entry and one profile-version bump.
-- [ ] Write RED races: 100 duplicate stat callbacks, competing item actions, four competing ring
+- [x] Write RED races: 100 duplicate stat callbacks, competing item actions, four competing ring
       choices, and the same Telegram update racing between a run action and a profile action.
-- [ ] Add focused scripts `test:db:phase4a` and `test:db:phase4a:concurrency`.
-- [ ] Run both scripts. Expected RED: migration/RPCs are absent; no unrelated test may fail.
-- [ ] Commit the executable RED contracts as `test: specify Phase 4A progression contracts`.
+- [x] Add focused scripts `test:db:phase4a` and `test:db:phase4a:concurrency`.
+- [x] Run both scripts. Expected RED: migration/RPCs are absent; no unrelated test may fail.
+- [x] Commit the executable RED contracts as `test: specify Phase 4A progression contracts`.
 
 ### Task 3: Add migration 014 data model and pinned progression configuration
 
@@ -140,18 +140,18 @@ type ProfileAction =
 }
 ```
 
-- [ ] Define strict primary/foreign/unique/check constraints and timestamps; store no Telegram ID,
+- [x] Define strict primary/foreign/unique/check constraints and timestamps; store no Telegram ID,
       username, display name, message text or secret.
-- [ ] Make config activation and payload/hash immutable with trigger/function protection.
-- [ ] Seed `progression-v1` with a canonical JSON payload and verified SHA-256; fail closed when the
+- [x] Make config activation and payload/hash immutable with trigger/function protection.
+- [x] Seed `progression-v1` with a canonical JSON payload and verified SHA-256; fail closed when the
       active flag/config is missing or hash-invalid. Migration 014 leaves
       `tutorial_starter_enabled=false`; only the local `supabase/seed.sql` fixture enables it.
-- [ ] Enable RLS and revoke all direct access, including from `service_role`.
-- [ ] Add only new forward SQL; never change an existing migration or checksum line.
-- [ ] Update public TypeScript RPC types through migration 014 while keeping private tables absent.
-- [ ] Run clean `npm run db:reset`, `npm run test:db:unit`, checksum verification and DB lint.
+- [x] Enable RLS and revoke all direct access, including from `service_role`.
+- [x] Add only new forward SQL; never change an existing migration or checksum line.
+- [x] Update public TypeScript RPC types through migration 014 while keeping private tables absent.
+- [x] Run clean `npm run db:reset`, `npm run test:db:unit`, checksum verification and DB lint.
       Expected: new structural tests green and migration 001–013 hashes unchanged.
-- [ ] Commit `feat: add Phase 4A progression schema`.
+- [x] Commit `feat: add Phase 4A progression schema`.
 
 ### Task 4: Implement canonical home, identity v2 and server-derived start
 
@@ -185,19 +185,19 @@ function startOnboardingRun(
 ): Promise<CommandResult>;
 ```
 
-- [ ] Write unit RED tests for exact RPC name/arguments and rejection propagation.
-- [ ] Implement `telegram_identity_v2` to initialize onboarding/stat rows idempotently without
+- [x] Write unit RED tests for exact RPC name/arguments and rejection propagation.
+- [x] Implement `telegram_identity_v2` to initialize onboarding/stat rows idempotently without
       changing `telegram_identity_v1`.
-- [ ] Implement `player_home_v1` with pending-deletion fail-closed behavior and canonical router
+- [x] Implement `player_home_v1` with pending-deletion fail-closed behavior and canonical router
       priority: item, ring, active run, tutorial-ready, ordinary-ready, terminal summary, menu.
-- [ ] Implement a private projection that locks the profile, reads base/purchased stats,
+- [x] Implement a private projection that locks the profile, reads base/purchased stats,
       equipment and ring, calculates effective self/loadout values, pins `progression-v1`, teacher
       snapshot and group max HP, then calls existing start semantics in the same transaction.
-- [ ] Expose `start_run_v3(player_id, at)` with no build arguments and one initial outbox intent.
-- [ ] Prove the first two starts use `partyMode=tutorial`, exact teacher snapshot and immutable hashes;
+- [x] Expose `start_run_v3(player_id, at)` with no build arguments and one initial outbox intent.
+- [x] Prove the first two starts use `partyMode=tutorial`, exact teacher snapshot and immutable hashes;
       the third uses the completed starter build and no teacher.
-- [ ] Run focused unit/integration tests. Expected GREEN.
-- [ ] Commit `feat: derive canonical onboarding runs`.
+- [x] Run focused unit/integration tests. Expected GREEN.
+- [x] Commit `feat: derive canonical onboarding runs`.
 
 ### Task 5: Implement tutorial assignment, rescue validation and completion credit
 
@@ -407,7 +407,7 @@ function routeCanonicalHome(
       originate from and edit the bound canonical message.
 - [x] Prove retryable edit failure followed by redelivery applies no second mutation and edits the
       same message.
-- [ ] Run handler/router/worker tests and all Phase 3 source/E2E regressions. Expected GREEN.
+- [x] Run handler/router/worker tests and all Phase 3 source/E2E regressions. Expected GREEN.
 - [x] Write `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md` and update memory. Commit the
       implementation checkpoint while preserving the explicit verification hold; close this item
       only after the missing runtime regression is green.
@@ -416,13 +416,13 @@ function routeCanonicalHome(
 
 ## Gate 4.3 — Two-Day E2E, Balance and Full Regression
 
-**Implementation checkpoint (updated 2026-07-16):** Tasks 10–11 source is complete. The original
+**Final checkpoint (updated 2026-07-16):** Tasks 10–11 and Phase 4A are complete locally. The original
 two-day/verifier commits are `f982392`, `fa096fa` and `12f48b6`; the council-corrected balance delta
 is `813156a`, `acb984c` and `c62d219`. Source verification (`168 + 3`) and the 72-cell strict
-pairwise matrix are green. The acceptance checkboxes below remain open because local Docker/database
-runtime and the two required clean full verifier passes are unavailable. The separate baseline
-diagnostic blocks Phase 4T owner-smoke. See
-`docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`.
+pairwise matrix are green. Docker access was restored and `verify:phase4a` passed all 31 steps twice
+in 525.1 s and 553.5 s. Runtime fixture corrections are committed as `1087fc4`; migration 014 is
+checksum-pinned and locked. The separate baseline diagnostic still blocks Phase 4T owner-smoke. See
+`docs/checkpoints/2026-07-15-phase-04a.md`.
 
 ### Task 10: Prove the two-cycle progression loop end to end
 
@@ -439,15 +439,15 @@ diagnostic blocks Phase 4T owner-smoke. See
   recording fake Telegram.
 - Produces: canonical transcript and durable progression evidence across three run snapshots.
 
-- [ ] RED-first flow: `/start → run 1 → credit → stat/defer → next cycle → run 2 → item → ring`.
-- [ ] Prove tutorial progress `0/2 → 1/2 → 2/2`, rank `Новак`, and correct menus at each step.
-- [ ] Exercise natural terminal, HP-zero, eligible expiry, ineligible expiry, start-only and abandon.
-- [ ] Exercise item accept and discard paths; both must reach the ring decision.
-- [ ] Exercise all four ring choices and both compatible main-item branches.
-- [ ] Show the stat purchase affects run 2 only when bought before its start.
-- [ ] Show item/ring affect run 3 and earlier snapshots remain byte-identical.
-- [ ] Replay/cross-race stale callbacks and restart handler/worker objects between steps.
-- [ ] Assert ledger, tutorial, offers, profile versions, result counts, outbox and canonical card
+- [x] RED-first flow: `/start → run 1 → credit → stat/defer → next cycle → run 2 → item → ring`.
+- [x] Prove tutorial progress `0/2 → 1/2 → 2/2`, rank `Новак`, and correct menus at each step.
+- [x] Exercise natural terminal, HP-zero, eligible expiry, ineligible expiry, start-only and abandon.
+- [x] Exercise item accept and discard paths; both must reach the ring decision.
+- [x] Exercise all four ring choices and both compatible main-item branches.
+- [x] Show the stat purchase affects run 2 only when bought before its start.
+- [x] Show item/ring affect run 3 and earlier snapshots remain byte-identical.
+- [x] Replay/cross-race stale callbacks and restart handler/worker objects between steps.
+- [x] Assert ledger, tutorial, offers, profile versions, result counts, outbox and canonical card
       reconciliation are exact and contain no real identity/secret.
 
 ### Task 11: Add balance simulation and a self-contained Phase 4 verifier
@@ -468,23 +468,23 @@ diagnostic blocks Phase 4T owner-smoke. See
 - Verifier is local-only, refuses `supabase/.temp/project-ref`, manages isolated CLI profile and
   always stops local Supabase in `finally`.
 
-- [ ] Write RED verifier tests for remote-link refusal, non-loopback DB refusal, cleanup and the
+- [x] Write RED verifier tests for remote-link refusal, non-loopback DB refusal, cleanup and the
       complete ordered command list.
 - [x] Compare depth, terminal state, HP, XP and successful-check distribution for each starter ring;
       fail closed if any ring pairwise-dominates another across the complete 72-cell matrix. Keep the
       non-empty 24-cell baseline diagnostic visible as a Phase 4T blocker.
-- [ ] Add `verify:phase4a` without editing historical `verify:phase3` or its fixed `283 pgTAP` label.
-- [ ] Run Phase 4 verification twice from a clean reset. It must include Phase 3 source, database,
+- [x] Add `verify:phase4a` without editing historical `verify:phase3` or its fixed `283 pgTAP` label.
+- [x] Run Phase 4 verification twice from a clean reset. It must include Phase 3 source, database,
       concurrency, deletion, Telegram E2E, lifecycle, delivery-fault and load regressions, then all
       new Gate 4.1–4.3 groups.
-- [ ] Verify migration/source baseline hashes, zero remote link, zero secret/PII findings,
+- [x] Verify migration/source baseline hashes, zero remote link, zero secret/PII findings,
       reconciliation `0/0/0`, DB lint and checksum manifest.
-- [ ] Write `docs/checkpoints/2026-07-15-phase-04a.md` with commands, counts, timings, balance matrix,
+- [x] Write `docs/checkpoints/2026-07-15-phase-04a.md` with commands, counts, timings, balance matrix,
       residual risks and exact next gate.
-- [ ] Update `PROJECT_STATE.md`, `TASKS.md` and `DECISIONS.md`; run project file hygiene audit without
+- [x] Update `PROJECT_STATE.md`, `TASKS.md` and `DECISIONS.md`; run project file hygiene audit without
       deleting or moving anything.
-- [ ] Commit `feat: complete Phase 4A starter loop`.
-- [ ] Invoke `superpowers:verification-before-completion` and a full project council. Phase 4A is
+- [x] Commit `feat: complete Phase 4A starter loop`.
+- [x] Invoke `superpowers:verification-before-completion` and a full project council. Phase 4A is
       approved only if every blocking finding is resolved and the repeated verifier is green.
 
 ## Phase 4A Done Definition

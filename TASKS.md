@@ -1,11 +1,15 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-04A: Implement the approved local onboarding and starter-build loop (`in_progress`; ADRs 047–048)
+- [x] ID: PHASE-04A: Implement the approved local onboarding and starter-build loop (`approved` locally; ADRs 047–053) → `docs/checkpoints/2026-07-15-phase-04a.md`
   - [x] P4A-00: Isolated worktree and repeated Phase 3 baseline → `docs/checkpoints/2026-07-15-phase-04a-baseline.md`
   - [x] P4A-41: Gate 4.1 schema, security and atomic progression (`approved` locally; ADR 049) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`
-  - [ ] P4A-42: Gate 4.2 canonical build, cards and routing (`implementation_complete`, `verification_hold`; ADR 050) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`
-  - [ ] P4A-43: Gate 4.3 two-day E2E, strict pairwise balance and repeated verifier (`implementation_complete`, `verification_hold`; 168 + 3 source tests and 72-cell simulation green, baseline fire dominance blocks Phase 4T owner-smoke, local Docker runtime unavailable; ADRs 051–052) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`
+  - [x] P4A-42: Gate 4.2 canonical build, cards and routing (`approved` locally; ADRs 050, 053) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`
+  - [x] P4A-43: Gate 4.3 two-day E2E, strict pairwise balance and repeated verifier (`approved` locally; two 31-step runs green; baseline fire dominance still blocks Phase 4T owner-smoke; ADRs 051–053) → `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`
+
+## Next Gated Work
+- [ ] ID: PHASE-04-BALANCE: Apply the owner-approved focused fallback balance amendment (`awaiting explicit Unlock` because production fallback is locked; ADRs 052–053)
+- [ ] ID: PHASE-04T: Private Telegram owner-smoke (`not_started`; depends on PHASE-04-BALANCE and separate remote authorization; ADRs 046–048, 052–053)
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)
