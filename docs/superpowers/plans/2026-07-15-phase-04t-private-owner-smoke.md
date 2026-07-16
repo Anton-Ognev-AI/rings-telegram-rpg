@@ -27,8 +27,12 @@ local PowerShell-compatible smoke runner, recovery-control database.
 - Use a separate staging app project, separate staging recovery project and separate private bot.
 - Owner allowlist rejection occurs before identity creation and before application routing.
 - No cron, external testers, production-like project ref, production data or public access.
-- Migration 015 is expand-only. Existing migrations/checksums and `delivery_unknown` semantics stay
-  unchanged until an operator makes one explicit decision.
+- Migration 015 is expand-only and reconciliation-only. It must not redefine migration-014
+  `request_run_render_v2`; a failing render regression stops the phase for a separate review.
+- Each reconciliation targets one retained delivery incident (`delivery_incident_id` is the
+  `lease_id` preserved when that attempt becomes `delivery_unknown`), not only its outbox row.
+- Existing migrations/checksums and `delivery_unknown` semantics stay unchanged until an operator
+  makes one explicit decision.
 
 ## Gate 4T.0 — Local Remote-Readiness Corrections
 
@@ -48,23 +52,29 @@ local PowerShell-compatible smoke runner, recovery-control database.
 ```text
 reconcile_delivery_unknown_v1(
   outbox_id,
+  delivery_incident_id,
   decision = 'confirm_delivered' | 'confirm_not_delivered_and_requeue',
   telegram_message_id,
   at
 ) -> immutable operator result
 ```
 
-- [ ] RED-first pgTAP tests for exact service/operator grants, no direct DML and immutable audit
-      evidence.
+- [ ] RED-first pgTAP tests for `game.delivery_unknown_reconciliations`, exact five-argument RPC,
+      service-role-only execute, no direct DML and immutable audit evidence keyed by
+      `(outbox_id, delivery_incident_id)`.
 - [ ] RED-first concurrency test proving the migration-014 `request_run_render_v2` contract already
-      coalesces by run/state and current cards return cached with no new outbox row. Migration 015
-      must not redefine that RPC unless a failing test demonstrates a required forward correction.
+      coalesces by run/state and current cards return cached with no new outbox row. A regression
+      failure stops Task 1; migration 015 never takes ownership of that RPC.
 - [ ] RED-first reconciliation tests: delivered requires a positive message ID and closes the row;
-      not-delivered requeues once without message ID; wrong status, ambiguous decision and replay
-      are rejected/cached with zero duplicate sends.
-- [ ] Implement migration 015 for operator reconciliation and any test-proven forward correction;
-      append only its checksum. Ownership of the normal v2 render contract remains in migration 014.
-- [ ] Run clean reset, upgrade-from-014, pgTAP, integration, reconciliation, lint and checksums.
+      not-delivered requeues once without message ID; exact replay returns the cached result;
+      conflicting replay, wrong status or wrong incident are rejected with zero duplicate sends.
+- [ ] Under an outbox row lock, recheck active identity/deletion, current intent/state and card
+      ownership. Deleted or stale intent is superseded and can never be requeued.
+- [ ] Prove concurrent conflicting decisions, a second delivery incident on the same re-leased
+      outbox, deletion race, stale intent and existing-card behavior.
+- [ ] Implement migration 015 for operator reconciliation only and append only its checksum.
+- [ ] Run clean reset, upgrade-from-014, pgTAP, integration, reconciliation, grants/direct-DML,
+      lint and checksums.
 - [ ] Commit `feat: add owner-smoke delivery controls`.
 
 ### Task 2: Add owner allowlist and webhook-secret boundary
@@ -88,6 +98,8 @@ function assertOwnerAllowed(
 
 - [ ] Prove Telegram secret verification happens before JSON parsing and allowlist parsing happens
       before database adapter/identity bootstrap construction.
+- [ ] Export an injectable webhook handler/factory so the boundary order is directly testable with
+      synthetic IDs and without constructing privileged adapters for rejected requests.
 - [ ] Accept exactly one canonical positive decimal Telegram external ID from an Edge secret; reject
       missing, malformed, zero, lists/ranges and mismatches with a generic response.
 - [ ] Preserve JWT plus separate internal-secret checks for worker/day functions.
@@ -111,11 +123,15 @@ function assertOwnerAllowed(
 
 ```text
 npm run staging:preflight -- --staging --project-ref <exact-ref>
-npm run staging:owner-smoke -- --staging --project-ref <exact-ref>
+npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-remote]
 ```
 
+- [ ] Both commands are offline/dry-run by default. Network access is impossible unless a future
+      approved invocation supplies `--execute-remote`.
 - [ ] Read the allowed staging project ref only from explicit local CLI input plus a local
       non-repository confirmation source; never infer it from production or Git state.
+- [ ] In remote mode, require the exact CLI project ref to match the non-repository confirmation
+      value; never read or print `.env` or any credential.
 - [ ] Refuse absent `--staging`, unknown/project-ref mismatch, production-like denylist entries,
       dirty migration order/checksums, missing Phase 4 flags, repository secrets or a linked
       different project.
