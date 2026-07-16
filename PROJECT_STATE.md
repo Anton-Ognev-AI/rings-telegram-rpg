@@ -5,7 +5,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 
 ## Technical Context
 - Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 4A is `approved` locally. Gates 4.1–4.3 passed two complete 31-step Docker/database verifiers; migration 014 is checksum-pinned and locked. Phase 4T is not started: its owner-smoke is blocked by the production-baseline fire-ring imbalance and still requires separate remote authorization. Parallel Track G and external validation remain gated.
+- Current Phase: Phase 4A is `approved` locally. PHASE-04-BALANCE is `in_progress` after the owner explicitly unlocked `content/fallback/case-001/day-01.json`; the council-approved minimum amendment is a build-aware informed-player simulation policy plus one non-golden stage-3 magical counter-route (ADR 054). Migration 014 and resolver/config/golden files remain locked. Phase 4T remote actions still require separate authorization. Parallel Track G and external validation remain gated.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
@@ -31,6 +31,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/superpowers/plans/2026-07-15-phase-04t-private-owner-smoke.md`: Separate local-readiness and remote-gated private Telegram plan (Status: approved for local preparation only; remote actions still require explicit approval; ADR 048)
 - `docs/superpowers/specs/2026-07-16-multi-archetype-ring-balance-gate-design.md`: Council-corrected strict pairwise starter-ring balance design with test-only archetypes and a separate production-baseline diagnostic (Status: owner-approved and source-implemented; ADR 052)
 - `docs/superpowers/plans/2026-07-16-multi-archetype-ring-balance-gate.md`: Executed TDD plan for the 72-cell fail-closed balance matrix (Status: source-complete; runtime hold inherited from Phase 4A)
+- `docs/superpowers/specs/2026-07-16-fallback-fire-balance-amendment-design.md`: Focused owner-unlocked fallback correction with build-aware oracle-policy boundary (Status: council-approved for TDD implementation; ADR 054)
+- `docs/superpowers/plans/2026-07-16-fallback-fire-balance-amendment.md`: Detailed PHASE-04-BALANCE TDD and re-lock plan (Status: in_progress)
 - `docs/checkpoints/2026-07-15-phase-04a-baseline.md`: Phase 4A worktree, repeated Phase 3 verifier and locked SHA-256 inventory (Status: approved baseline)
 - `docs/checkpoints/2026-07-15-phase-04a-gate-4-1.md`: Atomic tutorial/stat/item/ring progression, local upgrade-from-013 and council evidence (Status: approved locally; ADR 049)
 - `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`: Canonical build/home projection, guided cards, focused Telegram router and verification evidence (Status: approved locally; ADRs 050, 053)
@@ -59,7 +61,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `supabase/functions/health/` and `_shared/infrastructure/`: TDD Phase 0 foundation (Status: verified)
 - `docs/checkpoints/2026-07-12-phase-00.md`: Phase 0 evidence and explicit validation waiver (Status: approved_with_waiver)
 - `docs/checkpoints/2026-07-12-phase-01.md`: Deterministic kernel evidence, golden hash and simulation outputs (Status: approved)
-- `content/schemas/dungeon-v1.schema.json` and `content/fallback/case-001/day-01.json`: V1 content shape and reviewed mechanical fallback (Status: approved)
+- `content/schemas/dungeon-v1.schema.json`: V1 content shape (Status: approved and locked)
+- `content/fallback/case-001/day-01.json`: Reviewed mechanical fallback (Status: explicitly unlocked for PHASE-04-BALANCE only; in_progress; ADR 054)
 - `supabase/functions/_shared/domain/`: Pure versioned resolver, party/combat helpers, canonical hash and Kyiv cycle boundary (Status: approved)
 
 ## Current Review Gate
@@ -98,7 +101,7 @@ Telegram-бот гра: гравець — учень Академії у сві
 - Gate 4.1 passed locally after TDD and a five-role council correction pass. Migration 014 now owns deny-by-default normalized tutorial/progression state, pinned `progression-v1`, retryable uncredited tutorial attempts with one credited ordinal, scheduler-delay-safe credit, opaque actor/message/profile-bound actions, cross-namespace update locking and atomic stat/item/ring/mastery mutations. Evidence: 40 migration pgTAP assertions, 13 focused integration tests, 2 concurrency tests including 100 duplicates, reconciliation `0/0/0`, zero DB lint/checksum findings and an upgrade-from-013 preservation proof (ADR 049).
 - Gate 4.2 is approved locally. The playable onboarding routes through one strict `player_home_v1` projection, server-derived `start_run_v3`, message-bound `pa_` actions and run/state-derived `request_run_render_v2`. Guided stat/item/ring/mastery cards edit one canonical Telegram message; pending decisions and rejected actions have visible recovery paths. The corrected delivery-fault and complete Phase 3 regressions passed in both final verifiers (ADRs 050, 053).
 - Gate 4.3 and Phase 4A are approved locally. Production-shaped two-day accept/discard flows, exact tutorial/ledger/offer/card/snapshot assertions, terminal/expiry/abandon fixtures and all four starter builds passed twice inside the 31-step verifier (`525.1 s`, `553.5 s`). Source verification is `168 + 3`; checksums, reconciliation and DB lint are clean. The 72-cell test matrix has zero pairwise dominance, while the real baseline still pins `weapon > fire`, `defense > fire` and `healing > fire`; synthetic archetypes remain test-only (ADRs 051–053).
-- Next safe step: before Phase 4T owner-smoke, explicitly unlock and implement the approved focused fallback balance amendment, then re-run the strict matrix and full local verifier. After that, remote Supabase link/migrations, secrets, deployment and webhook registration still require a separate explicit gate. The 5–10-person external core-loop validation remains deferred—not passed or cancelled—until private owner-smoke succeeds. Migrations 001–014 and Phase 1 resolver/config/golden files are locked.
+- Next safe step: implement the owner-unlocked focused fallback amendment TDD-first, prove both baseline and full dominance are empty, preserve the golden replay, run the full local verifier twice and re-lock the fallback. After that, Phase 4T local readiness may proceed; remote Supabase link/migrations, secrets, deployment and webhook registration still require a separate explicit gate. The 5–10-person external core-loop validation remains deferred—not passed or cancelled—until private owner-smoke succeeds. Migrations 001–014 and Phase 1 resolver/config/golden files remain locked.
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
