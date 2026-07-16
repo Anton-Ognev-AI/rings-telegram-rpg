@@ -77,6 +77,28 @@ reconcile_delivery_unknown_v1(
       lint and checksums.
 - [ ] Commit `feat: add owner-smoke delivery controls`.
 
+### Task 1A: Correct the separately owned current-card render regression
+
+The RED regression proved migration 014 creates a redundant repair when
+`telegram_run_cards.last_state_version >= runs.state_version`, contrary to the approved Phase 4
+design. A focused second council approved a separate forward correction; migration 014 remains
+byte-locked and migration 015 remains reconciliation-only.
+
+**Files:**
+
+- Create: `supabase/migrations/202607150016_current_card_render_cache.sql`
+- Modify: `supabase/migrations/SHA256SUMS`
+- Modify: `supabase/functions/_shared/contracts/database.types.ts`
+- Verify: `tests/integration/render_repair_coalescing_v2_test.ts`
+
+- [ ] RED is preserved: a current card currently returns `applied` and inserts a redundant repair.
+- [ ] Migration 016 alone takes forward ownership of `request_run_render_v2`, returning cached
+      `card_current` before any insertion when the canonical card is at or ahead of run state.
+- [ ] Preserve owner/active/run/card validation, stale-card one-row coalescing, safe search path,
+      postgres ownership and service-role-only execute grants.
+- [ ] Prove migration 014 checksum/bytes are unchanged and upgrade-from-014 applies 015 then 016.
+- [ ] Commit `fix: cache current Telegram run cards`.
+
 ### Task 2: Add owner allowlist and webhook-secret boundary
 
 **Files:**
@@ -156,7 +178,8 @@ npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-re
 - Runbooks use placeholders such as `<STAGING_APP_REF>` and secret names only; never secret values.
 - Every command identifies its target project and verification/rollback step.
 
-- [ ] Document exact order: create/link app staging, create/link recovery staging, apply migrations,
+- [ ] Document exact order: create/link app staging, create/link recovery staging, apply migrations
+      014, 015 and 016,
       provision secrets, deploy internal functions, deploy webhook, register webhook, run preflight,
       run smoke, remove webhook/rotate token.
 - [ ] Document an authenticated synthetic non-owner webhook request before `/start` and identity
@@ -195,7 +218,7 @@ or dashboard and never through the conversation.
 
 - [ ] Run preflight against exact app/recovery refs; capture only redacted statuses and migration
       versions.
-- [ ] Apply migration 014 then 015 with `tutorial_starter_enabled` initially disabled.
+- [ ] Apply migration 014, 015 then 016 with `tutorial_starter_enabled` initially disabled.
 - [ ] Provision recovery sink and perform isolated backup-restore/tombstone replay smoke.
 - [ ] Set bot/webhook/internal/owner secrets through secret storage.
 - [ ] Deploy internal functions first, verify JWT/internal-secret rejection, then deploy webhook.

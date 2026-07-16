@@ -12,6 +12,7 @@
 - [ ] ID: PHASE-04T: Private Telegram owner-smoke (`in_progress` for Gate 4T.0 local readiness only; council-corrected reconciliation contract approved for local TDD; remote authorization still absent; ADRs 046–048, 052–056)
   - [x] P4T-00: Full council review; bind each reconciliation to its retained delivery incident, keep migration 015 reconciliation-only, and make staging tools offline by default (ADR 056)
   - [ ] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`in_progress`, local-only)
+  - [ ] P4T-01A: Forward migration 016 for current-card render caching (`approved for local TDD` after RED regression and focused council; migration 014 remains locked; ADR 057)
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)
