@@ -22,10 +22,15 @@ export async function ensureRecoveryDatabase(): Promise<void> {
     await admin.end({ timeout: 5 });
   }
 
-  const migration = await Deno.readTextFile(
-    "recovery-control/migrations/202607130001_deletion_tombstones.sql",
-  );
-  await withRecoveryDatabase((sql) => sql.unsafe(migration));
+  for (
+    const migrationPath of [
+      "recovery-control/migrations/202607130001_deletion_tombstones.sql",
+      "recovery-control/migrations/202607150002_record_deletion_tombstone.sql",
+    ]
+  ) {
+    const migration = await Deno.readTextFile(migrationPath);
+    await withRecoveryDatabase((sql) => sql.unsafe(migration));
+  }
 }
 
 export async function withRecoveryDatabase<T>(work: (sql: Sql) => Promise<T>): Promise<T> {

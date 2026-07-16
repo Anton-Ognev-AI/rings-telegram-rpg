@@ -107,9 +107,20 @@ async function preflightDependencies(
       `${await sha256(value)}  ${path.split("/").at(-1)}\n`
     ),
   )).join("");
+  const recoveryMigrations = {
+    "recovery-control/migrations/202607130001_deletion_tombstones.sql": "private table",
+    "recovery-control/migrations/202607150002_record_deletion_tombstone.sql": "service RPC",
+  };
+  const recoveryManifest = (await Promise.all(
+    Object.entries(recoveryMigrations).map(async ([path, value]) =>
+      `${await sha256(value)}  ${path.split("/").at(-1)}\n`
+    ),
+  )).join("");
   const files: Record<string, string> = {
     ...migrations,
     "supabase/migrations/SHA256SUMS": manifest,
+    ...recoveryMigrations,
+    "recovery-control/migrations/SHA256SUMS": recoveryManifest,
     "supabase/seed.sql": "tutorial_starter_enabled true",
     "scripts/safe.ts": "export const safe = true;",
     ...additions,
@@ -134,10 +145,21 @@ Deno.test("owner-smoke preflight verifies local migrations and scans tracked fil
   assertEquals(result, {
     status: "ready",
     mode: "dry-run",
-    checks: 7,
-    migrationsVerified: 3,
-    trackedFilesScanned: 6,
+    checks: 8,
+    migrationsVerified: 5,
+    trackedFilesScanned: 9,
   });
+});
+
+Deno.test("owner-smoke preflight rejects recovery migration checksum drift", async () => {
+  const dependencies = await preflightDependencies({
+    "recovery-control/migrations/202607150002_record_deletion_tombstone.sql": "drift",
+  });
+  await assertRejects(
+    () => preflightOwnerSmoke(options(), dependencies),
+    Error,
+    "migration_checksum_drift",
+  );
 });
 
 Deno.test("owner-smoke preflight rejects tracked env or credential material without exposing it", async () => {

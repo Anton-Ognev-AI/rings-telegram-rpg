@@ -8,11 +8,18 @@ const APP_CONFIRMATION = "TG_GAME_CONFIRMED_STAGING_APP_REF";
 const RECOVERY_CONFIRMATION = "TG_GAME_CONFIRMED_STAGING_RECOVERY_REF";
 const DENIED_REFS = "TG_GAME_DENIED_PROJECT_REFS";
 const LINK_PATH = "supabase/.temp/project-ref";
-const MANIFEST_PATH = "supabase/migrations/SHA256SUMS";
+const APP_MIGRATION_ROOT = "supabase/migrations";
+const APP_MANIFEST_PATH = `${APP_MIGRATION_ROOT}/SHA256SUMS`;
+const RECOVERY_MIGRATION_ROOT = "recovery-control/migrations";
+const RECOVERY_MANIFEST_PATH = `${RECOVERY_MIGRATION_ROOT}/SHA256SUMS`;
 const REQUIRED_MIGRATIONS = [
   "202607150014_tutorial_starter.sql",
   "202607150015_owner_smoke_readiness.sql",
   "202607150016_current_card_render_cache.sql",
+] as const;
+const REQUIRED_RECOVERY_MIGRATIONS = [
+  "202607130001_deletion_tombstones.sql",
+  "202607150002_record_deletion_tombstone.sql",
 ] as const;
 const TEXT_FILE = /(?:\.(?:ts|tsx|js|json|md|sql|toml|ya?ml|txt|example)|\.gitignore)$/i;
 const TELEGRAM_TOKEN = /\b\d{8,10}:[A-Za-z0-9_-]{35,}\b/;
@@ -71,6 +78,32 @@ function manifestEntries(value: string): ReadonlyMap<string, string> {
   return result;
 }
 
+async function verifyMigrationSet(
+  dependencies: OwnerSmokePreflightDependencies,
+  trackedPaths: readonly string[],
+  root: string,
+  manifestPath: string,
+  required: readonly string[],
+  missingCode: string,
+): Promise<number> {
+  const manifest = manifestEntries(await dependencies.readTextFile(manifestPath));
+  const migrationPaths = trackedPaths.filter((path) => {
+    if (!path.startsWith(`${root}/`)) return false;
+    const name = path.slice(root.length + 1);
+    return /^\d{12}_.+\.sql$/.test(name);
+  }).sort();
+  if (manifest.size !== migrationPaths.length) fail("migration_manifest_incomplete");
+  for (const path of migrationPaths) {
+    const name = path.split("/").at(-1)!;
+    const expected = manifest.get(name);
+    if (!expected || await sha256(await dependencies.readTextFile(path)) !== expected) {
+      fail("migration_checksum_drift");
+    }
+  }
+  if (required.some((name) => !manifest.has(name))) fail(missingCode);
+  return migrationPaths.length;
+}
+
 export async function preflightOwnerSmoke(
   options: StagingCliOptions,
   dependencies: OwnerSmokePreflightDependencies,
@@ -88,21 +121,22 @@ export async function preflightOwnerSmoke(
   const trackedPaths = (await dependencies.listTrackedPaths()).map(normalizePath);
   if (trackedPaths.some(isTrackedEnvironment)) fail("tracked_environment_forbidden");
 
-  const manifest = manifestEntries(await dependencies.readTextFile(MANIFEST_PATH));
-  const migrationPaths = trackedPaths.filter((path) =>
-    /^supabase\/migrations\/\d{12}_.+\.sql$/.test(path)
-  ).sort();
-  if (manifest.size !== migrationPaths.length) fail("migration_manifest_incomplete");
-  for (const path of migrationPaths) {
-    const name = path.split("/").at(-1)!;
-    const expected = manifest.get(name);
-    if (!expected || await sha256(await dependencies.readTextFile(path)) !== expected) {
-      fail("migration_checksum_drift");
-    }
-  }
-  if (REQUIRED_MIGRATIONS.some((name) => !manifest.has(name))) {
-    fail("phase4_migrations_missing");
-  }
+  const appMigrations = await verifyMigrationSet(
+    dependencies,
+    trackedPaths,
+    APP_MIGRATION_ROOT,
+    APP_MANIFEST_PATH,
+    REQUIRED_MIGRATIONS,
+    "phase4_migrations_missing",
+  );
+  const recoveryMigrations = await verifyMigrationSet(
+    dependencies,
+    trackedPaths,
+    RECOVERY_MIGRATION_ROOT,
+    RECOVERY_MANIFEST_PATH,
+    REQUIRED_RECOVERY_MIGRATIONS,
+    "recovery_migrations_missing",
+  );
 
   const tutorialMigration = await dependencies.readTextFile(
     `supabase/migrations/${REQUIRED_MIGRATIONS[0]}`,
@@ -126,8 +160,8 @@ export async function preflightOwnerSmoke(
   return {
     status: "ready",
     mode: policy.mode,
-    checks: 7,
-    migrationsVerified: migrationPaths.length,
+    checks: 8,
+    migrationsVerified: appMigrations + recoveryMigrations,
     trackedFilesScanned: trackedPaths.length,
   };
 }

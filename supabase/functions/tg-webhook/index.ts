@@ -1,5 +1,5 @@
-import type { IdentityDeletionSink } from "../_shared/application/delete-identity.ts";
-import { SupabaseRpcDatabase } from "../_shared/infrastructure/supabase-rpc.ts";
+import { SupabaseRecoveryDeletionSink } from "../_shared/infrastructure/recovery-supabase.ts";
+import { type FetchPort, SupabaseRpcDatabase } from "../_shared/infrastructure/supabase-rpc.ts";
 import { handleTelegramUpdate } from "../_shared/telegram/handler.ts";
 import { TelegramBotApiPort } from "../_shared/telegram/http.ts";
 import { assertOwnerAllowed, OwnerAllowlistError } from "../_shared/telegram/owner-allowlist.ts";
@@ -24,10 +24,6 @@ function requiredEnvironment(
   if (!value) throw new Error(`missing_environment_${name}`);
   return value;
 }
-
-const pendingDeletionSink: IdentityDeletionSink = {
-  recordTombstone: () => Promise.reject(new Error("deletion_sink_not_configured")),
-};
 
 export type BoundedWebhookBody =
   | { readonly ok: true; readonly body: string }
@@ -116,26 +112,39 @@ export function createTelegramWebhookHandler(
 
 const getEnvironment = (name: string) => Deno.env.get(name);
 
+export function createRuntimeHandlerDependencies(
+  environment: (name: string) => string | undefined,
+  fetcher: FetchPort = fetch,
+): TelegramHandlerDependencies {
+  return {
+    database: new SupabaseRpcDatabase(
+      requiredEnvironment(environment, "SUPABASE_URL"),
+      requiredEnvironment(environment, "SUPABASE_SERVICE_ROLE_KEY"),
+      fetcher,
+    ),
+    telegram: new TelegramBotApiPort(
+      requiredEnvironment(environment, "TELEGRAM_BOT_TOKEN"),
+      fetcher,
+    ),
+    clock: { now: () => new Date() },
+    deletionSink: new SupabaseRecoveryDeletionSink(
+      requiredEnvironment(environment, "RECOVERY_SUPABASE_URL"),
+      requiredEnvironment(environment, "RECOVERY_SUPABASE_SERVICE_ROLE_KEY"),
+      fetcher,
+    ),
+    deletionEnabled: true,
+    callbackKey: new TextEncoder().encode(
+      requiredEnvironment(environment, "TELEGRAM_CALLBACK_HMAC_KEY"),
+    ),
+  };
+}
+
 export const handleWebhook = createTelegramWebhookHandler({
   getEnvironment,
   verifySecret: verifyTelegramSecret,
   readBody: readBoundedWebhookBody,
   normalizeBody,
-  createHandlerDependencies: () => ({
-    database: new SupabaseRpcDatabase(
-      requiredEnvironment(getEnvironment, "SUPABASE_URL"),
-      requiredEnvironment(getEnvironment, "SUPABASE_SERVICE_ROLE_KEY"),
-    ),
-    telegram: new TelegramBotApiPort(
-      requiredEnvironment(getEnvironment, "TELEGRAM_BOT_TOKEN"),
-    ),
-    clock: { now: () => new Date() },
-    deletionSink: pendingDeletionSink,
-    deletionEnabled: false,
-    callbackKey: new TextEncoder().encode(
-      requiredEnvironment(getEnvironment, "TELEGRAM_CALLBACK_HMAC_KEY"),
-    ),
-  }),
+  createHandlerDependencies: () => createRuntimeHandlerDependencies(getEnvironment),
   handleUpdate: handleTelegramUpdate,
 });
 

@@ -26,6 +26,7 @@
     "test:db:integration": "deno test --allow-env --allow-net tests/integration/start_resume_test.ts tests/integration/action_atomicity_test.ts tests/integration/reconciliation_test.ts",
     "test:db:concurrency": "deno test --allow-env --allow-net tests/integration/action_concurrency_test.ts",
     "test:db:deletion": "deno test --allow-env --allow-net --allow-read tests/integration/deletion_restore_test.ts",
+    "test:db:recovery:rpc": "deno test --allow-env --allow-net --allow-read tests/integration/recovery_tombstone_rpc_test.ts",
     "test:db:phase3a": "deno test --allow-env --allow-net tests/integration/telegram_commands_test.ts tests/integration/outbox_delivery_test.ts",
     "test:db:phase4a": "deno test --allow-env --allow-net tests/integration/tutorial_progression_test.ts tests/integration/player_action_atomicity_test.ts tests/integration/starter_build_projection_test.ts",
     "test:db:phase4a:concurrency": "deno test --allow-env --allow-net tests/integration/player_action_concurrency_test.ts",

@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19";
 import {
+  createRuntimeHandlerDependencies,
   createTelegramWebhookHandler,
   type TelegramWebhookBoundaryDependencies,
 } from "../../supabase/functions/tg-webhook/index.ts";
@@ -157,4 +158,47 @@ Deno.test("webhook never exposes privileged credential failures", async () => {
   const body = await response.text();
   for (const secret of secrets) assertEquals(body.includes(secret), false);
   assertEquals(events.includes("handle-update"), false);
+});
+
+Deno.test("owner runtime enables deletion only with an isolated recovery adapter", async () => {
+  const environmentReads: string[] = [];
+  const values: Record<string, string> = {
+    SUPABASE_URL: "http://127.0.0.1:54321",
+    SUPABASE_SERVICE_ROLE_KEY: "synthetic-primary-service-key",
+    TELEGRAM_BOT_TOKEN: "123456789:" + "x".repeat(35),
+    RECOVERY_SUPABASE_URL: "https://bbbbbbbbbbbbbbbbbbbb.supabase.co",
+    RECOVERY_SUPABASE_SERVICE_ROLE_KEY: "synthetic-recovery-service-key",
+    TELEGRAM_CALLBACK_HMAC_KEY: "synthetic-callback-key",
+  };
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const runtime = createRuntimeHandlerDependencies(
+    (name) => {
+      environmentReads.push(name);
+      return values[name];
+    },
+    (input, init) => {
+      requests.push({ url: String(input), init });
+      return Promise.resolve(Response.json({ status: "applied" }));
+    },
+  );
+
+  assertEquals(runtime.deletionEnabled, true);
+  assertEquals(environmentReads, [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "TELEGRAM_BOT_TOKEN",
+    "RECOVERY_SUPABASE_URL",
+    "RECOVERY_SUPABASE_SERVICE_ROLE_KEY",
+    "TELEGRAM_CALLBACK_HMAC_KEY",
+  ]);
+  await runtime.deletionSink.recordTombstone({
+    surrogatePlayerId: "60000000-0000-4000-8000-000000000084",
+    deletionId: "61000000-0000-5000-8000-000000000084",
+    recordedAt: "2026-07-16T12:10:00.000Z",
+  });
+  assertEquals(requests.length, 1);
+  assertEquals(
+    requests[0]?.url,
+    "https://bbbbbbbbbbbbbbbbbbbb.supabase.co/rest/v1/rpc/record_deletion_tombstone_v1",
+  );
 });

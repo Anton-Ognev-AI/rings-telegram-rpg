@@ -14,6 +14,7 @@
   - [x] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`approved` locally; 13 pgTAP and six integration paths including concurrent conflict/deletion race; ADR 058)
   - [x] P4T-01A: Forward migration 016 for current-card render caching (`approved` locally; current-card cached, stale-card coalescing green, upgrade 014→016 green; migration 014 remains locked; ADR 058)
   - [x] P4T-02: Owner allowlist and webhook-secret boundary (`approved` locally; secret/body/normalize/owner/adapters order and generic redaction proven; ADR 059)
+  - [x] P4T-02A: Remote recovery-control deletion sink (`approved` locally; service-only idempotent RPC, fixed recovery adapter, concurrent conflict and restore paths green; ADRs 061–062)
   - [x] P4T-03: Offline fail-closed staging preflight and no-cron runner (`approved` locally; dry-run has no network/secret permission and remote execution requires a separate command plus flag; ADR 060)
   - [ ] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final local gate (`in_progress`, local-only)
 

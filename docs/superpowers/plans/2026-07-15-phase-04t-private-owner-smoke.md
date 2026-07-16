@@ -130,6 +130,47 @@ function assertOwnerAllowed(
 - [x] Run full source verification now; run the complete Phase 4A/4T regression gate in Task 4.
 - [x] Commit `feat: restrict staging webhook to owner` (this checkpoint).
 
+### Task 2A: Connect deletion to the isolated recovery-control project
+
+The Task 4 runbook audit found that `/delete_me` was still intentionally disabled in the deployed
+webhook because only the local recovery sink existed. A focused five-advisor council returned
+`SPLIT_PHASE`: close this single deployment blocker before writing or approving the remote runbook.
+
+**Files:**
+
+- Create: `recovery-control/migrations/202607150002_record_deletion_tombstone.sql`
+- Create: `supabase/functions/_shared/infrastructure/recovery-supabase.ts`
+- Create: `tests/unit/recovery_deletion_sink_test.ts`
+- Create: `tests/integration/recovery_tombstone_rpc_test.ts`
+- Modify: `scripts/recovery/local-recovery-database.ts`
+- Modify: `supabase/functions/tg-webhook/index.ts`
+- Modify: `tests/unit/telegram_webhook_boundary_test.ts`
+- Modify: `deno.json`
+
+**Interfaces:**
+
+```ts
+class SupabaseRecoveryDeletionSink implements IdentityDeletionSink {
+  recordTombstone(input: {
+    surrogatePlayerId: string;
+    deletionId: string;
+    recordedAt: string;
+  }): Promise<void>;
+}
+```
+
+- [x] Preserve recovery migration 001 byte-for-byte and all locked application migrations/content.
+- [x] Add one service-role-only, idempotent public RPC over the private recovery table; exact replay
+      is cached and a conflicting deletion ID/timestamp is rejected.
+- [x] Send only surrogate player UUID, deletion UUID and timestamp to the separately configured
+      recovery URL; never send Telegram ID, username, display name, message or bot credentials.
+- [x] Construct the recovery adapter only after webhook secret, body, normalization and owner checks;
+      fail closed when recovery configuration is absent or invalid.
+- [x] Enable Telegram deletion only with the configured remote sink and prove pending/retry behavior
+      remains honest when recovery is unavailable.
+- [x] Run focused migration/adapter/boundary tests and the full source gate.
+- [x] Commit `feat: connect owner deletion recovery`.
+
 ### Task 3: Build a fail-closed staging preflight and no-cron runner
 
 **Files:**
@@ -179,8 +220,8 @@ npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-re
 - Runbooks use placeholders such as `<STAGING_APP_REF>` and secret names only; never secret values.
 - Every command identifies its target project and verification/rollback step.
 
-- [ ] Document exact order: create/link app staging, create/link recovery staging, apply migrations
-      014, 015 and 016,
+- [ ] Document exact order: create/link app staging, create/link recovery staging, apply recovery
+      migrations 001–002 and app migrations through 014, 015 and 016,
       provision secrets, deploy internal functions, deploy webhook, register webhook, run preflight,
       run smoke, remove webhook/rotate token.
 - [ ] Document an authenticated synthetic non-owner webhook request before `/start` and identity
