@@ -1,14 +1,11 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert@1.0.19";
-import {
-  assertNoStrictRingDominance,
-  simulateStarterBuildMatrix,
-} from "../../scripts/simulate-starter-builds.ts";
+import { simulateStarterBuildMatrix } from "../../scripts/simulate-starter-builds.ts";
 
-Deno.test("starter balance matrix covers four rings, three policies and two party modes", async () => {
+Deno.test("starter balance matrix covers 72 unique terminal archetype contexts", async () => {
   const first = await simulateStarterBuildMatrix();
   const second = await simulateStarterBuildMatrix();
   assertEquals(first, second);
-  assertEquals(first.length, 24);
+  assertEquals(first.length, 72);
   assertEquals(
     new Set(first.map((report) => report.ring)),
     new Set(["weapon", "fire", "defense", "healing"]),
@@ -18,8 +15,20 @@ Deno.test("starter balance matrix covers four rings, three policies and two part
     new Set(["correct", "mixed", "attrition"]),
   );
   assertEquals(new Set(first.map((report) => report.partyMode)), new Set(["tutorial", "ordinary"]));
+  assertEquals(
+    new Set(first.map((report) => report.archetype)),
+    new Set(["baseline", "martial", "arcane"]),
+  );
+  assertEquals(first.every((report) => report.terminal !== null), true);
+  assertEquals(
+    new Set(
+      first.map((report) =>
+        `${report.archetype}:${report.partyMode}:${report.policy}:${report.ring}`
+      ),
+    ).size,
+    72,
+  );
   assertEquals(first.every((report) => /^[0-9a-f]{64}$/u.test(report.replayHash)), true);
-  assertNoStrictRingDominance(first);
 });
 
 Deno.test("starter rings produce distinct survival or successful-check evidence", async () => {

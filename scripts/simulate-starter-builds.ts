@@ -13,6 +13,7 @@ import type {
   TerminalResult,
 } from "../supabase/functions/_shared/contracts/domain.ts";
 import { canonicalJson, sha256Hex } from "../supabase/functions/_shared/domain/canonical-json.ts";
+import { validateDungeonContentV1 } from "../supabase/functions/_shared/domain/content-validator.ts";
 import { resolveAndHash } from "../supabase/functions/_shared/domain/resolver-registry.ts";
 import { aggregateParty } from "../supabase/functions/_shared/domain/resolvers/v1/party.ts";
 import { advanceStateV1 } from "../supabase/functions/_shared/domain/resolvers/v1/resolver.ts";
@@ -20,8 +21,10 @@ import { advanceStateV1 } from "../supabase/functions/_shared/domain/resolvers/v
 export type StarterRing = "weapon" | "fire" | "defense" | "healing";
 export type StarterPolicy = "correct" | "mixed" | "attrition";
 export type StarterPartyMode = "tutorial" | "ordinary";
+export type StarterArchetype = "baseline" | "martial" | "arcane";
 
 export interface StarterSimulationReport {
+  readonly archetype: StarterArchetype;
   readonly ring: StarterRing;
   readonly policy: StarterPolicy;
   readonly partyMode: StarterPartyMode;
@@ -37,6 +40,54 @@ const content = fallbackJson as DungeonContentV1;
 const rings: readonly StarterRing[] = ["weapon", "fire", "defense", "healing"];
 const policies: readonly StarterPolicy[] = ["correct", "mixed", "attrition"];
 const partyModes: readonly StarterPartyMode[] = ["tutorial", "ordinary"];
+const archetypes: readonly StarterArchetype[] = ["baseline", "martial", "arcane"];
+
+function projectedStat(
+  stat: Stat | undefined,
+  archetype: StarterArchetype,
+): Stat | undefined {
+  if (archetype === "martial" && stat === "magical") return "physical";
+  if (archetype === "arcane" && stat === "physical") return "magical";
+  return stat;
+}
+
+function projectChoice(choice: ChoiceV1, archetype: StarterArchetype): ChoiceV1 {
+  return choice.kind === "check"
+    ? { ...choice, stat: projectedStat(choice.stat, archetype) }
+    : { ...choice };
+}
+
+function projectContent(archetype: StarterArchetype): DungeonContentV1 {
+  const cloned = structuredClone(content);
+  const projected: DungeonContentV1 = archetype === "baseline" ? content : {
+    ...cloned,
+    stages: cloned.stages.map((stage) => ({
+      ...stage,
+      ...(stage.choices
+        ? { choices: stage.choices.map((choice) => projectChoice(choice, archetype)) }
+        : {}),
+      ...(stage.bossExchanges
+        ? {
+          bossExchanges: stage.bossExchanges.map((exchange) => ({
+            ...exchange,
+            choices: exchange.choices.map((choice) => projectChoice(choice, archetype)),
+          })),
+        }
+        : {}),
+    })),
+  };
+  const validation = validateDungeonContentV1(projected);
+  if (!validation.ok) {
+    throw new Error(
+      `invalid_starter_archetype:${archetype}:${validation.errors.join("|")}`,
+    );
+  }
+  return projected;
+}
+
+const contentByArchetype = new Map(
+  archetypes.map((archetype) => [archetype, projectContent(archetype)] as const),
+);
 
 function ringSelf(ring: StarterRing): SelfSnapshot {
   const base: SelfSnapshot = {
@@ -84,8 +135,11 @@ function party(ring: StarterRing, mode: StarterPartyMode): PartySnapshot {
   return { mode: "solo", self, companion: null };
 }
 
-function choicesFor(state: RunStateV1): readonly ChoiceV1[] {
-  const stage = content.stages[state.stage - 1];
+function choicesFor(
+  scenarioContent: DungeonContentV1,
+  state: RunStateV1,
+): readonly ChoiceV1[] {
+  const stage = scenarioContent.stages[state.stage - 1];
   if (!stage) throw new Error(`missing_simulation_stage:${state.stage}`);
   return state.stage === 10
     ? stage.bossExchanges?.[(state.exchange ?? 1) - 1]?.choices ?? []
@@ -126,10 +180,13 @@ function emptySuccessfulChecks(): Record<Stat, number> {
 }
 
 async function simulate(
+  archetype: StarterArchetype,
   ring: StarterRing,
   policy: StarterPolicy,
   partyMode: StarterPartyMode,
 ): Promise<StarterSimulationReport> {
+  const scenarioContent = contentByArchetype.get(archetype);
+  if (!scenarioContent) throw new Error(`missing_starter_archetype:${archetype}`);
   const snapshot = party(ring, partyMode);
   let state: RunStateV1 = {
     stage: 1,
@@ -146,14 +203,19 @@ async function simulate(
   const successfulChecks = emptySuccessfulChecks();
 
   while (state.terminal === null && state.stage <= 10) {
-    const selected = choose(choicesFor(state), policy, resolutions.length);
+    const selected = choose(choicesFor(scenarioContent, state), policy, resolutions.length);
     const command: ChoiceCommandV1 = {
       resolverVersion: "v1",
       stage: state.stage,
       exchange: state.stage === 10 ? state.exchange ?? 1 : null,
       choiceId: selected.id,
     };
-    const replay = await resolveAndHash({ content, party: snapshot, state, command });
+    const replay = await resolveAndHash({
+      content: scenarioContent,
+      party: snapshot,
+      state,
+      command,
+    });
     const resolution = replay.resolution;
     resolutions.push(resolution);
     if (resolution.outcome === "success" && resolution.check) {
@@ -166,6 +228,7 @@ async function simulate(
   }
 
   return {
+    archetype,
     ring,
     policy,
     partyMode,
@@ -180,9 +243,13 @@ async function simulate(
 
 export async function simulateStarterBuildMatrix(): Promise<readonly StarterSimulationReport[]> {
   const reports: StarterSimulationReport[] = [];
-  for (const partyMode of partyModes) {
-    for (const policy of policies) {
-      for (const ring of rings) reports.push(await simulate(ring, policy, partyMode));
+  for (const archetype of archetypes) {
+    for (const partyMode of partyModes) {
+      for (const policy of policies) {
+        for (const ring of rings) {
+          reports.push(await simulate(archetype, ring, policy, partyMode));
+        }
+      }
     }
   }
   return reports;
