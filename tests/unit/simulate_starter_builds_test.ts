@@ -1,5 +1,9 @@
-import { assertEquals, assertNotEquals } from "jsr:@std/assert@1.0.19";
-import { simulateStarterBuildMatrix } from "../../scripts/simulate-starter-builds.ts";
+import { assertEquals, assertNotEquals, assertThrows } from "jsr:@std/assert@1.0.19";
+import {
+  assertNoPairwiseRingDominance,
+  pairwiseDominancePairs,
+  simulateStarterBuildMatrix,
+} from "../../scripts/simulate-starter-builds.ts";
 
 Deno.test("starter balance matrix covers 72 unique terminal archetype contexts", async () => {
   const first = await simulateStarterBuildMatrix();
@@ -52,5 +56,72 @@ Deno.test("starter rings produce distinct survival or successful-check evidence"
   assertNotEquals(
     { hp: healing.remainingHp, checks: healing.successfulChecks },
     { hp: weapon.remainingHp, checks: weapon.successfulChecks },
+  );
+});
+
+Deno.test("pairwise gate reports the exact dominant and dominated ring", async () => {
+  const reports = (await simulateStarterBuildMatrix()).map((report) =>
+    report.ring === "weapon"
+      ? {
+        ...report,
+        lastCompletedStage: 10,
+        terminal: "victory" as const,
+        remainingHp: 99,
+        xp: 999,
+        successfulChecks: { physical: 99, magical: 99, agility: 99, vitality: 99 },
+      }
+      : report.ring === "fire"
+      ? {
+        ...report,
+        lastCompletedStage: 1,
+        terminal: "defeated" as const,
+        remainingHp: 0,
+        xp: 0,
+        successfulChecks: { physical: 0, magical: 0, agility: 0, vitality: 0 },
+      }
+      : report
+  );
+  assertEquals(
+    pairwiseDominancePairs(reports).some((pair) =>
+      pair.dominant === "weapon" && pair.dominated === "fire"
+    ),
+    true,
+  );
+  assertThrows(
+    () => assertNoPairwiseRingDominance(reports),
+    Error,
+    "pairwise_starter_ring_dominance:weapon>fire",
+  );
+});
+
+Deno.test("pairwise gate rejects missing, duplicate, or active matrix rows", async () => {
+  const reports = await simulateStarterBuildMatrix();
+  assertThrows(
+    () => pairwiseDominancePairs(reports.slice(1)),
+    Error,
+    "incomplete_starter_balance_matrix",
+  );
+  assertThrows(
+    () => pairwiseDominancePairs([reports[1]!, ...reports.slice(1)]),
+    Error,
+    "incomplete_starter_balance_matrix",
+  );
+  assertThrows(
+    () =>
+      pairwiseDominancePairs([
+        { ...reports[0]!, terminal: null },
+        ...reports.slice(1),
+      ]),
+    Error,
+    "incomplete_starter_balance_matrix",
+  );
+  const unknownArchetype = {
+    ...reports[0]!,
+    archetype: "unknown",
+  } as unknown as (typeof reports)[number];
+  assertThrows(
+    () => pairwiseDominancePairs([unknownArchetype, ...reports.slice(1)]),
+    Error,
+    "incomplete_starter_balance_matrix",
   );
 });

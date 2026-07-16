@@ -290,27 +290,117 @@ function dominates(
   };
 }
 
+function reportKeyFrom(
+  archetype: StarterArchetype,
+  partyMode: StarterPartyMode,
+  policy: StarterPolicy,
+  ring: StarterRing,
+): string {
+  return `${archetype}:${partyMode}:${policy}:${ring}`;
+}
+
+function reportKey(report: StarterSimulationReport): string {
+  return reportKeyFrom(report.archetype, report.partyMode, report.policy, report.ring);
+}
+
+function validateBalanceMatrixForArchetypes(
+  reports: readonly StarterSimulationReport[],
+  expectedArchetypes: readonly StarterArchetype[],
+): void {
+  const expected = new Set<string>();
+  for (const archetype of expectedArchetypes) {
+    for (const partyMode of partyModes) {
+      for (const policy of policies) {
+        for (const ring of rings) {
+          expected.add(reportKeyFrom(archetype, partyMode, policy, ring));
+        }
+      }
+    }
+  }
+  const actual = reports.map(reportKey);
+  if (
+    reports.length !== expected.size ||
+    new Set(actual).size !== expected.size ||
+    reports.some((report) => report.terminal === null) ||
+    actual.some((key) => !expected.has(key))
+  ) {
+    throw new Error("incomplete_starter_balance_matrix");
+  }
+}
+
+export function validateStarterBalanceMatrix(
+  reports: readonly StarterSimulationReport[],
+): void {
+  validateBalanceMatrixForArchetypes(reports, archetypes);
+}
+
+export interface RingDominancePair {
+  readonly dominant: StarterRing;
+  readonly dominated: StarterRing;
+}
+
+function dominancePairsForArchetypes(
+  reports: readonly StarterSimulationReport[],
+  expectedArchetypes: readonly StarterArchetype[],
+): readonly RingDominancePair[] {
+  validateBalanceMatrixForArchetypes(reports, expectedArchetypes);
+  const byKey = new Map(reports.map((report) => [reportKey(report), report]));
+  const pairs: RingDominancePair[] = [];
+  for (const dominant of rings) {
+    for (const dominated of rings) {
+      if (dominant === dominated) continue;
+      let anyStrict = false;
+      let allNoWorse = true;
+      for (const archetype of expectedArchetypes) {
+        for (const partyMode of partyModes) {
+          for (const policy of policies) {
+            const candidate = byKey.get(
+              reportKeyFrom(archetype, partyMode, policy, dominant),
+            );
+            const other = byKey.get(
+              reportKeyFrom(archetype, partyMode, policy, dominated),
+            );
+            if (!candidate || !other) throw new Error("incomplete_starter_balance_matrix");
+            const comparison = dominates(candidate, other);
+            allNoWorse &&= comparison.noWorse;
+            anyStrict ||= comparison.strictlyBetter;
+          }
+        }
+      }
+      if (allNoWorse && anyStrict) pairs.push({ dominant, dominated });
+    }
+  }
+  return pairs;
+}
+
+export function pairwiseDominancePairs(
+  reports: readonly StarterSimulationReport[],
+): readonly RingDominancePair[] {
+  return dominancePairsForArchetypes(reports, archetypes);
+}
+
+export function assertNoPairwiseRingDominance(
+  reports: readonly StarterSimulationReport[],
+): void {
+  const pairs = pairwiseDominancePairs(reports);
+  if (pairs.length > 0) {
+    throw new Error(
+      `pairwise_starter_ring_dominance:${
+        pairs.map((pair) => `${pair.dominant}>${pair.dominated}`).join(",")
+      }`,
+    );
+  }
+}
+
 export function strictlyDominatingRings(
   reports: readonly StarterSimulationReport[],
 ): readonly StarterRing[] {
-  const byKey = new Map(
-    reports.map((report) => [`${report.ring}:${report.partyMode}:${report.policy}`, report]),
-  );
-  return rings.filter((candidateRing) =>
-    rings.filter((otherRing) => otherRing !== candidateRing).every((otherRing) => {
-      let anyStrict = false;
-      for (const partyMode of partyModes) {
-        for (const policy of policies) {
-          const candidate = byKey.get(`${candidateRing}:${partyMode}:${policy}`);
-          const other = byKey.get(`${otherRing}:${partyMode}:${policy}`);
-          if (!candidate || !other) throw new Error("incomplete_starter_balance_matrix");
-          const comparison = dominates(candidate, other);
-          if (!comparison.noWorse) return false;
-          anyStrict ||= comparison.strictlyBetter;
-        }
-      }
-      return anyStrict;
-    })
+  const pairs = pairwiseDominancePairs(reports);
+  return rings.filter((candidate) =>
+    rings.every((other) =>
+      candidate === other ||
+      pairs.some((pair) => pair.dominant === candidate && pair.dominated === other)
+    )
   );
 }
 
