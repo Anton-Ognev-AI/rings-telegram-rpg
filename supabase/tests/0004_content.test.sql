@@ -7,7 +7,7 @@ select has_table('game', 'fallback_content', 'fallback_content exists');
 select is((select count(*)::integer from game.content_versions), 1,
   'reviewed fallback content is seeded');
 select is((select payload_sha256 from game.content_versions),
-  '9f136eb4d007c6c6b112aaece1f996906b8dad893318ebcc1e95d376b8e84851',
+  '9000f0cebc29e6483b80de0bf8cf09c6f926821d317c17890654bc343fbb1c81',
   'fallback content canonical hash is pinned');
 select is((select validation_status::text from game.content_versions), 'fallback_validated',
   'fallback content is explicitly classified');

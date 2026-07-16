@@ -63,6 +63,8 @@ the old debt. Full local verification re-pins only the authorized fallback check
 
 - Modify only the canonical fallback payload-hash expectation in
   `tests/unit/seed_content_test.ts`.
+- Modify only the matching fallback payload-hash expectation in
+  `supabase/tests/0004_content.test.sql`.
 - Modify only the fallback hash entry in `scripts/verify-phase4a.ts`.
 
 1. Run the content validator, balance simulator, golden replay test and property determinism test.
