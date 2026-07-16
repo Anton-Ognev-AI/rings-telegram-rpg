@@ -221,11 +221,13 @@ Deno.test("deleted, stale, or already-bound incidents are superseded and never r
       run_id, player_id, message_id, last_state_version
     ) values (${bound.runId}::uuid, ${bound.playerId}::uuid, 861000000000000005, 0)`;
 
-    for (const [fixture, at] of [
-      [deleted, "2026-09-14T07:00:03Z"],
-      [stale, "2026-09-14T07:00:04Z"],
-      [bound, "2026-09-14T07:00:05Z"],
-    ] as const) {
+    for (
+      const [fixture, at] of [
+        [deleted, "2026-09-14T07:00:03Z"],
+        [stale, "2026-09-14T07:00:04Z"],
+        [bound, "2026-09-14T07:00:05Z"],
+      ] as const
+    ) {
       const result = await reconcile(sql, {
         ...fixture,
         decision: "confirm_not_delivered_and_requeue",
@@ -245,24 +247,30 @@ Deno.test("deleted, stale, or already-bound incidents are superseded and never r
 });
 
 Deno.test("concurrent conflicting operator decisions persist exactly one result", async () => {
-  const fixture = await withDatabase((sql) => createUnknownFixture(sql, {
-    externalId: 960000000000000006n,
-    at: "2026-09-15T07:00:00Z",
-    incidentId: "96100000-0000-4000-8000-000000000006",
-  }));
+  const fixture = await withDatabase((sql) =>
+    createUnknownFixture(sql, {
+      externalId: 960000000000000006n,
+      at: "2026-09-15T07:00:00Z",
+      incidentId: "96100000-0000-4000-8000-000000000006",
+    })
+  );
   const results = await Promise.all([
-    withDatabase((sql) => reconcile(sql, {
-      ...fixture,
-      decision: "confirm_delivered",
-      telegramMessageId: 861000000000000006n,
-      at: "2026-09-15T07:00:02Z",
-    })),
-    withDatabase((sql) => reconcile(sql, {
-      ...fixture,
-      decision: "confirm_not_delivered_and_requeue",
-      telegramMessageId: null,
-      at: "2026-09-15T07:00:02Z",
-    })),
+    withDatabase((sql) =>
+      reconcile(sql, {
+        ...fixture,
+        decision: "confirm_delivered",
+        telegramMessageId: 861000000000000006n,
+        at: "2026-09-15T07:00:02Z",
+      })
+    ),
+    withDatabase((sql) =>
+      reconcile(sql, {
+        ...fixture,
+        decision: "confirm_not_delivered_and_requeue",
+        telegramMessageId: null,
+        at: "2026-09-15T07:00:02Z",
+      })
+    ),
   ]);
   assertEquals(results.filter((value) => value.status === "applied").length, 1);
   assertEquals(results.filter((value) => value.reason === "reconciliation_conflict").length, 1);
@@ -271,5 +279,92 @@ Deno.test("concurrent conflicting operator decisions persist exactly one result"
       from game.delivery_unknown_reconciliations
       where outbox_id = ${fixture.outboxId}::uuid`;
     assertEquals(state.audits, 1);
+  });
+});
+
+Deno.test("identity deletion racing a requeue always leaves delivery suppressed", async () => {
+  const fixture = await withDatabase((sql) =>
+    createUnknownFixture(sql, {
+      externalId: 960000000000000007n,
+      at: "2026-09-16T07:00:00Z",
+      incidentId: "96100000-0000-4000-8000-000000000007",
+    })
+  );
+  const [deletion, reconciliation] = await Promise.all([
+    withDatabase((sql) =>
+      rpc(sql`select public.begin_identity_deletion_v2(
+        ${fixture.playerId}::uuid,
+        '96300000-0000-4000-8000-000000000007'::uuid,
+        '2026-09-16T07:00:02Z'::timestamptz
+      ) as response`)
+    ),
+    withDatabase((sql) =>
+      reconcile(sql, {
+        ...fixture,
+        decision: "confirm_not_delivered_and_requeue",
+        telegramMessageId: null,
+        at: "2026-09-16T07:00:02Z",
+      })
+    ),
+  ]);
+  assertEquals(["applied", "cached"].includes(String(deletion.status)), true);
+  assertEquals(reconciliation.status, "applied");
+  await withDatabase(async (sql) => {
+    const [state] = await sql<{
+      player_state: string;
+      outbox_status: string;
+      last_error_kind: string;
+      audits: number;
+    }[]>`select p.deletion_state::text as player_state,
+      o.status::text as outbox_status,
+      o.last_error_kind,
+      (select count(*)::integer from game.delivery_unknown_reconciliations r
+        where r.outbox_id = o.id) as audits
+      from game.players p
+      join game.runs r on r.player_id = p.id
+      join game.outbox_messages o on o.payload->>'runId' = r.id::text
+      where p.id = ${fixture.playerId}::uuid and o.id = ${fixture.outboxId}::uuid`;
+    assertEquals(state, {
+      player_state: "deletion_pending",
+      outbox_status: "sent",
+      last_error_kind: "superseded",
+      audits: 1,
+    });
+  });
+});
+
+Deno.test("a delivered stale incident binds its real card and requests one repair", async () => {
+  await withDatabase(async (sql) => {
+    const fixture = await createUnknownFixture(sql, {
+      externalId: 960000000000000008n,
+      at: "2026-09-17T07:00:00Z",
+      incidentId: "96100000-0000-4000-8000-000000000008",
+    });
+    await sql`update game.runs set state_version = 1, stage = 2
+      where id = ${fixture.runId}::uuid`;
+    const delivered = await reconcile(sql, {
+      ...fixture,
+      decision: "confirm_delivered",
+      telegramMessageId: 861000000000000008n,
+      at: "2026-09-17T07:00:02Z",
+    });
+    assertEquals(delivered, {
+      status: "applied",
+      outcome: "superseded",
+      outboxStatus: "sent",
+      repairRequired: true,
+    });
+    const repair = await rpc(sql`select public.request_run_render_v2(
+      ${fixture.playerId}::uuid, ${fixture.runId}::uuid
+    ) as response`);
+    assertEquals(repair.status, "applied");
+    const [state] = await sql<{ cards: number; repairs: number }[]>`select
+      (select count(*)::integer from game.telegram_run_cards
+        where run_id = ${fixture.runId}::uuid) as cards,
+      (select count(*)::integer from game.outbox_messages
+        where intent_type = 'repair_run_state'
+          and status = 'pending'
+          and payload->>'runId' = ${fixture.runId}) as repairs`;
+    assertEquals(state, { cards: 1, repairs: 1 });
   });
 });

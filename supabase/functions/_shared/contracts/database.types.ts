@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract through migration 202607150015.
+// Generated locally from the public RPC contract through migration 202607150016.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 

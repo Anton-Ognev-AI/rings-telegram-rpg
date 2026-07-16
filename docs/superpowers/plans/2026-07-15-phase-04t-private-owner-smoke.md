@@ -59,23 +59,23 @@ reconcile_delivery_unknown_v1(
 ) -> immutable operator result
 ```
 
-- [ ] RED-first pgTAP tests for `game.delivery_unknown_reconciliations`, exact five-argument RPC,
+- [x] RED-first pgTAP tests for `game.delivery_unknown_reconciliations`, exact five-argument RPC,
       service-role-only execute, no direct DML and immutable audit evidence keyed by
       `(outbox_id, delivery_incident_id)`.
-- [ ] RED-first concurrency test proving the migration-014 `request_run_render_v2` contract already
+- [x] RED-first concurrency test proving the migration-014 `request_run_render_v2` contract already
       coalesces by run/state and current cards return cached with no new outbox row. A regression
       failure stops Task 1; migration 015 never takes ownership of that RPC.
-- [ ] RED-first reconciliation tests: delivered requires a positive message ID and closes the row;
+- [x] RED-first reconciliation tests: delivered requires a positive message ID and closes the row;
       not-delivered requeues once without message ID; exact replay returns the cached result;
       conflicting replay, wrong status or wrong incident are rejected with zero duplicate sends.
-- [ ] Under an outbox row lock, recheck active identity/deletion, current intent/state and card
+- [x] Under an outbox row lock, recheck active identity/deletion, current intent/state and card
       ownership. Deleted or stale intent is superseded and can never be requeued.
-- [ ] Prove concurrent conflicting decisions, a second delivery incident on the same re-leased
+- [x] Prove concurrent conflicting decisions, a second delivery incident on the same re-leased
       outbox, deletion race, stale intent and existing-card behavior.
-- [ ] Implement migration 015 for operator reconciliation only and append only its checksum.
-- [ ] Run clean reset, upgrade-from-014, pgTAP, integration, reconciliation, grants/direct-DML,
+- [x] Implement migration 015 for operator reconciliation only and append only its checksum.
+- [x] Run clean reset, upgrade-from-014, pgTAP, integration, reconciliation, grants/direct-DML,
       lint and checksums.
-- [ ] Commit `feat: add owner-smoke delivery controls`.
+- [x] Commit `feat: add owner-smoke delivery controls` (`e175054`).
 
 ### Task 1A: Correct the separately owned current-card render regression
 
@@ -91,13 +91,13 @@ byte-locked and migration 015 remains reconciliation-only.
 - Modify: `supabase/functions/_shared/contracts/database.types.ts`
 - Verify: `tests/integration/render_repair_coalescing_v2_test.ts`
 
-- [ ] RED is preserved: a current card currently returns `applied` and inserts a redundant repair.
-- [ ] Migration 016 alone takes forward ownership of `request_run_render_v2`, returning cached
+- [x] RED is preserved: a current card currently returns `applied` and inserts a redundant repair.
+- [x] Migration 016 alone takes forward ownership of `request_run_render_v2`, returning cached
       `card_current` before any insertion when the canonical card is at or ahead of run state.
-- [ ] Preserve owner/active/run/card validation, stale-card one-row coalescing, safe search path,
+- [x] Preserve owner/active/run/card validation, stale-card one-row coalescing, safe search path,
       postgres ownership and service-role-only execute grants.
-- [ ] Prove migration 014 checksum/bytes are unchanged and upgrade-from-014 applies 015 then 016.
-- [ ] Commit `fix: cache current Telegram run cards`.
+- [x] Prove migration 014 checksum/bytes are unchanged and upgrade-from-014 applies 015 then 016.
+- [x] Commit `fix: cache current Telegram run cards` (this checkpoint).
 
 ### Task 2: Add owner allowlist and webhook-secret boundary
 

@@ -64,6 +64,8 @@ const LOCKED_BASELINE: Readonly<Record<string, string>> = {
     "1bf197731b7965ac3bf5afe4b08c0a66cdb3368533c598a69cee6e6818718c03",
   "supabase/migrations/202607130013_outbox_dispatch_fence.sql":
     "b8b7af75921297966449644f360217dc8864acb64e1b308f17c71b006e44a78e",
+  "supabase/migrations/202607150014_tutorial_starter.sql":
+    "66d42b4b3c00f47f294d70e5f316f8430810b877d0d25f03006b356bc6f7a713",
   "supabase/functions/_shared/domain/resolvers/v1/combat.ts":
     "d7a1dacc4cd8b2e5d3633df2872511e61b1035881d17bad3b2e1fa1108394d70",
   "supabase/functions/_shared/domain/resolvers/v1/config.ts":
@@ -137,14 +139,16 @@ export const phase4VerificationSteps: readonly VerificationStep[] = [
   { ...npmRun("start local Supabase", "db:start", true), suppressStdout: true },
   npmRun("source verification", "verify"),
   reset("database regressions"),
-  npmRun("325 pgTAP assertions", "test:db:unit"),
+  npmRun("338 pgTAP assertions", "test:db:unit"),
   npmRun("Phase 2 integration regressions", "test:db:integration"),
   npmRun("Phase 2 concurrency regression", "test:db:concurrency"),
   npmRun("Phase 3 database contracts", "test:db:phase3a"),
   npmRun("Phase 2 deletion recovery", "test:db:deletion"),
   npmRun("Phase 4 progression integration", "test:db:phase4a"),
   npmRun("Phase 4 progression concurrency", "test:db:phase4a:concurrency"),
+  npmRun("Phase 4T local database controls", "test:db:phase4t0"),
   npmRun("upgrade from migration 013", "test:db:upgrade013", true),
+  npmRun("upgrade from migration 014", "test:db:upgrade014", true),
   reset("Phase 3 Telegram E2E"),
   e2e("fallback E2E", "tests/e2e/fallback_solo_test.ts"),
   e2e("restart E2E", "tests/e2e/restart_resume_test.ts"),
