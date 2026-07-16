@@ -13,7 +13,8 @@
   - [x] P4T-00: Full council review; bind each reconciliation to its retained delivery incident, keep migration 015 reconciliation-only, and make staging tools offline by default (ADR 056)
   - [x] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`approved` locally; 13 pgTAP and six integration paths including concurrent conflict/deletion race; ADR 058)
   - [x] P4T-01A: Forward migration 016 for current-card render caching (`approved` locally; current-card cached, stale-card coalescing green, upgrade 014→016 green; migration 014 remains locked; ADR 058)
-  - [ ] P4T-02: Owner allowlist and webhook-secret boundary (`in_progress`, local-only)
+  - [x] P4T-02: Owner allowlist and webhook-secret boundary (`approved` locally; secret/body/normalize/owner/adapters order and generic redaction proven; ADR 059)
+  - [ ] P4T-03: Offline fail-closed staging preflight and no-cron runner (`in_progress`, local-only)
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)

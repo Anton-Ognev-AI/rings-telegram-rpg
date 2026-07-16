@@ -105,9 +105,10 @@ byte-locked and migration 015 remains reconciliation-only.
 
 - Create: `supabase/functions/_shared/telegram/owner-allowlist.ts`
 - Create: `tests/unit/owner_allowlist_test.ts`
+- Create: `tests/unit/telegram_webhook_boundary_test.ts`
 - Modify: `supabase/functions/tg-webhook/index.ts`
-- Modify: `tests/unit/telegram_http_test.ts`
-- Modify: `tests/unit/internal_endpoints_test.ts`
+- Verify: `tests/unit/telegram_http_test.ts`
+- Verify: `tests/unit/internal_endpoints_test.ts`
 
 **Interfaces:**
 
@@ -118,16 +119,16 @@ function assertOwnerAllowed(
 ): void;
 ```
 
-- [ ] Prove Telegram secret verification happens before JSON parsing and allowlist parsing happens
+- [x] Prove Telegram secret verification happens before JSON parsing and allowlist parsing happens
       before database adapter/identity bootstrap construction.
-- [ ] Export an injectable webhook handler/factory so the boundary order is directly testable with
+- [x] Export an injectable webhook handler/factory so the boundary order is directly testable with
       synthetic IDs and without constructing privileged adapters for rejected requests.
-- [ ] Accept exactly one canonical positive decimal Telegram external ID from an Edge secret; reject
+- [x] Accept exactly one canonical positive decimal Telegram external ID from an Edge secret; reject
       missing, malformed, zero, lists/ranges and mismatches with a generic response.
-- [ ] Preserve JWT plus separate internal-secret checks for worker/day functions.
-- [ ] Prove logs/errors redact header values, external ID, bot token and service credentials.
-- [ ] Run full source verification and Phase 4A regressions. Expected GREEN.
-- [ ] Commit `feat: restrict staging webhook to owner`.
+- [x] Preserve JWT plus separate internal-secret checks for worker/day functions.
+- [x] Prove logs/errors redact header values, external ID, bot token and service credentials.
+- [x] Run full source verification now; run the complete Phase 4A/4T regression gate in Task 4.
+- [x] Commit `feat: restrict staging webhook to owner` (this checkpoint).
 
 ### Task 3: Build a fail-closed staging preflight and no-cron runner
 
