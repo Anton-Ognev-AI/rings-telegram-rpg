@@ -1,7 +1,7 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-04T: Private Telegram owner-smoke (Gate 4T.0 `approved` locally; Gate 4T.1 is the only active task and awaits explicit staging-only remote authorization; ADRs 046–066)
+- [ ] ID: PHASE-04T: Private Telegram owner-smoke (Gate 4T.0 `approved` locally; Gate 4T.1 is the only active task and awaits explicit staging-only remote authorization; ADRs 046–067)
   - [x] P4T-00: Full council review; bind each reconciliation to its retained delivery incident, keep migration 015 reconciliation-only, and make staging tools offline by default (ADR 056)
   - [x] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`approved` locally; 13 pgTAP and six integration paths including concurrent conflict/deletion race; ADR 058)
   - [x] P4T-01A: Forward migration 016 for current-card and profile-version render idempotency (`approved` locally; current-card cached, stale-card repair and profile-change edit are separately coalesced, upgrade 014→016 green; migration 014 remains locked; ADRs 058, 063)
