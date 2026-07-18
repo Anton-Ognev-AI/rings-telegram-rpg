@@ -18,6 +18,7 @@
   - [x] P4T-03: Offline fail-closed staging preflight and no-cron runner (`approved` locally; dry-run has no network/secret permission and remote execution requires a separate command plus flag; ADR 060)
   - [x] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final 34-step local gate (`approved` locally; tracked-set preflight scanned 266 files; fresh complete verifier exited 0; final council `APPROVE_WITH_SMALL_CHANGES`; ADR 064) → `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`
 - [x] ID: ARCHITECTURE-AS-BUILT: Document the actual gameplay/content/Telegram/persistence boundaries and update the Phase-0 README before further feature expansion (`approved` locally; direct Bot API/no-cron runtime truth and migration 017+ boundary recorded; ADR 065) → `docs/checkpoints/2026-07-18-architecture-as-built.md`
+- [x] ID: PRE-SMOKE-FUN-AUDIT: Add a survival-aware starter diagnostic and audit the implemented two-day Telegram loop (`approved` locally; all-neutral play loses 20–35 XP but still reaches stage 9; the owner-smoke now records depth, clarity, monotony, teacher identity and return-hook evidence; ADR 066) → `docs/checkpoints/2026-07-18-pre-smoke-fun-audit.md`
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)

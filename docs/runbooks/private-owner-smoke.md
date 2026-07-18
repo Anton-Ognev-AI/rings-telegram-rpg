@@ -268,6 +268,18 @@ The owner now tests through the real private bot:
 9. Test `/privacy` and deletion only through
    [staging-deletion-recovery.md](staging-deletion-recovery.md).
 
+Record the product evidence while playing; a technically green smoke is not enough:
+
+- last completed stage and earned XP for each of the three expeditions;
+- whether the stat/threshold/HP breakdown made the result and next decision understandable;
+- whether reaching stage 6 felt earned, especially when neutral choices were used;
+- whether the repeated fallback day felt monotonous by the second or third expedition;
+- whether the generic teacher/lesson presentation weakened the sense of being an Academy student;
+- whether the item, ring, spendable XP and next-day hook created a concrete reason to return.
+
+Do not tune production numbers during the session. Preserve the redacted observations for the
+Gate 4T.1 checkpoint and choose any content/balance amendment only after closeout.
+
 ## Closeout and Rollback
 
 Normal closeout:

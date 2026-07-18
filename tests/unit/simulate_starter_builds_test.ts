@@ -6,8 +6,10 @@ import {
   pairwiseDominancePairs,
   scoreInformedCheckChoice,
   selectInformedChoice,
+  selectSurvivalAwareChoice,
   simulateStarterBuildMatrix,
   simulateStarterBuildMatrixForContent,
+  simulateSurvivalAwareStarterMatrix,
 } from "../../scripts/simulate-starter-builds.ts";
 import type {
   ChoiceV1,
@@ -242,4 +244,55 @@ Deno.test("informed and mixed-alternative choices are build-aware with stable ar
   const second = { ...physical, id: "a-second" };
   assertEquals(selectInformedChoice([first, second], fireParty(), 3).id, "z-first");
   assertEquals(selectInformedChoice([second, first], fireParty(), 3).id, "a-second");
+});
+
+Deno.test("survival-aware policy takes a passing check and falls back to neutral when all fail", () => {
+  const stageThree = stageThreeChoices();
+  assertEquals(selectSurvivalAwareChoice(stageThree, fireParty(), 3).id, "s3-magical");
+
+  const stageNine = fallback.stages[8]?.choices;
+  if (!stageNine) throw new Error("missing_stage_nine_choices");
+  const neutral = stageNine.find((choice) => choice.kind === "neutral");
+  if (!neutral) throw new Error("missing_stage_nine_neutral");
+  const weakParty: PartySnapshot = {
+    mode: "solo",
+    self: {
+      maxHp: 40,
+      physical: 0,
+      magical: 0,
+      agility: 0,
+      vitality: 0,
+      defense: 0,
+      vampRateBps: 0,
+      postHeal: 0,
+    },
+    companion: null,
+  };
+  assertEquals(selectSurvivalAwareChoice(stageNine, weakParty, 9).id, neutral.id);
+});
+
+Deno.test("survival-aware diagnostic covers 24 contexts and dominates all-neutral play", async () => {
+  const adaptive = await simulateSurvivalAwareStarterMatrix();
+  const repeated = await simulateSurvivalAwareStarterMatrix();
+  assertEquals(adaptive, repeated);
+  assertEquals(adaptive.length, 24);
+  assertEquals(new Set(adaptive.map((report) => report.policy)), new Set(["survival_aware"]));
+  assertEquals(adaptive.every((report) => report.terminal !== null), true);
+
+  const attrition = (await simulateStarterBuildMatrix()).filter((report) =>
+    report.policy === "attrition"
+  );
+  const byContext = new Map(attrition.map((report) => [
+    `${report.archetype}:${report.partyMode}:${report.ring}`,
+    report,
+  ]));
+  let xpImprovement = 0;
+  for (const report of adaptive) {
+    const comparison = byContext.get(`${report.archetype}:${report.partyMode}:${report.ring}`);
+    if (!comparison) throw new Error("missing_attrition_comparison");
+    assertEquals(report.lastCompletedStage >= comparison.lastCompletedStage, true);
+    assertEquals(report.xp >= comparison.xp, true);
+    if (report.xp > comparison.xp) xpImprovement += 1;
+  }
+  assertEquals(xpImprovement > 0, true);
 });

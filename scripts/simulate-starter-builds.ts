@@ -20,7 +20,7 @@ import { CONFIG_V1 } from "../supabase/functions/_shared/domain/resolvers/v1/con
 import { advanceStateV1 } from "../supabase/functions/_shared/domain/resolvers/v1/resolver.ts";
 
 export type StarterRing = "weapon" | "fire" | "defense" | "healing";
-export type StarterPolicy = "correct" | "mixed" | "attrition";
+export type StarterPolicy = "correct" | "mixed" | "attrition" | "survival_aware";
 export type StarterPartyMode = "tutorial" | "ordinary";
 export type StarterArchetype = "baseline" | "martial" | "arcane";
 
@@ -39,7 +39,7 @@ export interface StarterSimulationReport {
 
 const content = fallbackJson as DungeonContentV1;
 const rings: readonly StarterRing[] = ["weapon", "fire", "defense", "healing"];
-const policies: readonly StarterPolicy[] = ["correct", "mixed", "attrition"];
+const balancePolicies: readonly StarterPolicy[] = ["correct", "mixed", "attrition"];
 const partyModes: readonly StarterPartyMode[] = ["tutorial", "ordinary"];
 const archetypes: readonly StarterArchetype[] = ["baseline", "martial", "arcane"];
 
@@ -178,6 +178,17 @@ export function selectInformedChoice(
   return choice;
 }
 
+export function selectSurvivalAwareChoice(
+  choices: readonly ChoiceV1[],
+  snapshot: PartySnapshot,
+  stageNumber: number,
+): ChoiceV1 {
+  const informed = selectInformedChoice(choices, snapshot, stageNumber);
+  const margin = scoreInformedCheckChoice(informed, snapshot, stageNumber);
+  if (margin !== null && margin >= 0) return informed;
+  return choices.find((candidate) => candidate.kind === "neutral") ?? informed;
+}
+
 function choose(
   choices: readonly ChoiceV1[],
   policy: StarterPolicy,
@@ -186,6 +197,9 @@ function choose(
   stageNumber: number,
 ): ChoiceV1 {
   if (policy === "correct") return selectInformedChoice(choices, snapshot, stageNumber);
+  if (policy === "survival_aware") {
+    return selectSurvivalAwareChoice(choices, snapshot, stageNumber);
+  }
   const neutral = choices.find((candidate) => candidate.kind === "neutral");
   if (policy === "attrition") {
     const choice = neutral ?? choices.find((candidate) => candidate.kind === "trap") ??
@@ -285,7 +299,7 @@ export async function simulateStarterBuildMatrixForContent(
     const scenarioContent = contentByArchetype.get(archetype);
     if (!scenarioContent) throw new Error(`missing_starter_archetype:${archetype}`);
     for (const partyMode of partyModes) {
-      for (const policy of policies) {
+      for (const policy of balancePolicies) {
         for (const ring of rings) {
           reports.push(await simulate(scenarioContent, archetype, ring, policy, partyMode));
         }
@@ -297,6 +311,33 @@ export async function simulateStarterBuildMatrixForContent(
 
 export async function simulateStarterBuildMatrix(): Promise<readonly StarterSimulationReport[]> {
   return await simulateStarterBuildMatrixForContent(content);
+}
+
+export async function simulateSurvivalAwareStarterMatrixForContent(
+  sourceContent: DungeonContentV1,
+): Promise<readonly StarterSimulationReport[]> {
+  const contentByArchetype = new Map(
+    archetypes.map((archetype) => [archetype, projectContent(sourceContent, archetype)] as const),
+  );
+  const reports: StarterSimulationReport[] = [];
+  for (const archetype of archetypes) {
+    const scenarioContent = contentByArchetype.get(archetype);
+    if (!scenarioContent) throw new Error(`missing_starter_archetype:${archetype}`);
+    for (const partyMode of partyModes) {
+      for (const ring of rings) {
+        reports.push(
+          await simulate(scenarioContent, archetype, ring, "survival_aware", partyMode),
+        );
+      }
+    }
+  }
+  return reports;
+}
+
+export async function simulateSurvivalAwareStarterMatrix(): Promise<
+  readonly StarterSimulationReport[]
+> {
+  return await simulateSurvivalAwareStarterMatrixForContent(content);
 }
 
 function terminalScore(terminal: TerminalResult | null): number {
@@ -354,7 +395,7 @@ function validateBalanceMatrixForArchetypes(
   const expected = new Set<string>();
   for (const archetype of expectedArchetypes) {
     for (const partyMode of partyModes) {
-      for (const policy of policies) {
+      for (const policy of balancePolicies) {
         for (const ring of rings) {
           expected.add(reportKeyFrom(archetype, partyMode, policy, ring));
         }
@@ -397,7 +438,7 @@ function dominancePairsForArchetypes(
       let allNoWorse = true;
       for (const archetype of expectedArchetypes) {
         for (const partyMode of partyModes) {
-          for (const policy of policies) {
+          for (const policy of balancePolicies) {
             const candidate = byKey.get(
               reportKeyFrom(archetype, partyMode, policy, dominant),
             );
@@ -466,8 +507,11 @@ export function assertNoStrictRingDominance(
 
 if (import.meta.main) {
   const reports = await simulateStarterBuildMatrix();
+  const survivalAwareReports = await simulateSurvivalAwareStarterMatrix();
   const dominancePairs = pairwiseDominancePairs(reports);
   assertNoPairwiseRingDominance(reports);
   const baselineDominancePairs = baselineRingDominancePairs(reports);
-  console.log(canonicalJson({ reports, dominancePairs, baselineDominancePairs }));
+  console.log(
+    canonicalJson({ reports, survivalAwareReports, dominancePairs, baselineDominancePairs }),
+  );
 }
