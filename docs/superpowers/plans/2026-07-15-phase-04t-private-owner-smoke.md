@@ -94,6 +94,9 @@ byte-locked and migration 015 remains reconciliation-only.
 - [x] RED is preserved: a current card currently returns `applied` and inserts a redundant repair.
 - [x] Migration 016 alone takes forward ownership of `request_run_render_v2`, returning cached
       `card_current` before any insertion when the canonical card is at or ahead of run state.
+- [x] A full-gate regression exposed profile changes hidden by the run-only cache. Migration 016 now
+      also owns narrow `request_profile_run_render_v1`, keyed by current `profile_version`; it never
+      reopens locked migration 014 and does not add a generic force-render switch.
 - [x] Preserve owner/active/run/card validation, stale-card one-row coalescing, safe search path,
       postgres ownership and service-role-only execute grants.
 - [x] Prove migration 014 checksum/bytes are unchanged and upgrade-from-014 applies 015 then 016.
@@ -220,20 +223,23 @@ npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-re
 - Runbooks use placeholders such as `<STAGING_APP_REF>` and secret names only; never secret values.
 - Every command identifies its target project and verification/rollback step.
 
-- [ ] Document exact order: create/link app staging, create/link recovery staging, apply recovery
+- [x] Document exact order: create/link app staging, create/confirm recovery staging without linking
+      it from the app worktree, apply recovery
       migrations 001–002 and app migrations through 014, 015 and 016,
       provision secrets, deploy internal functions, deploy webhook, register webhook, run preflight,
       run smoke, remove webhook/rotate token.
-- [ ] Document an authenticated synthetic non-owner webhook request before `/start` and identity
+- [x] Document an authenticated synthetic non-owner webhook request before `/start` and identity
       count proof after it; the owner does not need a second Telegram account.
-- [ ] Document `delivery_unknown` evidence gathering and the two explicit operator decisions; forbid
+- [x] Document `delivery_unknown` evidence gathering and the two explicit operator decisions; forbid
       blind retry.
-- [ ] Document isolated backup restore plus tombstone replay and proof that deleted Telegram identity
+- [x] Document isolated backup restore plus tombstone replay and proof that deleted Telegram identity
       is not restored.
-- [ ] Document rollback: disable new starts, reconcile/drain one owner profile, revert function build,
+- [x] Document rollback: disable new starts, reconcile/drain one owner profile, revert function build,
       keep expanded tables, remove webhook or rotate bot token.
-- [ ] Run secret/PII scan, checksum verification and documentation link audit.
-- [ ] Update project memory and commit `docs: prepare private owner smoke`.
+- [x] Run secret/PII scan, checksum verification and documentation link audit.
+- [x] Update project memory.
+- [x] Repeat the offline preflight against the fully tracked set (`266` files), run a fresh complete
+      verifier with exit code `0`, and commit `docs: prepare private owner smoke` at this checkpoint.
 
 ---
 

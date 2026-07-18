@@ -14,3 +14,18 @@ export function requestRunRender(
     p_run_id: input.runId,
   });
 }
+
+export interface RequestProfileRunRenderInput extends RequestRunRenderInput {
+  readonly profileVersion: number;
+}
+
+export function requestProfileRunRender(
+  database: DatabasePort,
+  input: RequestProfileRunRenderInput,
+): Promise<CommandResult> {
+  return database.call<CommandResult>("request_profile_run_render_v1", {
+    p_player_id: input.playerId,
+    p_run_id: input.runId,
+    p_profile_version: input.profileVersion,
+  });
+}

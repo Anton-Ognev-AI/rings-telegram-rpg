@@ -190,10 +190,15 @@ Deno.test("persisted fake Telegram completes the fallback dungeon through both b
       at,
       `51000000-0000-4000-8000-${String(workerSequence).padStart(12, "0")}`,
     );
-    assertEquals(repairedStaleTerminal.result.sent, 1);
-    const staleTerminalEdit = delivery(repairedStaleTerminal.telegram);
-    assertEquals(staleTerminalEdit.operation, "editMessage");
-    assertStringIncludes(staleTerminalEdit.input.text, "Підсумок: Перемога над загрозою");
+    assertEquals(repairedStaleTerminal.result, {
+      leased: 0,
+      sent: 0,
+      retried: 0,
+      dead: 0,
+      deliveryUnknown: 0,
+      superseded: 0,
+    });
+    assertEquals(repairedStaleTerminal.telegram.calls, []);
 
     if (lastAppliedUpdate === null) throw new Error("missing_terminal_callback");
     const cachedTerminal = await handleWithRestart(sql, at, lastAppliedUpdate);
@@ -201,17 +206,29 @@ Deno.test("persisted fake Telegram completes the fallback dungeon through both b
     const [terminalRepair] = await sql<{ repairs: number }[]>`select count(*)::integer as repairs
       from game.outbox_messages
       where intent_type = 'repair_run_state' and status = 'pending'`;
-    assertEquals(terminalRepair.repairs, 1);
+    assertEquals(terminalRepair.repairs, 0);
+    const [terminalCard] = await sql<{ card_version: number; run_version: number }[]>`select
+      c.last_state_version::integer as card_version,
+      r.state_version::integer as run_version
+      from game.telegram_run_cards c
+      join game.runs r on r.id = c.run_id
+      where c.run_id = ${runId}::uuid`;
+    assertEquals(terminalCard.card_version, terminalCard.run_version);
     workerSequence += 1;
     const repairedTerminal = await workWithRestart(
       sql,
       at,
       `51000000-0000-4000-8000-${String(workerSequence).padStart(12, "0")}`,
     );
-    assertEquals(repairedTerminal.result.sent, 1);
-    const terminalEdit = delivery(repairedTerminal.telegram);
-    assertEquals(terminalEdit.operation, "editMessage");
-    assertStringIncludes(terminalEdit.input.text, "Підсумок: Перемога над загрозою");
+    assertEquals(repairedTerminal.result, {
+      leased: 0,
+      sent: 0,
+      retried: 0,
+      dead: 0,
+      deliveryUnknown: 0,
+      superseded: 0,
+    });
+    assertEquals(repairedTerminal.telegram.calls, []);
 
     assertEquals(await durableCounts(sql, runId), {
       state_version: 11,

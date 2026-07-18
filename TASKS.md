@@ -9,14 +9,15 @@
 
 ## Next Gated Work
 - [x] ID: PHASE-04-BALANCE: Focused fallback balance amendment (`approved` locally; baseline/full dominance `[]`; two complete 31-step verifiers green; fallback re-locked; ADRs 054–055) → `docs/checkpoints/2026-07-16-phase-04-balance.md`
-- [ ] ID: PHASE-04T: Private Telegram owner-smoke (`in_progress` for Gate 4T.0 local readiness only; database controls, owner ingress and offline staging runner approved locally; remote authorization still absent; ADRs 046–060)
+- [ ] ID: PHASE-04T: Private Telegram owner-smoke (Gate 4T.0 `approved` locally; Gate 4T.1 awaits an explicit staging-only remote authorization; ADRs 046–064)
   - [x] P4T-00: Full council review; bind each reconciliation to its retained delivery incident, keep migration 015 reconciliation-only, and make staging tools offline by default (ADR 056)
   - [x] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`approved` locally; 13 pgTAP and six integration paths including concurrent conflict/deletion race; ADR 058)
-  - [x] P4T-01A: Forward migration 016 for current-card render caching (`approved` locally; current-card cached, stale-card coalescing green, upgrade 014→016 green; migration 014 remains locked; ADR 058)
+  - [x] P4T-01A: Forward migration 016 for current-card and profile-version render idempotency (`approved` locally; current-card cached, stale-card repair and profile-change edit are separately coalesced, upgrade 014→016 green; migration 014 remains locked; ADRs 058, 063)
   - [x] P4T-02: Owner allowlist and webhook-secret boundary (`approved` locally; secret/body/normalize/owner/adapters order and generic redaction proven; ADR 059)
   - [x] P4T-02A: Remote recovery-control deletion sink (`approved` locally; service-only idempotent RPC, fixed recovery adapter, concurrent conflict and restore paths green; ADRs 061–062)
   - [x] P4T-03: Offline fail-closed staging preflight and no-cron runner (`approved` locally; dry-run has no network/secret permission and remote execution requires a separate command plus flag; ADR 060)
-  - [ ] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final local gate (`in_progress`, local-only)
+  - [x] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final 34-step local gate (`approved` locally; tracked-set preflight scanned 266 files; fresh complete verifier exited 0; final council `APPROVE_WITH_SMALL_CHANGES`; ADR 064) → `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`
+- [ ] ID: ARCHITECTURE-AS-BUILT: Document the actual gameplay/content/Telegram/persistence boundaries and update the Phase-0 README before further feature expansion (`next autonomous local task`; no schema/runtime behavior changes; ADR 064)
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)

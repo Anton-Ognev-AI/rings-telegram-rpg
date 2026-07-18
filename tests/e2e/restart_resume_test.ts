@@ -44,7 +44,7 @@ function callback(data: string, updateId: number) {
   });
 }
 
-Deno.test("resume enqueues a fresh canonical edit when no render is already pending", async () => {
+Deno.test("resume keeps an already-current canonical card without a redundant edit", async () => {
   await withDatabase(async (sql) => {
     const database = new PostgresRpcDatabase(sql);
     assertEquals((await publishFallbackDay(database, at)).status, "applied");
@@ -101,21 +101,27 @@ Deno.test("resume enqueues a fresh canonical edit when no render is already pend
     }>("resume_v1", { p_player_id: identity.playerId });
     assertEquals(durable.run.stage, 2);
     assertEquals(durable.run.stateVersion, 1);
-    const [repair] = await sql<{ repairs: number }[]>`select count(*)::integer as repairs
-      from game.outbox_messages
-      where intent_type = 'repair_run_state' and status = 'pending'`;
-    assertEquals(repair.repairs, 1);
+    const [renderState] = await sql<{ repairs: number; card_version: number }[]>`select
+      (select count(*)::integer from game.outbox_messages
+        where intent_type = 'repair_run_state' and status = 'pending') as repairs,
+      (select last_state_version::integer from game.telegram_run_cards
+        where run_id = ${durable.run.id}::uuid) as card_version`;
+    assertEquals(renderState, { repairs: 0, card_version: durable.run.stateVersion });
 
     const afterRestart = await workWithRestart(
       sql,
       at,
       "52000000-0000-4000-8000-000000000003",
     );
-    assertEquals(afterRestart.result.sent, 1);
-    const edited = afterRestart.telegram.calls.find((call) => call.operation === "editMessage");
-    if (!edited || edited.operation !== "editMessage") throw new Error("missing_resumed_edit");
-    assertStringIncludes(edited.input.text, "Результат етапу 1: Успіх");
-    assertStringIncludes(edited.input.text, "етап 2/10");
+    assertEquals(afterRestart.result, {
+      leased: 0,
+      sent: 0,
+      retried: 0,
+      dead: 0,
+      deliveryUnknown: 0,
+      superseded: 0,
+    });
+    assertEquals(afterRestart.telegram.calls, []);
 
     const emptyAfterSecondRestart = await workWithRestart(
       sql,

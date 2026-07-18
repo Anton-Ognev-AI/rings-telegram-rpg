@@ -150,6 +150,10 @@ export type Database = {
         Args: { p_player_id: string; p_request_key: string; p_run_id: string };
         Returns: Json;
       };
+      request_profile_run_render_v1: {
+        Args: { p_player_id: string; p_profile_version: number; p_run_id: string };
+        Returns: Json;
+      };
       request_run_render_v2: {
         Args: { p_player_id: string; p_run_id: string };
         Returns: Json;

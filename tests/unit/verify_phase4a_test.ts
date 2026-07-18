@@ -70,6 +70,7 @@ Deno.test("Phase 4 verifier keeps the complete ordered local regression list", (
     "Phase 2 concurrency regression",
     "Phase 3 database contracts",
     "Phase 2 deletion recovery",
+    "recovery-control tombstone RPC",
     "Phase 4 progression integration",
     "Phase 4 progression concurrency",
     "Phase 4T local database controls",

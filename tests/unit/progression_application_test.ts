@@ -1,6 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19";
 import type { DatabasePort } from "../../supabase/functions/_shared/application/database-port.ts";
 import { getPlayerHome } from "../../supabase/functions/_shared/application/player-home.ts";
+import { requestProfileRunRender } from "../../supabase/functions/_shared/application/request-run-render.ts";
 import { startOnboardingRun } from "../../supabase/functions/_shared/application/start-onboarding-run.ts";
 import { getTelegramIdentityV2 } from "../../supabase/functions/_shared/application/telegram-identity-v2.ts";
 
@@ -24,6 +25,11 @@ Deno.test("Phase 4A application adapters use server-authoritative narrow RPCs", 
     playerId: "player-1",
     at: "2026-08-15T07:00:00.000Z",
   });
+  await requestProfileRunRender(database, {
+    playerId: "player-1",
+    runId: "run-1",
+    profileVersion: 2,
+  });
 
   assertEquals(database.calls, [
     {
@@ -34,6 +40,10 @@ Deno.test("Phase 4A application adapters use server-authoritative narrow RPCs", 
     {
       rpc: "start_run_v3",
       args: { p_player_id: "player-1", p_at: "2026-08-15T07:00:00.000Z" },
+    },
+    {
+      rpc: "request_profile_run_render_v1",
+      args: { p_player_id: "player-1", p_run_id: "run-1", p_profile_version: 2 },
     },
   ]);
 });

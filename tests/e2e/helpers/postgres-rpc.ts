@@ -134,6 +134,13 @@ export class PostgresRpcDatabase implements DatabasePort {
           ${stringArgument(args, "p_run_id")}::uuid
         ) as response`;
         break;
+      case "request_profile_run_render_v1":
+        rows = await this.sql<{ response: unknown }[]>`select public.request_profile_run_render_v1(
+          ${stringArgument(args, "p_player_id")}::uuid,
+          ${stringArgument(args, "p_run_id")}::uuid,
+          ${integerStringArgument(args, "p_profile_version")}::bigint
+        ) as response`;
+        break;
       case "prepare_action_v1":
         rows = await this.sql<{ response: unknown }[]>`select public.prepare_action_v1(
           ${stringArgument(args, "p_player_id")}::uuid,

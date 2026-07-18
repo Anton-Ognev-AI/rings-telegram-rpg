@@ -266,8 +266,8 @@ Deno.test("hero and Academy are direct read-only projections with no prepared mu
 Deno.test("profile callback binds actor, Telegram update and canonical message before rerender", async () => {
   const database = new ScriptedDatabase({
     resolve_player_action_v1: [{ status: "applied" }],
-    player_home_v1: [home({ lastTerminalRunId: "terminal-run" })],
-    request_run_render_v2: [{ status: "applied" }],
+    player_home_v1: [home({ profileVersion: 1, lastTerminalRunId: "terminal-run" })],
+    request_profile_run_render_v1: [{ status: "applied" }],
   });
   const update: NormalizedCallbackUpdate = {
     kind: "callback",
@@ -286,10 +286,15 @@ Deno.test("profile callback binds actor, Telegram update and canonical message b
   assertEquals(database.calls.map((call) => call.rpc), [
     "resolve_player_action_v1",
     "player_home_v1",
-    "request_run_render_v2",
+    "request_profile_run_render_v1",
   ]);
   assertEquals(database.calls[0].args.p_telegram_update_id, "1004");
   assertEquals(database.calls[0].args.p_callback_message_id, "9001");
+  assertEquals(database.calls[2].args, {
+    p_player_id: playerId,
+    p_run_id: "terminal-run",
+    p_profile_version: 1,
+  });
 });
 
 Deno.test("rejected profile callbacks give one generic visible recovery path", async () => {

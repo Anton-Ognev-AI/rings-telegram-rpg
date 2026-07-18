@@ -5,7 +5,7 @@ import {
   resolvePlayerAction,
 } from "../application/player-action.ts";
 import type { TelegramRunView } from "../application/prepare-run-card.ts";
-import { requestRunRender } from "../application/request-run-render.ts";
+import { requestProfileRunRender, requestRunRender } from "../application/request-run-render.ts";
 import type { CommandResult, DatabasePort } from "../application/database-port.ts";
 import type { Clock } from "../infrastructure/clock.ts";
 import { parseCanonicalBuildView } from "../progression/build-view.ts";
@@ -311,7 +311,16 @@ export async function handleCanonicalProfileCallback(
     return { route: "profile_rejected" };
   }
   const home = parseHome(await getPlayerHome(dependencies.database, input.playerId));
-  await requestHomeRender(dependencies.database, home, true);
+  const runId = runToRender(home, true);
+  if (runId === null) throw new Error("profile_render_run_unavailable");
+  const requested = await requestProfileRunRender(dependencies.database, {
+    playerId: home.playerId,
+    runId,
+    profileVersion: home.profileVersion,
+  });
+  if (requested.status !== "applied" && requested.status !== "cached") {
+    throw new Error("request_profile_run_render_rejected");
+  }
   return { route: `profile_${result.status}` };
 }
 

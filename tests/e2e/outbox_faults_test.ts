@@ -144,19 +144,25 @@ async function cardCount(sql: Sql, runId: string): Promise<number> {
   return row?.count ?? -1;
 }
 
+async function advanceCanonicalVersionWithoutDelivery(sql: Sql, runId: string): Promise<void> {
+  await sql`update game.runs set state_version = state_version + 1
+    where id = ${runId}::uuid`;
+}
+
 async function assertCanonicalRun(
   database: PostgresRpcDatabase,
   playerId: string,
   runId: string,
+  expectedStateVersion = 0,
 ) {
   const resumed = await resumeRun(database, playerId);
   assertEquals(resumed.status, "ok");
   assertEquals((resumed.run as { id: string; stateVersion: number }).id, runId);
-  assertEquals((resumed.run as { stateVersion: number }).stateVersion, 0);
+  assertEquals((resumed.run as { stateVersion: number }).stateVersion, expectedStateVersion);
   const view = await getRunView(database, { playerId, runId });
   assertEquals(view.status, "ok");
   assertEquals((view.run as { id: string; stateVersion: number }).id, runId);
-  assertEquals((view.run as { stateVersion: number }).stateVersion, 0);
+  assertEquals((view.run as { stateVersion: number }).stateVersion, expectedStateVersion);
 }
 
 Deno.test("retryable Telegram failures recover to one canonical editable card", async () => {
@@ -190,6 +196,7 @@ Deno.test("retryable Telegram failures recover to one canonical editable card", 
       assertEquals(await cardCount(sql, scenario.runId), 1);
       await assertCanonicalRun(database, scenario.playerId, scenario.runId);
 
+      await advanceCanonicalVersionWithoutDelivery(sql, scenario.runId);
       const repair = await requestRunRender(database, {
         playerId: scenario.playerId,
         runId: scenario.runId,
@@ -359,6 +366,7 @@ Deno.test("an ambiguous edit is safely retried against the same canonical messag
     );
     assertStringIncludes(initialCalls[0]!.url, "/sendMessage");
 
+    await advanceCanonicalVersionWithoutDelivery(sql, scenario.runId);
     assertEquals(
       (await requestRunRender(database, {
         playerId: scenario.playerId,
@@ -390,6 +398,6 @@ Deno.test("an ambiguous edit is safely retried against the same canonical messag
     assertStringIncludes(recoveredCalls[0]!.url, "/editMessageText");
     assertEquals((recoveredCalls[0]!.body as { message_id: number }).message_id, 8400);
     assertEquals(await cardCount(sql, scenario.runId), 1);
-    await assertCanonicalRun(database, scenario.playerId, scenario.runId);
+    await assertCanonicalRun(database, scenario.playerId, scenario.runId, 1);
   });
 });

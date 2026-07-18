@@ -85,3 +85,50 @@ Deno.test("render v2 coalesces one repair for a stale card", async () => {
     assertEquals(state.repairs, 1);
   });
 });
+
+Deno.test("profile render records exactly one edit request per profile version", async () => {
+  await withDatabase(async (sql) => {
+    const fixture = await createCardFixture(
+      sql,
+      950000000000000003n,
+      "2026-09-03T07:00:00Z",
+    );
+    await sql`update game.player_onboarding set profile_version = 1
+      where player_id = ${fixture.playerId}::uuid`;
+
+    const responses = await Promise.all(
+      Array.from({ length: 25 }, () =>
+        rpc(sql`select public.request_profile_run_render_v1(
+          ${fixture.playerId}::uuid, ${fixture.runId}::uuid, 1
+        ) as response`)),
+    );
+    assertEquals(responses.filter((value) => value.status === "applied").length, 1);
+    assertEquals(responses.filter((value) => value.status === "cached").length, 24);
+    const [first] = await sql<{ repairs: number }[]>`select count(*)::integer as repairs
+      from game.outbox_messages
+      where intent_type = 'repair_run_state'
+        and payload->>'runId' = ${fixture.runId}
+        and payload->>'profileVersion' = '1'`;
+    assertEquals(first.repairs, 1);
+
+    await sql`update game.outbox_messages set status = 'sent'
+      where intent_type = 'repair_run_state'
+        and payload->>'runId' = ${fixture.runId}`;
+    const replay = await rpc(sql`select public.request_profile_run_render_v1(
+      ${fixture.playerId}::uuid, ${fixture.runId}::uuid, 1
+    ) as response`);
+    assertEquals(replay.status, "cached");
+    assertEquals(replay.reason, "profile_render_recorded");
+
+    await sql`update game.player_onboarding set profile_version = 2
+      where player_id = ${fixture.playerId}::uuid`;
+    const next = await rpc(sql`select public.request_profile_run_render_v1(
+      ${fixture.playerId}::uuid, ${fixture.runId}::uuid, 2
+    ) as response`);
+    assertEquals(next.status, "applied");
+    const stale = await rpc(sql`select public.request_profile_run_render_v1(
+      ${fixture.playerId}::uuid, ${fixture.runId}::uuid, 1
+    ) as response`);
+    assertEquals(stale, { status: "rejected", reason: "stale_profile_version" });
+  });
+});

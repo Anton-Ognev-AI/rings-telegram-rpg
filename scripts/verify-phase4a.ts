@@ -38,6 +38,8 @@ const SYNTHETIC_TELEGRAM_ID_MIN = 910_000_000;
 const SYNTHETIC_TELEGRAM_ID_MAX = 999_999_999;
 
 const LOCKED_BASELINE: Readonly<Record<string, string>> = {
+  "recovery-control/migrations/202607130001_deletion_tombstones.sql":
+    "464de9fe299b1c9c61a038cd93a6fd185189ec9f11f40f505663b31d73bfe2c8",
   "supabase/migrations/202607120001_foundation.sql":
     "981bd65bfac8a35b086e0d2f09ac70172a5ba0dd6798bfee38522eaa793dbc2a",
   "supabase/migrations/202607120002_config.sql":
@@ -144,6 +146,7 @@ export const phase4VerificationSteps: readonly VerificationStep[] = [
   npmRun("Phase 2 concurrency regression", "test:db:concurrency"),
   npmRun("Phase 3 database contracts", "test:db:phase3a"),
   npmRun("Phase 2 deletion recovery", "test:db:deletion"),
+  npmRun("recovery-control tombstone RPC", "test:db:recovery:rpc"),
   npmRun("Phase 4 progression integration", "test:db:phase4a"),
   npmRun("Phase 4 progression concurrency", "test:db:phase4a:concurrency"),
   npmRun("Phase 4T local database controls", "test:db:phase4t0"),
