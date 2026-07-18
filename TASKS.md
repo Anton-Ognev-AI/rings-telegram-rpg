@@ -1,7 +1,7 @@
 # Tasks
 
 ## Active Task
-- [ ] ID: PHASE-04T: Private Telegram owner-smoke (Gate 4T.0 `approved` locally; Gate 4T.1 is the only active task, staging-only remote authorization is granted, and P4T-05 is paused at the owner-operated app-project database-password checkpoint; ADRs 046–067)
+- [ ] ID: PHASE-04T: Private Telegram owner-smoke (Gate 4T.0 `approved` locally; Gate 4T.1 is the only active task, staging-only remote authorization is granted, and P4T-05 awaits an owner decision on the account-wide Supabase Free-project limit; ADRs 046–067)
   - [x] P4T-00: Full council review; bind each reconciliation to its retained delivery incident, keep migration 015 reconciliation-only, and make staging tools offline by default (ADR 056)
   - [x] P4T-01: Migration 015 and `delivery_unknown` operator reconciliation (`approved` locally; 13 pgTAP and six integration paths including concurrent conflict/deletion race; ADR 058)
   - [x] P4T-01A: Forward migration 016 for current-card and profile-version render idempotency (`approved` locally; current-card cached, stale-card repair and profile-change edit are separately coalesced, upgrade 014→016 green; migration 014 remains locked; ADRs 058, 063)
@@ -10,7 +10,7 @@
   - [x] P4T-03: Offline fail-closed staging preflight and no-cron runner (`approved` locally; dry-run has no network/secret permission and remote execution requires a separate command plus flag; ADR 060)
   - [x] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final 34-step local gate (`approved` locally; tracked-set preflight scanned 266 files; fresh complete verifier exited 0; final council `APPROVE_WITH_SMALL_CHANGES`; ADR 064) → `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`
   - [x] P4T-04A: Pre-deploy amendment pins Edge Function JWT modes, exposes the disposable restore-target scope and keeps secret storage owner-operated (`approved` locally; 9-check/18-migration/270-file offline preflight and zero-call dry runner; ADR 067) → `docs/checkpoints/2026-07-18-phase-04t-pre-deploy-amendment.md`
-  - [ ] P4T-05: Provision isolated app/recovery staging plus a disposable no-webhook restore target, apply app migrations 001–016 and recovery 001–002, pause for owner-operated secret storage without reading `.env`, deploy internal functions before the owner-only webhook, and prove non-owner rejection (`in_progress`: authorization and Supabase authentication confirmed; a separate free staging organization exists without changing existing projects; the app-project form is prepared and awaits the owner's database password)
+  - [ ] P4T-05: Provision isolated app/recovery staging plus a disposable no-webhook restore target, apply app migrations 001–016 and recovery 001–002, pause for owner-operated secret storage without reading `.env`, deploy internal functions before the owner-only webhook, and prove non-owner rejection (`in_progress`: Supabase authentication is confirmed, app staging is `ACTIVE_HEALTHY`, and a separate Free staging organization exists; recovery creation is stopped because the account-wide two-active-Free-project limit is occupied by app staging and the unrelated `Instagram` project, which has not been modified)
   - [ ] P4T-06: Run the real private Telegram flow, record technical and product evidence, close deletion/recovery/reconciliation checks, remove or explicitly retain staging, and write the Gate 4T.1 checkpoint
 
 ## Completed Local Phase 4 Work
