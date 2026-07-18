@@ -17,7 +17,7 @@
   - [x] P4T-02A: Remote recovery-control deletion sink (`approved` locally; service-only idempotent RPC, fixed recovery adapter, concurrent conflict and restore paths green; ADRs 061–062)
   - [x] P4T-03: Offline fail-closed staging preflight and no-cron runner (`approved` locally; dry-run has no network/secret permission and remote execution requires a separate command plus flag; ADR 060)
   - [x] P4T-04: Staging/deletion/reconciliation runbooks, local-readiness checkpoint and final 34-step local gate (`approved` locally; tracked-set preflight scanned 266 files; fresh complete verifier exited 0; final council `APPROVE_WITH_SMALL_CHANGES`; ADR 064) → `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`
-- [ ] ID: ARCHITECTURE-AS-BUILT: Document the actual gameplay/content/Telegram/persistence boundaries and update the Phase-0 README before further feature expansion (`next autonomous local task`; no schema/runtime behavior changes; ADR 064)
+- [x] ID: ARCHITECTURE-AS-BUILT: Document the actual gameplay/content/Telegram/persistence boundaries and update the Phase-0 README before further feature expansion (`approved` locally; direct Bot API/no-cron runtime truth and migration 017+ boundary recorded; ADR 065) → `docs/checkpoints/2026-07-18-architecture-as-built.md`
 
 ## Completed Phase 4 Planning
 - [x] ID: PHASE-04-DESIGN: Supplemental Phase 4A/4T audit and design (`approved`; ADRs 046–048)

@@ -4,15 +4,16 @@
 Telegram-бот гра: гравець — учень Академії у світі книг Антона; щоденна спільна 10-етапна експедиція з однією обкладинкою, детермінованими виборами (успіх / нейтрально / провал), міні-босом на етапі 5 та босом на етапі 10; розвиток героя (фізична сила, магічна сила, спритність, живучість), предметів без інвентарю й магічних грудних кілець (синє → зелене → жовте → фіолетове; чорне не використовується), а також асинхронна група з викладачем або одним взаємним напарником і денним snapshot прозорого внеску.
 
 ## Technical Context
-- Language/Stack: TypeScript + grammY + Supabase (Postgres + Edge Functions webhook + pg_cron); LLM: Claude API; image-gen: TBD
-- Current Phase: Phase 4A, PHASE-04-BALANCE and PHASE-04T Gate 4T.0 are `approved` locally. Gate 4T.1 is the next playable boundary but awaits explicit staging-only authorization before any remote project, secret, deploy, webhook or real Telegram call. The next autonomous local task is a compact as-built architecture/README truth pass; Phase 5+ remains behind the real owner-smoke and deferred core-loop validation. Application migrations 001–014, recovery migration 001, fallback and resolver/config/golden files remain locked.
+- Language/Stack: TypeScript/Deno + direct Telegram Bot API adapter + Supabase (private Postgres schema and Edge Functions); owner-smoke lifecycle is no-cron. LLM/image generation are future offline content-pipeline concerns, not runtime dependencies.
+- Current Phase: Phase 4A, PHASE-04-BALANCE, PHASE-04T Gate 4T.0 and the as-built architecture truth pass are `approved` locally. Gate 4T.1 is the next playable boundary but awaits explicit staging-only authorization before any remote project, secret, deploy, webhook or real Telegram call. Phase 5+ remains behind the real owner-smoke and deferred core-loop validation. Application migrations 001–016, recovery migrations 001–002, fallback and resolver/config/golden files are locked.
 
 ## Architecture Map
 - `CLAUDE.md`: System protocol (Status: locked)
+- `AGENTS.md`: Codex project protocol (Status: locked)
+- `ARCHITECTURE.md`: Canonical as-built boundaries, runtime flows, repository map and change guide (Status: approved; ADR 065)
 - `PROJECT_STATE.md`: Single source of truth (Status: in_progress)
 - `TASKS.md`: Task tracking (Status: in_progress)
 - `DECISIONS.md`: ADR log (Status: in_progress)
-- `/skills`: Custom AI skills (Status: todo)
 - `docs/lore/LORE_CONTEXT.md`: Лор-канон з книг для генератора квестів (Status: approved)
 - `docs/research/SIMILAR_PROJECTS.md`: Аналіз схожих проєктів (Status: approved)
 - `docs/specs/2026-07-11-game-design.md`: Історичний дизайн-документ v1.0 (Status: superseded; keep for history)
@@ -40,7 +41,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - `docs/checkpoints/2026-07-15-phase-04a-gate-4-2.md`: Canonical build/home projection, guided cards, focused Telegram router and verification evidence (Status: approved locally; ADRs 050, 053)
 - `docs/checkpoints/2026-07-15-phase-04a-gate-4-3.md`: Two-day accept/discard E2E, terminal/snapshot proof, 72-cell strict balance matrix, repeated local verifier and council evidence (Status: approved locally; baseline fire debt still blocks Phase 4T; ADRs 051–053)
 - `docs/checkpoints/2026-07-15-phase-04a.md`: Final repeated runtime evidence, Docker recovery, test-fixture corrections, migration-014 lock and residual Phase 4T boundary (Status: approved locally; ADR 053)
-- `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`: Owner-only staging runbooks, render/recovery corrections and complete 34-step local evidence (Status: council-approved locally, pending Git checkpoint commit; ADR 063)
+- `docs/checkpoints/2026-07-15-phase-04t-local-readiness.md`: Owner-only staging runbooks, render/recovery corrections and complete 34-step local evidence (Status: approved locally; ADRs 063–064)
+- `docs/checkpoints/2026-07-18-architecture-as-built.md`: Runtime truth, change map and migration 017+ boundary (Status: approved locally; ADR 065)
 - `recovery-control/` and `scripts/recovery/`: Non-PII tombstone store and restore replay tooling (Status: approved locally; production provisioning deferred)
 - `supabase/migrations/SHA256SUMS`: Canonical manifest for migrations 001–014; all fourteen migrations are locked and byte changes require a new forward migration
 - `supabase/migrations/202607120001_foundation.sql` … `202607120004_content.sql`: Private normalized Gate 2A schema (Status: approved)
@@ -112,7 +114,8 @@ Telegram-бот гра: гравець — учень Академії у сві
 - P4T-02A closes the remote deletion blocker locally. Recovery migration 002 exposes one service-role-only idempotent tombstone RPC over the private recovery table; exact replay caches, conflicts reject, and advisory locks retain one row under a race. The fixed-host recovery adapter sends only surrogate player UUID, deletion UUID and timestamp, is constructed after owner authorization, and enables `/delete_me` only when all recovery configuration exists. Recovery migration 001 remains on SHA `464de9fe299b1c9c61a038cd93a6fd185189ec9f11f40f505663b31d73bfe2c8`; separate recovery checksums are now part of staging preflight. Three RPC/concurrency tests, adapter/boundary tests, deletion restore and source `191 + 3` pass (ADR 062).
 - The local Telegram ingress boundary is owner-only and private-chat-only before any privileged adapter or identity bootstrap. The injectable webhook proves `secret → bounded body → normalization → owner allowlist → adapters`; malformed/missing/list/range/zero/other-owner/group-chat inputs fail closed, while responses never expose webhook values, IDs, bot token, service key or callback key. Existing internal worker/day secret-first tests remain green; source verification is now 179 + 3 (ADR 059).
 - Local runtime lesson: preflight at least 1 GiB free on `C:` before long Docker/npm gates. One intermediate repeat failed only with npm `ENOSPC` at roughly 84 KiB free; after scoped cache/old-Temp cleanup, the complete independent verifier passed.
-- Gate 4T.0 is approved locally: three operator runbooks, offline preflight/runner, isolated recovery adapter and the 34-step verifier passed; the tracked-set repeat scanned 266 files and a fresh complete verifier exited 0 on 2026-07-18, with the stack absent afterward. The external Claude audit's useful findings are retained (missing as-built map and late fun-validation risk), while its stale claims about an unexplained migration 016/fallback change are superseded by ADRs 054–055, 057 and 063. Next safe local step: document the as-built architecture. Next playable step: stop at the Remote Approval Gate and request staging-only authorization (ADR 064).
+- Gate 4T.0 is approved locally: three operator runbooks, offline preflight/runner, isolated recovery adapter and the 34-step verifier passed; the tracked-set repeat scanned 266 files and a fresh complete verifier exited 0 on 2026-07-18, with the stack absent afterward. The external Claude audit's useful findings are retained (missing as-built map and late fun-validation risk), while its stale claims about an unexplained migration 016/fallback change are superseded by ADRs 054–055, 057 and 063. The local architecture truth pass is now complete; next playable step is to stop at the Remote Approval Gate and request staging-only authorization (ADRs 064–065).
+- The as-built truth pass replaces the stale Phase-0 README and planned grammY/pg_cron claims with the implemented direct Bot API/no-cron topology. `ARCHITECTURE.md` now defines authority and change boundaries: pure versioned resolver for calculations, service-only SQL RPC for atomic state, thin TypeScript adapters, outbox-only Telegram effects and separate non-PII deletion recovery. Future application schema starts at migration 017; next playable step remains the separately authorized Gate 4T.1 (ADR 065).
 
 ## Important Constants/Endpoints
 - Project Root: D:\Projects\TgGame
