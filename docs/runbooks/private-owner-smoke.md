@@ -1,7 +1,7 @@
 # Private Telegram Owner-Smoke Runbook
 
-**Scope:** one owner, one private bot, one isolated app staging project and one isolated
-recovery-control staging project.
+**Scope:** one owner, one private bot, one isolated app staging project, one isolated
+recovery-control staging project and one disposable restore target used only for the deletion drill.
 
 **Current gate:** documentation only. Do not execute any command in the `Remote actions` sections
 until the owner explicitly authorizes staging-only Supabase and Telegram use.
@@ -14,6 +14,8 @@ until the owner explicitly authorizes staging-only Supabase and Telegram use.
   deploy or by the smoke runner.
 - Keep app and recovery project refs different. Put known production refs in
   `TG_GAME_DENIED_PROJECT_REFS` with commas and no spaces.
+- Keep the disposable restore target different from both staging projects, denylist it from normal
+  bot use, never deploy the webhook there and destroy it after the drill.
 - Link only the app project from this worktree. Apply recovery migrations in the recovery project's
   SQL editor; never run the app migration folder against recovery.
 - Keep `tutorial_starter_enabled` absent/disabled until authenticated non-owner rejection is proven.
@@ -47,6 +49,7 @@ Store values outside the repository and expose them only to the current operator
 ```text
 <STAGING_APP_REF>
 <STAGING_RECOVERY_REF>
+<RESTORE_DRILL_REF>
 <KNOWN_PRODUCTION_REFS>
 <OUTSIDE_REPO_EDGE_ENV_PATH>
 ```
@@ -91,8 +94,10 @@ The dry-run command has no network or runtime-secret permission.
 2. Create two new Supabase projects in the dashboard:
    - app staging: `<STAGING_APP_REF>`;
    - recovery control: `<STAGING_RECOVERY_REF>`.
-3. Confirm neither ref is in the denylist and the projects have no production data.
-4. In the recovery project's SQL editor, apply exactly in order:
+3. Confirm the approved staging scope also permits a disposable `<RESTORE_DRILL_REF>`. Create it
+   only immediately before the deletion drill; it is not a third persistent game service.
+4. Confirm none of the refs identifies production and all three targets contain no production data.
+5. In the recovery project's SQL editor, apply exactly in order:
    - `recovery-control/migrations/202607130001_deletion_tombstones.sql`;
    - `recovery-control/migrations/202607150002_record_deletion_tombstone.sql`.
 5. In that same recovery project, verify without selecting any rows:
@@ -138,9 +143,11 @@ or false and the owner has not sent `/start`.
 
 ## Remote Actions — Secrets and Deployment
 
-The operator creates `<OUTSIDE_REPO_EDGE_ENV_PATH>` outside the repository. Copy the existing bot
-token there manually; do not ask Codex to read `.env`. Set `RECOVERY_SUPABASE_URL` to the exact
-recovery project origin and use that project's service-role credential.
+The owner/operator—not Codex—creates `<OUTSIDE_REPO_EDGE_ENV_PATH>` outside the repository and runs
+the secret-storage step. Copy the existing bot token there manually; do not ask Codex to read
+`.env`. Set `RECOVERY_SUPABASE_URL` to the exact recovery project origin and use that project's
+service-role credential. Codex may continue only after the operator reports that secret storage
+completed; it must never inspect the file or echo the command environment.
 
 If the numeric owner Telegram ID is not already known, keep the webhook absent, send one harmless
 message to the bot and inspect `getUpdates` in a private local operator session. Retain only

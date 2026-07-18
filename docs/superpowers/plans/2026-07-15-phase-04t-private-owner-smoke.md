@@ -10,10 +10,11 @@ loop through a private Telegram bot without exposing production, external tester
 secrets.
 
 **Architecture:** Two isolated staging projects separate gameplay data from deletion tombstones. A
-public webhook authenticates Telegram's secret header and rejects non-owner updates before identity
-bootstrap. Privileged functions retain JWT plus internal-secret protection. A local no-cron runner
-publishes once and polls the remote worker for a bounded owner-smoke session. Migration 015 adds only
-remote-readiness corrections and explicit operator reconciliation.
+third disposable restore target exists only for the deletion replay drill and is never a game
+service. A public webhook authenticates Telegram's secret header and rejects non-owner updates
+before identity bootstrap. Privileged functions retain JWT plus internal-secret protection. A local
+no-cron runner publishes once and polls the remote worker for a bounded owner-smoke session.
+Migration 015 adds only remote-readiness corrections and explicit operator reconciliation.
 
 **Tech Stack:** Supabase CLI/Edge Functions, Postgres 17, Deno 2.9.2, Telegram Bot API webhook,
 local PowerShell-compatible smoke runner, recovery-control database.
@@ -25,6 +26,8 @@ local PowerShell-compatible smoke runner, recovery-control database.
 - Never paste, print, commit or chat a bot token, webhook secret, internal secret, service-role key,
   Telegram user ID or database credential.
 - Use a separate staging app project, separate staging recovery project and separate private bot.
+- The deletion drill uses a separately approved disposable restore target with no webhook or live
+  traffic; destroy it after aggregate evidence is recorded.
 - Owner allowlist rejection occurs before identity creation and before application routing.
 - No cron, external testers, production-like project ref, production data or public access.
 - Migration 015 is expand-only and reconciliation-only. It must not redefine migration-014
@@ -202,6 +205,8 @@ npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-re
 - [x] Refuse absent `--staging`, unknown/project-ref mismatch, production-like denylist entries,
       dirty migration order/checksums, missing Phase 4 flags, repository secrets or a linked
       different project.
+- [x] Fail closed unless deploy config keeps `tg-webhook.verify_jwt=false` and both
+      `outbox-worker.verify_jwt=true` and `day-publish-reset.verify_jwt=true`.
 - [x] Runner publishes/opens fallback day once through the internal endpoint, then calls the remote
       worker every two seconds until Ctrl+C; it does not advance/reset the day repeatedly.
 - [x] Print only redacted aggregate status/counts and exit nonzero on auth/project mismatch.
@@ -248,6 +253,7 @@ npm run staging:owner-smoke -- --staging --project-ref <exact-ref> [--execute-re
 Stop and request one explicit owner approval immediately before any of these actions:
 
 - create or link either staging project;
+- create or restore into the disposable deletion-drill target;
 - create/use the private bot or enter its token;
 - apply migration 014 or 015 remotely;
 - set Edge secrets;
@@ -268,7 +274,10 @@ or dashboard and never through the conversation.
       versions.
 - [ ] Apply migration 014, 015 then 016 with `tutorial_starter_enabled` initially disabled.
 - [ ] Provision recovery sink and perform isolated backup-restore/tombstone replay smoke.
-- [ ] Set bot/webhook/internal/owner secrets through secret storage.
+- [ ] Create the approved disposable restore target only for the isolated replay drill and destroy
+      it after aggregate evidence is recorded.
+- [ ] The owner/operator sets bot/webhook/internal/owner secrets through secret storage without
+      Codex reading `.env`, the outside-repository file or command environment.
 - [ ] Deploy internal functions first, verify JWT/internal-secret rejection, then deploy webhook.
 - [ ] Register webhook with Telegram secret token, enable the owner cohort and verify a non-owner
       update creates no identity.
@@ -291,7 +300,8 @@ or dashboard and never through the conversation.
 ## Phase 4T Done Definition
 
 - Local readiness tests and runbooks are complete before remote approval.
-- Staging is isolated, owner-only and recoverable; non-owner ingress creates no identity.
+- Staging is isolated, owner-only and recoverable; the disposable restore target is destroyed and
+  non-owner ingress creates no identity.
 - The owner completes the full Phase 4A progression through real Telegram with canonical resume and
   delivery recovery.
 - No secret/real identity enters Git, logs, analytics, outbox payloads or chat.

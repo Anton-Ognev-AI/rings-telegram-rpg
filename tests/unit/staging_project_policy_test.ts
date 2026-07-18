@@ -121,6 +121,14 @@ async function preflightDependencies(
     "supabase/migrations/SHA256SUMS": manifest,
     ...recoveryMigrations,
     "recovery-control/migrations/SHA256SUMS": recoveryManifest,
+    "supabase/config.toml": [
+      "[functions.tg-webhook]",
+      "verify_jwt = false",
+      "[functions.outbox-worker]",
+      "verify_jwt = true",
+      "[functions.day-publish-reset]",
+      "verify_jwt = true",
+    ].join("\n"),
     "supabase/seed.sql": "tutorial_starter_enabled true",
     "scripts/safe.ts": "export const safe = true;",
     ...additions,
@@ -145,10 +153,33 @@ Deno.test("owner-smoke preflight verifies local migrations and scans tracked fil
   assertEquals(result, {
     status: "ready",
     mode: "dry-run",
-    checks: 8,
+    checks: 9,
     migrationsVerified: 5,
-    trackedFilesScanned: 9,
+    trackedFilesScanned: 10,
   });
+});
+
+Deno.test("owner-smoke preflight rejects unsafe Edge Function JWT modes", async () => {
+  for (
+    const config of [
+      "[functions.tg-webhook]\nverify_jwt = true",
+      [
+        "[functions.tg-webhook]",
+        "verify_jwt = false",
+        "[functions.outbox-worker]",
+        "verify_jwt = false",
+        "[functions.day-publish-reset]",
+        "verify_jwt = true",
+      ].join("\n"),
+    ]
+  ) {
+    const dependencies = await preflightDependencies({ "supabase/config.toml": config });
+    await assertRejects(
+      () => preflightOwnerSmoke(options(), dependencies),
+      Error,
+      "unsafe_function_jwt_config",
+    );
+  }
 });
 
 Deno.test("owner-smoke preflight rejects recovery migration checksum drift", async () => {

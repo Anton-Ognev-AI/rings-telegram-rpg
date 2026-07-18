@@ -12,6 +12,7 @@ const APP_MIGRATION_ROOT = "supabase/migrations";
 const APP_MANIFEST_PATH = `${APP_MIGRATION_ROOT}/SHA256SUMS`;
 const RECOVERY_MIGRATION_ROOT = "recovery-control/migrations";
 const RECOVERY_MANIFEST_PATH = `${RECOVERY_MIGRATION_ROOT}/SHA256SUMS`;
+const FUNCTION_CONFIG_PATH = "supabase/config.toml";
 const REQUIRED_MIGRATIONS = [
   "202607150014_tutorial_starter.sql",
   "202607150015_owner_smoke_readiness.sql",
@@ -78,6 +79,33 @@ function manifestEntries(value: string): ReadonlyMap<string, string> {
   return result;
 }
 
+function assertFunctionJwtConfig(value: string): void {
+  const expected = new Map<string, boolean>([
+    ["tg-webhook", false],
+    ["outbox-worker", true],
+    ["day-publish-reset", true],
+  ]);
+  const actual = new Map<string, boolean>();
+  let currentFunction: string | null = null;
+
+  for (const line of value.split(/\r?\n/)) {
+    const section = /^\s*\[functions\.([a-z0-9-]+)\]\s*(?:#.*)?$/.exec(line);
+    if (section) {
+      currentFunction = section[1]!;
+      continue;
+    }
+    if (/^\s*\[/.test(line)) currentFunction = null;
+    const verifyJwt = /^\s*verify_jwt\s*=\s*(true|false)\s*(?:#.*)?$/.exec(line);
+    if (!currentFunction || !verifyJwt) continue;
+    if (actual.has(currentFunction)) fail("unsafe_function_jwt_config");
+    actual.set(currentFunction, verifyJwt[1] === "true");
+  }
+
+  for (const [name, expectedMode] of expected) {
+    if (actual.get(name) !== expectedMode) fail("unsafe_function_jwt_config");
+  }
+}
+
 async function verifyMigrationSet(
   dependencies: OwnerSmokePreflightDependencies,
   trackedPaths: readonly string[],
@@ -120,6 +148,8 @@ export async function preflightOwnerSmoke(
 
   const trackedPaths = (await dependencies.listTrackedPaths()).map(normalizePath);
   if (trackedPaths.some(isTrackedEnvironment)) fail("tracked_environment_forbidden");
+  if (!trackedPaths.includes(FUNCTION_CONFIG_PATH)) fail("unsafe_function_jwt_config");
+  assertFunctionJwtConfig(await dependencies.readTextFile(FUNCTION_CONFIG_PATH));
 
   const appMigrations = await verifyMigrationSet(
     dependencies,
@@ -160,7 +190,7 @@ export async function preflightOwnerSmoke(
   return {
     status: "ready",
     mode: policy.mode,
-    checks: 8,
+    checks: 9,
     migrationsVerified: appMigrations + recoveryMigrations,
     trackedFilesScanned: trackedPaths.length,
   };
