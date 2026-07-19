@@ -6,7 +6,10 @@ import type { ResolutionV1 } from "../../supabase/functions/_shared/contracts/do
 import type { CanonicalBuildView } from "../../supabase/functions/_shared/progression/build-view.ts";
 import { renderAcademyCard } from "../../supabase/functions/_shared/render/academy.ts";
 import { renderHelpCard } from "../../supabase/functions/_shared/render/help.ts";
-import { renderHeroCard } from "../../supabase/functions/_shared/render/hero.ts";
+import {
+  renderHeroCard,
+  renderHeroManagementCard,
+} from "../../supabase/functions/_shared/render/hero.ts";
 import { renderMenuCard } from "../../supabase/functions/_shared/render/menu.ts";
 import {
   renderItemOfferCard,
@@ -24,6 +27,7 @@ import { renderSummaryCard } from "../../supabase/functions/_shared/render/summa
 
 const fallback = fallbackJson as DungeonContentV1;
 const pa = (suffix: string) => `pa_${suffix.padEnd(32, "0")}`;
+const hm = (suffix: string) => `hm_${suffix.padEnd(32, "0")}`;
 
 function assertTelegramSafe(
   cards: readonly {
@@ -335,6 +339,10 @@ Deno.test("hero, Academy and help cards turn progression into a visible next goa
   assertStringIncludes(hero.text, "Магічне кільце: Кільце зброї");
   assertStringIncludes(hero.text, "Майстерність: 2%");
   assertStringIncludes(hero.text, "20 XP → +1% майстерності");
+  assertEquals(
+    hero.buttons.flat().map((button) => button.callbackData).includes("nav:hero-manage"),
+    true,
+  );
   assertStringIncludes(academy.text, "Ранг: Новак");
   assertStringIncludes(academy.text, "Навчання: 2/2");
   assertStringIncludes(academy.text, "особиста перевірка етапу 5");
@@ -366,6 +374,47 @@ Deno.test("hero card shows empty slots and only acquired active bonuses", () => 
   assertNotMatch(emptyHero.text, /Вампіризм|Відновлення/u);
   assertStringIncludes(vampiricHero.text, "Вампіризм: 5%");
   assertTelegramSafe([emptyHero, vampiricHero]);
+});
+
+Deno.test("hero management shows exact goals but enables only affordable actions", () => {
+  const management = renderHeroManagementCard({
+    freeXp: 43,
+    hasActiveRun: true,
+    options: [
+      {
+        stat: "physical",
+        current: 6,
+        next: 7,
+        cost: 28,
+        effect: "physical +1",
+        callbackData: hm("physical"),
+      },
+      {
+        stat: "magical",
+        current: 7,
+        next: 8,
+        cost: 50,
+        effect: "magical +1",
+      },
+    ],
+    mastery: { current: 2, cost: 20, callbackData: hm("mastery") },
+  });
+
+  assertStringIncludes(management.text, "Керування персонажем");
+  assertStringIncludes(management.text, "Вільний досвід: 43 XP");
+  assertStringIncludes(management.text, "Фізична сила: 6 → 7 · 28 XP · залишиться 15 XP");
+  assertStringIncludes(management.text, "Магічна сила: 7 → 8 · 50 XP · бракує 7 XP");
+  assertStringIncludes(management.text, "Майстерність кільця: 2% → 3% · 20 XP");
+  assertStringIncludes(management.text, "Поточна експедиція не зміниться");
+  assertEquals(
+    management.buttons.flat().some((button) => button.callbackData === hm("physical")),
+    true,
+  );
+  assertEquals(
+    management.buttons.flat().some((button) => button.text.includes("Магічна сила")),
+    false,
+  );
+  assertTelegramSafe([management]);
 });
 
 function tutorialPrepared(): PreparedRunCard {

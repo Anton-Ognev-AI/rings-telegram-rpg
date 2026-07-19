@@ -17,6 +17,13 @@ const ITEM_SLOTS = [
   ["talisman", "Талісман"],
 ] as const;
 
+const UPGRADE_STAT_LABELS = {
+  physical: "Фізична сила",
+  magical: "Магічна сила",
+  agility: "Спритність",
+  vitality: "Живучість",
+} as const;
+
 function contributionText(contribution: BuildContribution): string {
   const base = `${contribution.label} +${contribution.amount}`;
   if (contribution.operation === "add") return base;
@@ -68,8 +75,88 @@ export function renderHeroCard(input: HeroCardInput): RenderedCard {
       callbackData: input.masteryCallbackData,
     }]);
   }
+  buttons.push([staticButton("Керувати XP", "nav:hero-manage")]);
   buttons.push([
     staticButton("Академія", "nav:academy"),
+    staticButton("До меню", "nav:menu"),
+  ]);
+  return renderCard(lines.join("\n"), buttons);
+}
+
+export interface HeroUpgradeOption {
+  readonly stat: "physical" | "magical" | "agility" | "vitality";
+  readonly current: number;
+  readonly next: number;
+  readonly cost: number;
+  readonly effect: string;
+  readonly callbackData?: string;
+}
+
+export interface HeroManagementCardInput {
+  readonly freeXp: number;
+  readonly hasActiveRun: boolean;
+  readonly options: readonly HeroUpgradeOption[];
+  readonly mastery?: {
+    readonly current: number;
+    readonly cost: number;
+    readonly callbackData?: string;
+  };
+}
+
+function xpOutcome(freeXp: number, cost: number): string {
+  return freeXp >= cost ? `залишиться ${freeXp - cost} XP` : `бракує ${cost - freeXp} XP`;
+}
+
+export function renderHeroManagementCard(input: HeroManagementCardInput): RenderedCard {
+  const lines = [
+    "Керування персонажем",
+    `Вільний досвід: ${input.freeXp} XP`,
+    "",
+    "Покращення характеристик",
+  ];
+  const buttons: Array<Array<{ text: string; callbackData: string }>> = [];
+  for (const option of input.options) {
+    const label = UPGRADE_STAT_LABELS[option.stat];
+    lines.push(
+      `${label}: ${option.current} → ${option.next} · ${option.cost} XP · ${
+        xpOutcome(input.freeXp, option.cost)
+      }`,
+      `  ${option.effect}`,
+    );
+    if (option.callbackData) {
+      buttons.push([{
+        text: `${label} ${option.current}→${option.next} · ${option.cost} XP`,
+        callbackData: option.callbackData,
+      }]);
+    }
+  }
+  if (input.mastery) {
+    lines.push(
+      "",
+      `Майстерність кільця: ${input.mastery.current}% → ${
+        input.mastery.current + 1
+      }% · ${input.mastery.cost} XP · ${xpOutcome(input.freeXp, input.mastery.cost)}`,
+    );
+    if (input.mastery.callbackData) {
+      buttons.push([{
+        text: `Майстерність ${input.mastery.current}%→${
+          input.mastery.current + 1
+        }% · ${input.mastery.cost} XP`,
+        callbackData: input.mastery.callbackData,
+      }]);
+    }
+  }
+  if (input.hasActiveRun) {
+    lines.push(
+      "",
+      "Поточна експедиція не зміниться: нові характеристики діятимуть у наступному виході.",
+    );
+  }
+  if (buttons.length === 0) {
+    lines.push("", "Поки що XP недостатньо для доступного покращення.");
+  }
+  buttons.push([
+    staticButton("Герой", "nav:hero"),
     staticButton("До меню", "nav:menu"),
   ]);
   return renderCard(lines.join("\n"), buttons);
