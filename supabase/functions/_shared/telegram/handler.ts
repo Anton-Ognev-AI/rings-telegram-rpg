@@ -17,7 +17,12 @@ import { renderCard, type RenderedCard } from "../render/types.ts";
 import { hashCallbackForActor } from "./callback-token.ts";
 import { deriveDeletionCallbackToken, verifyDeletionCallbackToken } from "./deletion-callback.ts";
 import type { TelegramPort } from "./port.ts";
-import { handleCanonicalProfileCallback, routeCanonicalHome } from "./progression-router.ts";
+import {
+  handleCanonicalProfileCallback,
+  handleHeroManagementCallback,
+  openHeroManagement,
+  routeCanonicalHome,
+} from "./progression-router.ts";
 import type { NormalizedTelegramUpdate } from "./update.ts";
 
 export interface TelegramHandlerDependencies {
@@ -332,6 +337,22 @@ export async function handleTelegramUpdate(
         return await routeProgression(dependencies, update, "home");
       case "nav:hero":
         return await routeProgression(dependencies, update, "hero");
+      case "nav:hero-manage": {
+        const identity = await identityFor(dependencies, update.telegramExternalId, false);
+        const id = playerId(identity);
+        if (id === null) return { statusCode: 200, route: "hero_management_rejected" };
+        const result = await openHeroManagement({
+          database: dependencies.database,
+          telegram: dependencies.telegram,
+          clock: dependencies.clock,
+          callbackKey: dependencies.callbackKey,
+        }, {
+          playerId: id,
+          chatId: update.chatId,
+          messageId: update.messageId,
+        });
+        return { statusCode: 200, route: result.route };
+      }
       case "nav:academy":
         return await routeProgression(dependencies, update, "academy");
       case "nav:help":
@@ -353,6 +374,18 @@ export async function handleTelegramUpdate(
           const id = playerId(identity);
           if (id === null) return { statusCode: 200, route: "profile_rejected" };
           const result = await handleCanonicalProfileCallback({
+            database: dependencies.database,
+            telegram: dependencies.telegram,
+            clock: dependencies.clock,
+            callbackKey: dependencies.callbackKey,
+          }, { playerId: id, update });
+          return { statusCode: 200, route: result.route };
+        }
+        if (update.data.startsWith("hm_")) {
+          const identity = await identityFor(dependencies, update.telegramExternalId, false);
+          const id = playerId(identity);
+          if (id === null) return { statusCode: 200, route: "hero_management_rejected" };
+          const result = await handleHeroManagementCallback({
             database: dependencies.database,
             telegram: dependencies.telegram,
             clock: dependencies.clock,

@@ -292,6 +292,70 @@ Deno.test("expedition callback is acknowledged before identity and atomic start"
   });
 });
 
+Deno.test("hero management navigation acknowledges first and binds the source message", async () => {
+  const events: string[] = [];
+  const database = new ScriptedDatabase({
+    telegram_identity_v2: [identity],
+    player_home_v1: [home({ freeXp: 43 })],
+    prepare_player_action_v1: Array.from({ length: 4 }, () => ({ status: "ok" })),
+  }, events);
+  const telegram = new EventTelegram(events);
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram),
+    { ...callbackBase, data: "nav:hero-manage" },
+  );
+
+  assertEquals(events[0], "telegram:answer");
+  assertEquals(result.route, "hero_management");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_identity_v2",
+    "player_home_v1",
+    "prepare_player_action_v1",
+    "prepare_player_action_v1",
+    "prepare_player_action_v1",
+    "prepare_player_action_v1",
+  ]);
+  assertEquals(database.calls[0].args.p_create_if_missing, false);
+  assertEquals(
+    database.calls.slice(2).every((call) => call.args.p_expected_message_id === "11"),
+    true,
+  );
+  assertEquals(telegram.calls.at(-1)?.operation, "editMessage");
+});
+
+Deno.test("hero management actions use existing identity and generic rejection", async () => {
+  const appliedDatabase = new ScriptedDatabase({
+    telegram_identity_v2: [identity],
+    resolve_player_action_v1: [{ status: "applied" }],
+    player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
+  });
+  const applied = await handleTelegramUpdate(
+    dependencies(appliedDatabase),
+    { ...callbackBase, updateId: 105n, data: "hm_0123456789abcdef0123456789abcdef" },
+  );
+  assertEquals(applied.route, "hero_management_applied");
+  assertEquals(appliedDatabase.calls.map((call) => call.rpc), [
+    "telegram_identity_v2",
+    "resolve_player_action_v1",
+    "player_home_v1",
+  ]);
+  assertEquals(appliedDatabase.calls[0].args.p_create_if_missing, false);
+  assertEquals(appliedDatabase.calls[1].args.p_callback_message_id, "11");
+
+  const rejectedDatabase = new ScriptedDatabase({ telegram_identity_v2: [identity] });
+  const rejectedTelegram = new RecordingTelegramPort();
+  const rejected = await handleTelegramUpdate(
+    dependencies(rejectedDatabase, rejectedTelegram),
+    { ...callbackBase, updateId: 106n, data: "hm_" },
+  );
+  assertEquals(rejected.route, "hero_management_rejected");
+  assertEquals(rejectedDatabase.calls.map((call) => call.rpc), ["telegram_identity_v2"]);
+  assertEquals(rejectedDatabase.calls[0].args.p_create_if_missing, false);
+  const recovery = rejectedTelegram.calls.find((call) => call.operation === "sendMessage");
+  if (!recovery || recovery.operation !== "sendMessage") throw new Error("missing_hero_recovery");
+  assertEquals(recovery.input.buttons?.[0]?.[0]?.callbackData, "nav:hero");
+});
+
 Deno.test("resume and unknown commands route to a compact safe menu", async () => {
   const database = new ScriptedDatabase({
     telegram_identity_v2: [identity, identity],
