@@ -63,8 +63,11 @@ export function renderTrainingChoiceCard(input: TrainingChoiceCardInput): Render
     "Оберіть, у що вкласти досвід. Показані числа — точний прогноз сервера:",
   ];
   for (const option of input.options) {
+    const remainingXp = input.freeXp - option.cost;
     lines.push(
-      `${STAT_LABELS[option.stat]}: ${option.current} → ${option.next} · ${option.cost} XP`,
+      `${
+        STAT_LABELS[option.stat]
+      }: ${option.current} → ${option.next} · ${option.cost} XP · залишиться ${remainingXp} XP`,
       `  ${option.effect}`,
     );
   }

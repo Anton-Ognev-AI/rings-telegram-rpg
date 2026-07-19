@@ -71,7 +71,7 @@ Deno.test("tutorial and completed menus expose only useful honest actions", () =
 
 Deno.test("training card shows exact server forecast and no hidden arithmetic", () => {
   const card = renderTrainingChoiceCard({
-    freeXp: 20,
+    freeXp: 63,
     options: [
       {
         stat: "physical",
@@ -108,8 +108,9 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
     ],
     deferCallbackData: pa("defer"),
   });
-  assertStringIncludes(card.text, "Доступно: 20 XP");
-  assertStringIncludes(card.text, "Фізична сила: 5 → 6 · 20 XP");
+  assertStringIncludes(card.text, "Доступно: 63 XP");
+  assertStringIncludes(card.text, "Фізична сила: 5 → 6 · 20 XP · залишиться 43 XP");
+  assertStringIncludes(card.text, "Живучість: 5 → 6 · 20 XP · залишиться 43 XP");
   assertStringIncludes(card.text, "максимум HP +4");
   assertEquals(card.buttons.length, 5);
   assertTelegramSafe([card]);
@@ -401,6 +402,7 @@ Deno.test("tutorial stage guidance teaches the encounter without leaking the ans
   assertStringIncludes(stage.text, "Навчання 1/2");
   assertStringIncludes(stage.text, "Урок спостережливості");
   assertStringIncludes(stage.text, "Порада викладача");
+  assertStringIncludes(stage.text, "влучний підхід знижує вимогу");
   assertNotMatch(stage.text, /Поріг|правильн|успішн/u);
   assertStringIncludes(resolved.text, "Втручання викладача: +23 HP");
   assertStringIncludes(resolved.text, "не магія кільця");

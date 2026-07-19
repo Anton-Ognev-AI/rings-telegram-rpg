@@ -39,6 +39,9 @@ const FULL_GUIDANCE: Readonly<Record<EncounterType, string>> = {
     "Порада викладача: оцініть загрозу й оберіть характеристику, на яку справді спирається дія.",
 };
 
+const CHECK_RULE_GUIDANCE =
+  "Зіставте спостереження з дією: влучний підхід знижує вимогу перевірки, а ризикований — підвищує.";
+
 function heading(prepared: PreparedRunCard): string {
   if (prepared.view.tutorial) {
     return `Навчання ${prepared.view.tutorial.ordinal}/2 · ${
@@ -83,8 +86,8 @@ function stageLines(prepared: PreparedRunCard, compact: boolean): string[] {
     ...(prepared.view.tutorial
       ? [
         prepared.view.tutorial.guidance === "full"
-          ? FULL_GUIDANCE[prepared.stage.encounterType]
-          : "Орієнтир викладача: спостереження підказує шлях, але не гарантує результат.",
+          ? `${FULL_GUIDANCE[prepared.stage.encounterType]} ${CHECK_RULE_GUIDANCE}`
+          : "Орієнтир викладача: влучний підхід знижує вимогу перевірки, але не гарантує результат.",
       ]
       : []),
     "",
