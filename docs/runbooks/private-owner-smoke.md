@@ -382,18 +382,26 @@ npm run staging:owner-smoke:execute -- --staging --project-ref $appRef --recover
 The runner publishes/opens the fallback day once, then polls `outbox-worker` every two seconds until
 Ctrl+C. Keep the machine awake. It prints aggregate counts only.
 
-The owner now tests through the real private bot:
+This is intentionally a three-cycle smoke, not three runs in one sitting. The database permits one
+run per player per Kyiv cycle, and the production-shaped webhook uses the real clock. Do not change
+the machine clock, edit timestamps or add a staging time override. At each new cycle (after the
+09:00 `Europe/Kyiv` boundary), start the remote runner command again so it publishes/opens that
+cycle once. Stop the runner when the current play session and outbox drain are complete; the
+owner-only webhook may remain registered between cycles.
 
-1. `/start` shows the Academy home.
-2. Complete tutorial expedition 1 and resolve the guided stat choice or defer it.
-3. Complete tutorial expedition 2 and accept or discard the offered item.
-4. Choose one ordinary blue starter ring.
-5. Open `Герой`, `Академія`, `Допомога`; verify exact build and next goal.
-6. Start the third expedition and verify the chosen build changes the forecast/result.
-7. Send `/resume`, press one stale callback, and verify one canonical card is restored/edited.
-8. If `delivery_unknown` appears, stop the runner and follow
+The owner now tests through the real private bot in this order:
+
+1. **Cycle 1:** `/start` shows the Academy home; complete tutorial expedition 1 and resolve the
+   guided stat choice or defer it.
+2. **Cycle 2:** restart the runner, complete tutorial expedition 2, accept or discard the offered
+   item, and choose one ordinary blue starter ring.
+3. Still in cycle 2, open `Герой`, `Академія`, `Допомога`; verify exact build and next goal.
+4. **Cycle 3:** restart the runner, start the first post-tutorial expedition and verify the chosen
+   build changes the forecast/result.
+5. Send `/resume`, press one stale callback, and verify one canonical card is restored/edited.
+6. If `delivery_unknown` appears, stop the runner and follow
    [delivery-unknown-reconciliation.md](delivery-unknown-reconciliation.md).
-9. Test `/privacy` and deletion only through
+7. Test `/privacy` and deletion only through
    [staging-deletion-recovery.md](staging-deletion-recovery.md).
 
 Record the product evidence while playing; a technically green smoke is not enough:
