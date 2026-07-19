@@ -20,7 +20,10 @@ export function renderMenuCard(input: MenuCardInput): RenderedCard {
           ? "Навчальна експедиція збережена."
           : "Продовжте навчання, щоб отримати перший предмет і магічне кільце.",
       ].join("\n"),
-      [[primary], [staticButton("Допомога", "nav:help")]],
+      [
+        [primary],
+        [staticButton("Герой", "nav:hero"), staticButton("Допомога", "nav:help")],
+      ],
     );
   }
   return renderCard(

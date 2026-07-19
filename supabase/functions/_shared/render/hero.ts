@@ -11,6 +11,12 @@ const DISPLAY_STATS = [
   ["postHeal", "Відновлення після бою"],
 ] as const;
 
+const ITEM_SLOTS = [
+  ["main", "Основний предмет"],
+  ["armor", "Обладунок"],
+  ["talisman", "Талісман"],
+] as const;
+
 function contributionText(contribution: BuildContribution): string {
   const base = `${contribution.label} +${contribution.amount}`;
   if (contribution.operation === "add") return base;
@@ -35,14 +41,25 @@ export function renderHeroCard(input: HeroCardInput): RenderedCard {
       lines.push(`  ${contributions.map(contributionText).join(" · ")}`);
     }
   }
+  if (input.build.selfSnapshot.vampRateBps > 0) {
+    lines.push(`Вампіризм: ${input.build.selfSnapshot.vampRateBps / 100}%`);
+  }
+  lines.push("", "Спорядження");
+  for (const [slot, label] of ITEM_SLOTS) {
+    const item = input.build.loadoutSnapshot.items.find((candidate) => candidate.slot === slot);
+    lines.push(`${label}: ${item?.label ?? "порожньо"}`);
+  }
   const ring = input.build.loadoutSnapshot.rings[0];
   if (ring) {
     lines.push(
       "",
-      `${ring.label} · синє · звичайне`,
+      `Магічне кільце: ${ring.label}`,
+      "Синє · звичайне",
       `Майстерність: ${ring.masteryPercent}% · вкладено ${ring.investedXp}/${ring.blueBudget} XP`,
       `${input.masteryCostXp} XP → +1% майстерності. Бойовий бонус синього кільця лишається 15% до майбутнього прориву.`,
     );
+  } else {
+    lines.push("", "Магічні кільця: немає");
   }
   const buttons = [];
   if (ring && input.masteryCallbackData) {

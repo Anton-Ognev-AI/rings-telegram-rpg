@@ -36,7 +36,10 @@ export function renderTutorialCard(input: TutorialCardInput): RenderedCard {
       "",
       next,
     ].join("\n"),
-    [[primary], [staticButton("Допомога", "nav:help")]],
+    [
+      [primary],
+      [staticButton("Герой", "nav:hero"), staticButton("Допомога", "nav:help")],
+    ],
   );
 }
 

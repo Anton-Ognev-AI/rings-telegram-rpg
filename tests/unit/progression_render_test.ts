@@ -57,6 +57,12 @@ Deno.test("tutorial and completed menus expose only useful honest actions", () =
   assertStringIncludes(tutorial.text, "викладач");
   assertEquals(tutorialMenu.buttons.flat().map((button) => button.callbackData), [
     "nav:expedition",
+    "nav:hero",
+    "nav:help",
+  ]);
+  assertEquals(tutorial.buttons.flat().map((button) => button.callbackData), [
+    "nav:expedition",
+    "nav:hero",
     "nav:help",
   ]);
   assertEquals(completedMenu.buttons.flat().map((button) => button.callbackData), [
@@ -266,6 +272,45 @@ const heroBuild: CanonicalBuildView = {
   },
 };
 
+const emptyHeroBuild: CanonicalBuildView = {
+  selfSnapshot: {
+    maxHp: 40,
+    physical: 5,
+    magical: 5,
+    agility: 5,
+    vitality: 5,
+    defense: 5,
+    vampRateBps: 0,
+    postHeal: 0,
+  },
+  loadoutSnapshot: {
+    progressionConfig: "progression-v1",
+    items: [],
+    rings: [],
+  },
+  breakdown: {
+    physical: [
+      { source: "base", label: "База", operation: "add", amount: 5, result: 5, bps: null },
+    ],
+    magical: [
+      { source: "base", label: "База", operation: "add", amount: 5, result: 5, bps: null },
+    ],
+    agility: [
+      { source: "base", label: "База", operation: "add", amount: 5, result: 5, bps: null },
+    ],
+    vitality: [
+      { source: "base", label: "База", operation: "add", amount: 5, result: 5, bps: null },
+    ],
+    defense: [
+      { source: "base", label: "База", operation: "add", amount: 5, result: 5, bps: null },
+    ],
+    maxHp: [
+      { source: "base", label: "База", operation: "add", amount: 40, result: 40, bps: null },
+    ],
+    postHeal: [],
+  },
+};
+
 Deno.test("hero, Academy and help cards turn progression into a visible next goal", () => {
   const hero = renderHeroCard({
     build: heroBuild,
@@ -284,6 +329,10 @@ Deno.test("hero, Academy and help cards turn progression into a visible next goa
   assertStringIncludes(hero.text, "База +5");
   assertStringIncludes(hero.text, "Навчальний меч +2");
   assertStringIncludes(hero.text, "Кільце зброї +1 (×1.15)");
+  assertStringIncludes(hero.text, "Основний предмет: Навчальний меч");
+  assertStringIncludes(hero.text, "Обладунок: Навчальний обладунок");
+  assertStringIncludes(hero.text, "Талісман: порожньо");
+  assertStringIncludes(hero.text, "Магічне кільце: Кільце зброї");
   assertStringIncludes(hero.text, "Майстерність: 2%");
   assertStringIncludes(hero.text, "20 XP → +1% майстерності");
   assertStringIncludes(academy.text, "Ранг: Новак");
@@ -292,6 +341,31 @@ Deno.test("hero, Academy and help cards turn progression into a visible next goa
   assertStringIncludes(help.text, "успіх, обережний прохід або невдачу");
   assertStringIncludes(help.text, "/delete_me");
   assertTelegramSafe([hero, academy, help]);
+});
+
+Deno.test("hero card shows empty slots and only acquired active bonuses", () => {
+  const emptyHero = renderHeroCard({
+    build: emptyHeroBuild,
+    freeXp: 63,
+    masteryCostXp: 20,
+  });
+  const vampiricHero = renderHeroCard({
+    build: {
+      ...emptyHeroBuild,
+      selfSnapshot: { ...emptyHeroBuild.selfSnapshot, vampRateBps: 500 },
+    },
+    freeXp: 63,
+    masteryCostXp: 20,
+  });
+
+  assertStringIncludes(emptyHero.text, "Вільний досвід: 63 XP");
+  assertStringIncludes(emptyHero.text, "Основний предмет: порожньо");
+  assertStringIncludes(emptyHero.text, "Обладунок: порожньо");
+  assertStringIncludes(emptyHero.text, "Талісман: порожньо");
+  assertStringIncludes(emptyHero.text, "Магічні кільця: немає");
+  assertNotMatch(emptyHero.text, /Вампіризм|Відновлення/u);
+  assertStringIncludes(vampiricHero.text, "Вампіризм: 5%");
+  assertTelegramSafe([emptyHero, vampiricHero]);
 });
 
 function tutorialPrepared(): PreparedRunCard {
