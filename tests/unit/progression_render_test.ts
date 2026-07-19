@@ -404,6 +404,7 @@ Deno.test("tutorial stage guidance teaches the encounter without leaking the ans
   assertNotMatch(stage.text, /Поріг|правильн|успішн/u);
   assertStringIncludes(resolved.text, "Втручання викладача: +23 HP");
   assertStringIncludes(resolved.text, "не магія кільця");
+  assertNotMatch(resolved.text, /Вампіризм|Відновлення/u);
   assertStringIncludes(summary.text, "Навчання: 1/2");
   assertStringIncludes(summary.text, "оберіть перше тренування");
   assertNotMatch(summary.text, /завтра о 09:00/u);

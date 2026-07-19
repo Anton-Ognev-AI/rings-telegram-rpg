@@ -1,5 +1,5 @@
 import type { PreparedRunCard } from "../application/prepare-run-card.ts";
-import type { DungeonContentV1, EncounterType, Stat } from "../contracts/content.ts";
+import type { ChoiceV1, DungeonContentV1, EncounterType, Stat } from "../contracts/content.ts";
 import type { ResolutionV1 } from "../contracts/domain.ts";
 import type { TutorialResolutionV1 } from "../progression/contracts.ts";
 import { renderCard, type RenderedCard, truncatePlainText } from "./types.ts";
@@ -112,22 +112,51 @@ export interface ResolvedCardInput {
   readonly content?: DungeonContentV1;
 }
 
-export function outcomeCopy(
+function selectedChoice(
   content: DungeonContentV1,
   resolution: ResolutionV1,
-): string | null {
+): ChoiceV1 | null {
   const stage = content.stages[resolution.stage - 1];
   if (!stage) return null;
   const choices = resolution.stage === 10 && resolution.exchange !== null
     ? stage.bossExchanges?.[resolution.exchange - 1]?.choices
     : stage.choices;
-  const choice = choices?.find((candidate) => candidate.id === resolution.choiceId);
+  return choices?.find((candidate) => candidate.id === resolution.choiceId) ?? null;
+}
+
+export function outcomeCopy(
+  content: DungeonContentV1,
+  resolution: ResolutionV1,
+): string | null {
+  const choice = selectedChoice(content, resolution);
   return choice?.copy[resolution.outcome] ?? null;
+}
+
+function approachExplanation(
+  content: DungeonContentV1,
+  resolution: ResolutionV1,
+): string | null {
+  const choice = selectedChoice(content, resolution);
+  if (!choice) return null;
+  if (choice.kind === "neutral") {
+    return "Обережний вибір пропустив перевірку, але має власну ціну в HP або XP.";
+  }
+  if (choice.kind === "trap") {
+    return "Це була пастка: характеристика не могла виправити невдалий підхід.";
+  }
+  if (choice.tier === "easy" || choice.tacticalModifier === "counter") {
+    return "Влучний підхід знизив вимогу перевірки.";
+  }
+  if (choice.tier === "hard" || choice.tacticalModifier === "against_telegraph") {
+    return "Ризикований підхід підвищив вимогу перевірки.";
+  }
+  return "Застосовано стандартну вимогу перевірки.";
 }
 
 export function resolutionLines(
   resolution: ResolutionV1,
   copy: string | null = null,
+  approach: string | null = null,
 ): string[] {
   const lines = [
     `Результат етапу ${resolution.stage}: ${OUTCOME_LABELS[resolution.outcome]}`,
@@ -136,18 +165,24 @@ export function resolutionLines(
     `Спостереження: ${truncatePlainText(resolution.clue.text, 500)}`,
   ];
   if (resolution.check) {
+    const margin = resolution.check.totalPower - resolution.check.threshold;
     lines.push(
       "",
       `Перевірка — ${STAT_LABELS[resolution.check.stat]}`,
-      `Ви: ${resolution.check.selfPower} · Напарник: ${resolution.check.companionPower} · Разом: ${resolution.check.totalPower} · Поріг: ${resolution.check.threshold}`,
+      `Ви: ${resolution.check.selfPower} · Напарник: ${resolution.check.companionPower}`,
+      `Разом: ${resolution.check.totalPower}`,
+      `Для успіху потрібно: ${resolution.check.threshold}`,
+      margin >= 0 ? `Запас: +${margin}` : `Не вистачило: ${Math.abs(margin)}`,
     );
   }
+  if (approach) lines.push(approach);
   lines.push(
     "",
     `HP: ${resolution.hp.before} → ${resolution.hp.after} · Шкода: ${resolution.hp.damage}`,
-    `Вампіризм: +${resolution.hp.vampHeal} · Відновлення: +${resolution.hp.postHeal}`,
-    `XP: +${resolution.xp.delta} (${resolution.xp.after})`,
   );
+  if (resolution.hp.vampHeal > 0) lines.push(`Вампіризм: +${resolution.hp.vampHeal}`);
+  if (resolution.hp.postHeal > 0) lines.push(`Відновлення: +${resolution.hp.postHeal}`);
+  lines.push(`XP: +${resolution.xp.delta} (${resolution.xp.after})`);
   const tutorial = (resolution as TutorialResolutionV1).tutorial;
   if (tutorial?.teacherRescue) {
     lines.push(
@@ -165,7 +200,8 @@ export function resolutionLines(
 export function renderResolvedCard(input: ResolvedCardInput): RenderedCard {
   const { resolution, next } = input;
   const copy = input.content ? outcomeCopy(input.content, resolution) : null;
-  const lines = resolutionLines(resolution, copy);
+  const approach = input.content ? approachExplanation(input.content, resolution) : null;
+  const lines = resolutionLines(resolution, copy, approach);
   if (next) lines.push("", "Далі", ...stageLines(next, true));
   return renderCard(lines.join("\n"), next ? choiceButtons(next) : []);
 }

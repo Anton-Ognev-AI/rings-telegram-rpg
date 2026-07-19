@@ -160,13 +160,36 @@ Deno.test("resolved cards explain stats, damage, healing, XP, and keep one next 
   assertStringIncludes(card.text, "Ви: 42");
   assertStringIncludes(card.text, "Напарник: 19");
   assertStringIncludes(card.text, "Разом: 61");
-  assertStringIncludes(card.text, "Поріг: 60");
+  assertStringIncludes(card.text, "Для успіху потрібно: 60");
+  assertStringIncludes(card.text, "Запас: +1");
+  assertStringIncludes(card.text, "Влучний підхід знизив вимогу перевірки.");
   assertStringIncludes(card.text, "Шкода: 12");
   assertStringIncludes(card.text, "Вампіризм: +3");
   assertStringIncludes(card.text, "Відновлення: +2");
   assertStringIncludes(card.text, "XP: +10 (40)");
   assertStringIncludes(card.text, "&lt;точно&gt;");
   assertEquals(card.buttons.length, next.choices.length);
+});
+
+Deno.test("resolved cards hide inactive effects and show a failed check shortfall", () => {
+  const card = renderResolvedCard({
+    resolution: {
+      ...resolution,
+      outcome: "failure",
+      check: {
+        ...resolution.check!,
+        totalPower: 51,
+        threshold: 60,
+      },
+      hp: { before: 88, damage: 12, vampHeal: 0, postHeal: 0, after: 76 },
+    },
+    next: null,
+    content: fallback,
+  });
+
+  assertStringIncludes(card.text, "Для успіху потрібно: 60");
+  assertStringIncludes(card.text, "Не вистачило: 9");
+  assertNotMatch(card.text, /Вампіризм|Відновлення/u);
 });
 
 Deno.test("miniboss and boss exchanges have distinct encounter headings", () => {
