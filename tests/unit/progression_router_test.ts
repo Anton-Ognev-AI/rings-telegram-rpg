@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19";
 import type {
   CommandResult,
   DatabasePort,
@@ -8,6 +8,8 @@ import { FixedClock } from "../../supabase/functions/_shared/infrastructure/cloc
 import { RecordingTelegramPort } from "../../supabase/functions/_shared/telegram/fake.ts";
 import {
   handleCanonicalProfileCallback,
+  handleHeroManagementCallback,
+  openHeroManagement,
   type ProgressionRouterDependencies,
   renderCanonicalProgressionCard,
   routeCanonicalHome,
@@ -261,6 +263,237 @@ Deno.test("hero and Academy are direct read-only projections with no prepared mu
     if (!sent || sent.operation !== "sendMessage") throw new Error("missing_read_only_card");
     assertStringIncludes(sent.input.text, destination === "hero" ? "Герой" : "Академія");
   }
+});
+
+Deno.test("hero management prepares only affordable canonical forecasts for its message", async () => {
+  const mixedTraining = {
+    masteryCostXp: 20,
+    options: [
+      {
+        stat: "physical",
+        current: 6,
+        next: 7,
+        cost: 28,
+        statDelta: 1,
+        maxHpDelta: 0,
+        defenseDelta: 0,
+      },
+      {
+        stat: "magical",
+        current: 7,
+        next: 8,
+        cost: 50,
+        statDelta: 1,
+        maxHpDelta: 0,
+        defenseDelta: 0,
+      },
+      {
+        stat: "agility",
+        current: 6,
+        next: 7,
+        cost: 28,
+        statDelta: 1,
+        maxHpDelta: 0,
+        defenseDelta: 0,
+      },
+      {
+        stat: "vitality",
+        current: 7,
+        next: 8,
+        cost: 50,
+        statDelta: 1,
+        maxHpDelta: 4,
+        defenseDelta: 0,
+      },
+    ],
+  };
+  const database = new ScriptedDatabase({
+    player_home_v1: [home({
+      freeXp: 43,
+      activeRunId: "active-run",
+      training: mixedTraining,
+    })],
+    prepare_player_action_v1: [{ status: "ok" }, { status: "ok" }],
+  });
+  const telegram = new RecordingTelegramPort();
+
+  const result = await openHeroManagement(dependencies(database, telegram), {
+    playerId,
+    chatId: 700000001n,
+    messageId: 9001n,
+  });
+
+  assertEquals(result.route, "hero_management");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "player_home_v1",
+    "prepare_player_action_v1",
+    "prepare_player_action_v1",
+  ]);
+  assertEquals(
+    database.calls.slice(1).map((call) => call.args.p_action),
+    [
+      { kind: "buy_stat", stat: "physical" },
+      { kind: "buy_stat", stat: "agility" },
+    ],
+  );
+  assertEquals(
+    database.calls.slice(1).every((call) => call.args.p_expected_message_id === "9001"),
+    true,
+  );
+  const edited = telegram.calls[0];
+  if (!edited || edited.operation !== "editMessage") throw new Error("missing_management_edit");
+  assertEquals(edited.input.messageId, 9001n);
+  assertStringIncludes(edited.input.text, "Поточна експедиція не зміниться");
+  assertEquals(
+    edited.input.buttons?.flat().filter((button) => button.callbackData.startsWith("hm_")).length,
+    2,
+  );
+});
+
+Deno.test("hero management prepares affordable ring mastery from the canonical build", async () => {
+  const ringBuild = {
+    ...build,
+    loadoutSnapshot: {
+      ...build.loadoutSnapshot,
+      rings: [{
+        kind: "weapon",
+        color: "blue",
+        rarity: "ordinary",
+        label: "Кільце зброї",
+        masteryPercent: 2,
+        investedXp: 40,
+        blueBudget: 2000,
+        combatBps: 1500,
+      }],
+    },
+  };
+  const database = new ScriptedDatabase({
+    player_home_v1: [home({ freeXp: 43, build: ringBuild })],
+    prepare_player_action_v1: Array.from({ length: 5 }, () => ({ status: "ok" })),
+  });
+  const telegram = new RecordingTelegramPort();
+
+  await openHeroManagement(dependencies(database, telegram), {
+    playerId,
+    chatId: 700000001n,
+    messageId: 9001n,
+  });
+
+  assertEquals(database.calls.at(-1)?.args.p_action, { kind: "train_ring_mastery" });
+  const edited = telegram.calls[0];
+  if (!edited || edited.operation !== "editMessage") throw new Error("missing_mastery_edit");
+  assertStringIncludes(edited.input.text, "Майстерність кільця: 2% → 3% · 20 XP");
+  assertEquals(
+    edited.input.buttons?.flat().some((button) => button.callbackData.startsWith("hm_")),
+    true,
+  );
+});
+
+Deno.test("hero management callbacks refresh canonical state without touching run cards", async () => {
+  for (const status of ["applied", "cached", "stale"] as const) {
+    const database = new ScriptedDatabase({
+      resolve_player_action_v1: [{ status }],
+      player_home_v1: [home({ profileVersion: 1, freeXp: 0, activeRunId: "active-run" })],
+    });
+    const telegram = new RecordingTelegramPort();
+    const result = await handleHeroManagementCallback(dependencies(database, telegram), {
+      playerId,
+      update: {
+        kind: "callback",
+        updateId: 1010n,
+        telegramExternalId: 700000001n,
+        chatId: 700000001n,
+        messageId: 9001n,
+        callbackQueryId: "hero-callback",
+        data: "hm_0123456789abcdef0123456789abcdef",
+      },
+    });
+
+    assertEquals(result.route, `hero_management_${status}`);
+    assertEquals(database.calls.map((call) => call.rpc), [
+      "resolve_player_action_v1",
+      "player_home_v1",
+    ]);
+    assertEquals(database.calls[0].args.p_telegram_update_id, "1010");
+    assertEquals(database.calls[0].args.p_callback_message_id, "9001");
+    assertEquals(
+      database.calls.some((call) =>
+        call.rpc === "request_run_render_v2" || call.rpc === "request_profile_run_render_v1"
+      ),
+      false,
+    );
+    assertEquals(telegram.calls[0]?.operation, "editMessage");
+  }
+});
+
+Deno.test("invalid or rejected hero management callbacks use one generic recovery", async () => {
+  for (
+    const [data, responses] of [
+      ["hm_", {}],
+      [
+        "hm_0123456789abcdef0123456789abcdef",
+        { resolve_player_action_v1: [{ status: "rejected", reason: "invalid_token" }] },
+      ],
+    ] as const
+  ) {
+    const database = new ScriptedDatabase(responses);
+    const telegram = new RecordingTelegramPort();
+    const result = await handleHeroManagementCallback(dependencies(database, telegram), {
+      playerId,
+      update: {
+        kind: "callback",
+        updateId: 1011n,
+        telegramExternalId: 700000001n,
+        chatId: 700000001n,
+        messageId: 9001n,
+        callbackQueryId: "hero-rejected",
+        data,
+      },
+    });
+
+    assertEquals(result.route, "hero_management_rejected");
+    const sent = telegram.calls[0];
+    if (!sent || sent.operation !== "sendMessage") throw new Error("missing_hero_recovery");
+    assertStringIncludes(sent.input.text, "актуальну картку героя");
+    assertEquals(sent.input.buttons?.[0]?.[0]?.callbackData, "nav:hero");
+  }
+});
+
+Deno.test("hero management edit failure is recoverable through a cached Telegram retry", async () => {
+  const update: NormalizedCallbackUpdate = {
+    kind: "callback",
+    updateId: 1012n,
+    telegramExternalId: 700000001n,
+    chatId: 700000001n,
+    messageId: 9001n,
+    callbackQueryId: "hero-edit-retry",
+    data: "hm_0123456789abcdef0123456789abcdef",
+  };
+  const failedDatabase = new ScriptedDatabase({
+    resolve_player_action_v1: [{ status: "applied" }],
+    player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
+  });
+  await assertRejects(() =>
+    handleHeroManagementCallback(
+      dependencies(
+        failedDatabase,
+        new RecordingTelegramPort([{ kind: "retryable" }]),
+      ),
+      { playerId, update },
+    )
+  );
+
+  const retryDatabase = new ScriptedDatabase({
+    resolve_player_action_v1: [{ status: "cached" }],
+    player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
+  });
+  const retryTelegram = new RecordingTelegramPort();
+  const retry = await handleHeroManagementCallback(
+    dependencies(retryDatabase, retryTelegram),
+    { playerId, update },
+  );
+  assertEquals(retry.route, "hero_management_cached");
+  assertEquals(retryTelegram.calls[0]?.operation, "editMessage");
 });
 
 Deno.test("profile callback binds actor, Telegram update and canonical message before rerender", async () => {

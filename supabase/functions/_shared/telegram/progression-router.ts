@@ -16,12 +16,17 @@ import {
 } from "../progression/catalog.ts";
 import { renderAcademyCard } from "../render/academy.ts";
 import { renderHelpCard } from "../render/help.ts";
-import { renderHeroCard } from "../render/hero.ts";
+import { renderHeroCard, renderHeroManagementCard } from "../render/hero.ts";
 import { renderMenuCard } from "../render/menu.ts";
 import { renderItemOfferCard, renderRingOfferCard } from "../render/offers.ts";
 import { renderTrainingChoiceCard, renderTutorialCard } from "../render/tutorial.ts";
 import { renderCard, type RenderedCard, staticButton } from "../render/types.ts";
-import { derivePlayerCallbackToken, hashPlayerCallbackForActor } from "./player-callback-token.ts";
+import {
+  deriveHeroManagementCallbackToken,
+  derivePlayerCallbackToken,
+  hashHeroManagementCallbackForActor,
+  hashPlayerCallbackForActor,
+} from "./player-callback-token.ts";
 import type { TelegramPort } from "./port.ts";
 import type { NormalizedCallbackUpdate } from "./update.ts";
 
@@ -89,6 +94,10 @@ export interface CanonicalRouteResult {
 const PROFILE_ACTION_REJECTED_CARD = renderCard(
   "Ця дія більше недоступна. Відкрийте актуальну картку й повторіть вибір.",
   [[staticButton("До кабінету", "nav:home")]],
+);
+const HERO_MANAGEMENT_REJECTED_CARD = renderCard(
+  "Ця дія більше недоступна. Відкрийте актуальну картку героя й повторіть вибір.",
+  [[staticButton("Герой", "nav:hero")]],
 );
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -358,6 +367,124 @@ async function prepareProfileAction(
     throw new Error("prepare_player_action_rejected");
   }
   return token.raw;
+}
+
+async function prepareHeroManagementAction(
+  dependencies: ProgressionCardDependencies,
+  home: CanonicalPlayerHome,
+  messageId: bigint,
+  action: ProfileAction,
+): Promise<string> {
+  const token = await deriveHeroManagementCallbackToken(dependencies.callbackKey, {
+    playerId: home.playerId,
+    profileVersion: home.profileVersion,
+    messageId,
+    action,
+  });
+  const expiresAt = new Date(dependencies.clock.now().getTime() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString();
+  const result = await preparePlayerAction(dependencies.database, {
+    playerId: home.playerId,
+    tokenSha256: token.tokenSha256,
+    profileVersion: home.profileVersion,
+    messageId,
+    action,
+    contextSha256: token.contextSha256,
+    expiresAt,
+  });
+  if (result.status !== "ok" && result.status !== "cached") {
+    throw new Error("prepare_hero_management_action_rejected");
+  }
+  return token.raw;
+}
+
+async function refreshHeroManagement(
+  dependencies: ProgressionRouterDependencies,
+  home: CanonicalPlayerHome,
+  input: { readonly chatId: bigint; readonly messageId: bigint },
+): Promise<void> {
+  const options = [];
+  for (const option of home.training.options) {
+    const callbackData = option.cost <= home.freeXp
+      ? await prepareHeroManagementAction(dependencies, home, input.messageId, {
+        kind: "buy_stat",
+        stat: option.stat,
+      })
+      : undefined;
+    options.push({ ...option, effect: effectText(option), callbackData });
+  }
+  const build = parseCanonicalBuildView(home.build);
+  const ring = build.loadoutSnapshot.rings[0];
+  const mastery = ring && ring.masteryPercent < 100
+    ? {
+      current: ring.masteryPercent,
+      cost: masteryCost(home),
+      callbackData: masteryCost(home) <= home.freeXp
+        ? await prepareHeroManagementAction(dependencies, home, input.messageId, {
+          kind: "train_ring_mastery",
+        })
+        : undefined,
+    }
+    : undefined;
+  const card = renderHeroManagementCard({
+    freeXp: home.freeXp,
+    hasActiveRun: home.activeRunId !== null,
+    options,
+    mastery,
+  });
+  await dependencies.telegram.editMessage({
+    chatId: input.chatId.toString(),
+    messageId: input.messageId,
+    text: card.text,
+    buttons: card.buttons,
+    parseMode: "HTML",
+  });
+}
+
+export async function openHeroManagement(
+  dependencies: ProgressionRouterDependencies,
+  input: { readonly playerId: string; readonly chatId: bigint; readonly messageId: bigint },
+): Promise<CanonicalRouteResult> {
+  const home = parseHome(await getPlayerHome(dependencies.database, input.playerId));
+  await refreshHeroManagement(dependencies, home, input);
+  return { route: "hero_management" };
+}
+
+export async function handleHeroManagementCallback(
+  dependencies: ProgressionRouterDependencies,
+  input: { readonly playerId: string; readonly update: NormalizedCallbackUpdate },
+): Promise<CanonicalRouteResult> {
+  let hashes: Awaited<ReturnType<typeof hashHeroManagementCallbackForActor>>;
+  try {
+    hashes = await hashHeroManagementCallbackForActor(input.update.data, input.playerId);
+  } catch {
+    await sendCard(
+      dependencies.telegram,
+      input.update.chatId,
+      HERO_MANAGEMENT_REJECTED_CARD,
+    );
+    return { route: "hero_management_rejected" };
+  }
+  const result = await resolvePlayerAction(dependencies.database, {
+    ...hashes,
+    telegramUpdateId: input.update.updateId,
+    actorPlayerId: input.playerId,
+    callbackMessageId: input.update.messageId,
+  });
+  if (!["applied", "cached", "stale"].includes(result.status)) {
+    await sendCard(
+      dependencies.telegram,
+      input.update.chatId,
+      HERO_MANAGEMENT_REJECTED_CARD,
+    );
+    return { route: "hero_management_rejected" };
+  }
+  const home = parseHome(await getPlayerHome(dependencies.database, input.playerId));
+  await refreshHeroManagement(dependencies, home, {
+    chatId: input.update.chatId,
+    messageId: input.update.messageId,
+  });
+  return { route: `hero_management_${result.status}` };
 }
 
 function parseMessageId(view: TelegramRunView): bigint {
