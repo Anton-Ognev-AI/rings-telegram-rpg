@@ -224,23 +224,6 @@ foreach ($name in @("day-publish-reset", "outbox-worker")) {
 
 ## Remote Actions — Register Webhook and Prove Non-Owner Rejection
 
-Use the bot token and webhook secret from the operator session. Do not enable command logging or a
-PowerShell transcript. Register only `message` and `callback_query`, and discard old queued updates.
-
-```powershell
-$telegramBase = "https://api.telegram.org/bot$env:TELEGRAM_BOT_TOKEN"
-$webhookBody = @{
-  url = "$functionBase/tg-webhook"
-  secret_token = $env:TELEGRAM_WEBHOOK_SECRET
-  allowed_updates = @("message", "callback_query")
-  drop_pending_updates = $true
-} | ConvertTo-Json -Depth 4
-
-$registration = Invoke-RestMethod -Method Post -Uri "$telegramBase/setWebhook" `
-  -ContentType "application/json" -Body $webhookBody
-if (-not $registration.ok) { throw "webhook_registration_failed" }
-```
-
 Before the owner sends `/start`, record this aggregate in the app SQL editor:
 
 ```sql
@@ -248,29 +231,113 @@ select count(*)::integer as telegram_identity_count
 from game.identity_links where platform = 'telegram';
 ```
 
-Send one authenticated synthetic update whose actor is a positive safe integer different from the
-owner. This does not require a second Telegram account:
+The owner/operator then runs the following block in a private PowerShell session with transcripts
+disabled. It reads only the three required Telegram values from the outside-repository Edge file,
+registers only `message` and `callback_query`, drops queued updates, verifies the registered URL and
+sends one authenticated synthetic non-owner update. The synthetic actor is derived locally to be
+different from the owner and does not require a second Telegram account. No secret or project ref is
+printed. If the block fails, close that terminal before sharing only the generic error identifier.
 
 ```powershell
-$syntheticNonOwner = [int64]"<SYNTHETIC_NON_OWNER_ID>"
-$syntheticUpdate = @{
-  update_id = 700000001
-  message = @{
-    message_id = 1
-    from = @{ id = $syntheticNonOwner; is_bot = $false; first_name = "Synthetic" }
-    chat = @{ id = $syntheticNonOwner; type = "private" }
-    date = 1
-    text = "/start"
-  }
-} | ConvertTo-Json -Depth 6
+$edgeSecretsPath = "<OUTSIDE_REPO_EDGE_ENV_PATH>"
+$operatorSecrets = @{}
 
 try {
-  Invoke-WebRequest -Method Post -Uri "$functionBase/tg-webhook" `
-    -Headers @{ "X-Telegram-Bot-Api-Secret-Token" = $env:TELEGRAM_WEBHOOK_SECRET } `
-    -ContentType "application/json" -Body $syntheticUpdate | Out-Null
-  throw "synthetic_non_owner_was_not_rejected"
-} catch {
-  if ([int]$_.Exception.Response.StatusCode -ne 403) { throw }
+  if (-not (Test-Path -LiteralPath $edgeSecretsPath)) {
+    throw "edge_staging_env_not_found"
+  }
+
+  foreach ($line in Get-Content -LiteralPath $edgeSecretsPath) {
+    if ($line -match `
+      '^\s*(TELEGRAM_BOT_TOKEN|TELEGRAM_WEBHOOK_SECRET|TELEGRAM_OWNER_EXTERNAL_ID)\s*=(.*)$'
+    ) {
+      $name = $Matches[1]
+      $value = $Matches[2].Trim()
+      if ([string]::IsNullOrWhiteSpace($value)) { throw "empty_operator_secret:$name" }
+      if ($operatorSecrets.ContainsKey($name)) { throw "duplicate_operator_secret:$name" }
+      $operatorSecrets[$name] = $value
+    }
+  }
+
+  $required = @(
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_WEBHOOK_SECRET",
+    "TELEGRAM_OWNER_EXTERNAL_ID"
+  )
+  $missing = @($required | Where-Object { -not $operatorSecrets.ContainsKey($_) })
+  if ($missing.Count -ne 0) { throw "missing_operator_secrets:$($missing -join ',')" }
+
+  [long]$ownerId = 0
+  if (-not [long]::TryParse(
+    $operatorSecrets["TELEGRAM_OWNER_EXTERNAL_ID"],
+    [ref]$ownerId
+  ) -or $ownerId -le 0) {
+    throw "invalid_owner_id"
+  }
+
+  $telegramBase = "https://api.telegram.org/bot$($operatorSecrets['TELEGRAM_BOT_TOKEN'])"
+  $webhookBody = @{
+    url = "$functionBase/tg-webhook"
+    secret_token = $operatorSecrets["TELEGRAM_WEBHOOK_SECRET"]
+    allowed_updates = @("message", "callback_query")
+    drop_pending_updates = $true
+  } | ConvertTo-Json -Depth 4
+
+  try {
+    $registration = Invoke-RestMethod -Method Post -Uri "$telegramBase/setWebhook" `
+      -ContentType "application/json" -Body $webhookBody -ErrorAction Stop
+  } catch {
+    throw "telegram_set_webhook_request_failed"
+  }
+  if (-not $registration.ok) { throw "telegram_webhook_registration_failed" }
+
+  try {
+    $webhookInfo = Invoke-RestMethod -Method Get -Uri "$telegramBase/getWebhookInfo" `
+      -ErrorAction Stop
+  } catch {
+    throw "telegram_webhook_info_failed"
+  }
+  if (-not $webhookInfo.ok -or $webhookInfo.result.url -ne "$functionBase/tg-webhook") {
+    throw "telegram_webhook_verification_failed"
+  }
+  $allowedUpdates = @($webhookInfo.result.allowed_updates)
+  if ("message" -notin $allowedUpdates -or "callback_query" -notin $allowedUpdates) {
+    throw "telegram_allowed_updates_mismatch"
+  }
+
+  [long]$syntheticNonOwner = if ($ownerId -ne 900000001) { 900000001 } else { 900000002 }
+  $syntheticUpdate = @{
+    update_id = 700000001
+    message = @{
+      message_id = 1
+      from = @{ id = $syntheticNonOwner; is_bot = $false; first_name = "Synthetic" }
+      chat = @{ id = $syntheticNonOwner; type = "private" }
+      date = 1
+      text = "/start"
+    }
+  } | ConvertTo-Json -Depth 6
+
+  try {
+    $response = Invoke-WebRequest -UseBasicParsing -Method Post `
+      -Uri "$functionBase/tg-webhook" `
+      -Headers @{
+        "X-Telegram-Bot-Api-Secret-Token" = $operatorSecrets["TELEGRAM_WEBHOOK_SECRET"]
+      } `
+      -ContentType "application/json" -Body $syntheticUpdate -ErrorAction Stop
+    $nonOwnerStatus = [int]$response.StatusCode
+  } catch {
+    if ($null -eq $_.Exception.Response) { throw "synthetic_non_owner_request_failed" }
+    $nonOwnerStatus = [int]$_.Exception.Response.StatusCode
+  }
+  if ($nonOwnerStatus -ne 403) {
+    throw "synthetic_non_owner_expected_403_got_$nonOwnerStatus"
+  }
+
+  Write-Host "status=ready webhook_registered=true synthetic_non_owner=403"
+} finally {
+  $operatorSecrets.Clear()
+  Remove-Variable operatorSecrets, telegramBase, webhookBody, registration, webhookInfo, `
+    syntheticUpdate -ErrorAction SilentlyContinue
 }
 ```
 
