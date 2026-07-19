@@ -25,6 +25,7 @@ const REQUIRED_RECOVERY_MIGRATIONS = [
 const TEXT_FILE = /(?:\.(?:ts|tsx|js|json|md|sql|toml|ya?ml|txt|example)|\.gitignore)$/i;
 const TELEGRAM_TOKEN = /\b\d{8,10}:[A-Za-z0-9_-]{35,}\b/;
 const SUPABASE_SECRET = /\bsb_secret_[A-Za-z0-9_-]{20,}\b/;
+const JWT_CREDENTIAL = /\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/;
 
 export interface OwnerSmokePreflightDependencies {
   readonly getEnvironment: (name: string) => string | undefined;
@@ -182,7 +183,9 @@ export async function preflightOwnerSmoke(
   for (const path of trackedPaths) {
     if (!TEXT_FILE.test(path)) continue;
     const content = await dependencies.readTextFile(path);
-    if (TELEGRAM_TOKEN.test(content) || SUPABASE_SECRET.test(content)) {
+    if (
+      TELEGRAM_TOKEN.test(content) || SUPABASE_SECRET.test(content) || JWT_CREDENTIAL.test(content)
+    ) {
       fail("tracked_credential_material");
     }
   }

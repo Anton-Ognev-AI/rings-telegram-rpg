@@ -195,9 +195,15 @@ Deno.test("owner-smoke preflight rejects recovery migration checksum drift", asy
 
 Deno.test("owner-smoke preflight rejects tracked env or credential material without exposing it", async () => {
   const credential = `TELEGRAM_BOT_TOKEN=${"123456789:"}${"x".repeat(35)}`;
+  const legacySupabaseJwt = [
+    ["ey", "JhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"].join(""),
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0YWdpbmd0ZXN0In0",
+    "syntheticSignatureSegmentForTrackedCredentialTest",
+  ].join(".");
   const cases: ReadonlyArray<Readonly<Record<string, string>>> = [
     { ".env": "must-not-be-read" },
     { "scripts/leak.ts": credential },
+    { "scripts/legacy-key.ts": `export const key = "${legacySupabaseJwt}";` },
   ];
   for (const additions of cases) {
     const dependencies = await preflightDependencies(additions);
