@@ -1,6 +1,8 @@
 import { assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert@1.0.19";
 import {
+  deriveHeroManagementCallbackToken,
   derivePlayerCallbackToken,
+  hashHeroManagementCallbackForActor,
   hashPlayerCallbackForActor,
 } from "../../supabase/functions/_shared/telegram/player-callback-token.ts";
 
@@ -67,4 +69,35 @@ Deno.test("player callback rejects another namespace and malformed bindings", as
     }
     assertEquals(rejected, true);
   }));
+});
+
+Deno.test("hero management callback is isolated, bounded and actor-verifiable", async () => {
+  const legacy = await derivePlayerCallbackToken(key, binding);
+  const hero = await deriveHeroManagementCallbackToken(key, binding);
+
+  assertMatch(hero.raw, /^hm_[A-Za-z0-9_-]+$/);
+  assertEquals(encoder.encode(hero.raw).byteLength <= 64, true);
+  assertNotEquals(hero.raw, legacy.raw);
+  assertEquals(await hashHeroManagementCallbackForActor(hero.raw, binding.playerId), {
+    tokenSha256: hero.tokenSha256,
+    contextSha256: hero.contextSha256,
+  });
+  assertEquals((await derivePlayerCallbackToken(key, binding)).raw, legacy.raw);
+
+  for (
+    const [hash, raw] of [
+      [hashPlayerCallbackForActor, hero.raw],
+      [hashHeroManagementCallbackForActor, legacy.raw],
+      [hashHeroManagementCallbackForActor, "hm_"],
+      [hashHeroManagementCallbackForActor, `hm_${"a".repeat(62)}`],
+    ] as const
+  ) {
+    let rejected = false;
+    try {
+      await hash(raw, binding.playerId);
+    } catch {
+      rejected = true;
+    }
+    assertEquals(rejected, true);
+  }
 });

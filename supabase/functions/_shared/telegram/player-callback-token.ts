@@ -3,6 +3,7 @@ import type { DerivedCallbackToken } from "./callback-token.ts";
 
 const encoder = new TextEncoder();
 const PREFIX = "pa_";
+const HERO_PREFIX = "hm_";
 const MINIMUM_KEY_BYTES = 32;
 
 export interface PlayerCallbackBinding {
@@ -51,6 +52,23 @@ export async function hashPlayerCallbackForActor(
   };
 }
 
+export async function hashHeroManagementCallbackForActor(
+  raw: string,
+  playerId: string,
+): Promise<Pick<DerivedCallbackToken, "tokenSha256" | "contextSha256">> {
+  if (!/^hm_[A-Za-z0-9_-]+$/u.test(raw) || encoder.encode(raw).byteLength > 64) {
+    throw new Error("invalid_hero_management_callback_token");
+  }
+  return {
+    tokenSha256: await sha256Hex(raw),
+    contextSha256: await sha256Hex(canonicalJson({
+      playerId,
+      raw,
+      version: "hero-management-callback-context-v1",
+    })),
+  };
+}
+
 export async function derivePlayerCallbackToken(
   key: Uint8Array,
   binding: PlayerCallbackBinding,
@@ -77,4 +95,32 @@ export async function derivePlayerCallbackToken(
   );
   const raw = PREFIX + base64Url(signature.slice(0, 24));
   return { raw, ...await hashPlayerCallbackForActor(raw, binding.playerId) };
+}
+
+export async function deriveHeroManagementCallbackToken(
+  key: Uint8Array,
+  binding: PlayerCallbackBinding,
+): Promise<DerivedCallbackToken> {
+  assertBinding(key, binding);
+  const ownedKey = new Uint8Array(key);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    ownedKey.buffer,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(
+    await crypto.subtle.sign(
+      "HMAC",
+      cryptoKey,
+      encoder.encode(canonicalJson({
+        ...binding,
+        messageId: binding.messageId.toString(),
+        version: "hero-management-callback-token-v1",
+      })),
+    ),
+  );
+  const raw = HERO_PREFIX + base64Url(signature.slice(0, 24));
+  return { raw, ...await hashHeroManagementCallbackForActor(raw, binding.playerId) };
 }
