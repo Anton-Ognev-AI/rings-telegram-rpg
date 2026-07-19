@@ -370,6 +370,42 @@ Only after non-owner rejection is proven:
 supabase db push --linked --include-seed
 ```
 
+The reviewed fallback JSON is UTF-8 without a BOM. Windows PowerShell 5.1 must never read it with
+plain `Get-Content`: its default code page can silently turn Ukrainian text into mojibake while a
+separately computed SHA still looks valid. Any operator-side inspection must be explicit:
+
+```powershell
+$fallback = Get-Content -LiteralPath "content/fallback/case-001/day-01.json" `
+  -Raw -Encoding UTF8 | ConvertFrom-Json
+```
+
+Do not construct an ad hoc Management API insert from that PowerShell object. Content import must
+go through `buildContentSeedRecord` in `scripts/db/seed-content.ts`, which validates the schema,
+rejects suspicious Cyrillic mojibake and computes the canonical hash from the same decoded payload.
+Never combine a payload loaded by one path with a hash computed by another.
+
+After any staging content import, inspect the stored payload itself rather than trusting only the
+declared `payload_sha256`:
+
+```sql
+select
+  cv.payload_sha256,
+  cv.payload->'stages'->0->>'scene' as first_scene,
+  (
+    select jsonb_agg(choice->>'label' order by ordinality)
+    from jsonb_array_elements(cv.payload->'stages'->0->'choices')
+      with ordinality as c(choice, ordinality)
+  ) as first_choices
+from game.fallback_content fallback
+join game.content_versions cv on cv.id = fallback.content_version_id
+where fallback.slot = 'daily-v1';
+```
+
+The hash must be
+`9000f0cebc29e6483b80de0bf8cf09c6f926821d317c17890654bc343fbb1c81`; the scene and all
+three labels must be readable Ukrainian. Any `Р...`/`С...` sequences are a hard stop before the
+owner begins or resumes an expedition.
+
 Verify in the app SQL editor that the active fallback/config exists and
 `tutorial_starter_enabled=true`. Then expose only the required local runner variables in the current
 session and execute the explicitly remote command:

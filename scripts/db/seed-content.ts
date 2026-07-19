@@ -7,6 +7,9 @@ import {
 import { validateDungeonContentV1 } from "../../supabase/functions/_shared/domain/content-validator.ts";
 import { withDatabase } from "./local-database.ts";
 
+const SUSPICIOUS_CYRILLIC_MOJIBAKE =
+  /[\u0402\u0403\u0405\u0408-\u040f\u0451-\u0453\u0455\u0458-\u045f]/u;
+
 export interface ContentSeedRecord {
   readonly externalId: string;
   readonly schemaVersion: string;
@@ -21,6 +24,9 @@ export async function buildContentSeedRecord(
   content: unknown,
   cycleId: string,
 ): Promise<ContentSeedRecord> {
+  if (SUSPICIOUS_CYRILLIC_MOJIBAKE.test(canonicalJson(content))) {
+    throw new Error("invalid fallback content: suspicious_mojibake");
+  }
   const validation = validateDungeonContentV1(content);
   if (!validation.ok) {
     throw new Error(`invalid fallback content: ${validation.errors.join(" | ")}`);

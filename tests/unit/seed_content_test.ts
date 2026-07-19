@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.19";
+import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19";
 import fallback from "../../content/fallback/case-001/day-01.json" with { type: "json" };
 import { buildContentSeedRecord } from "../../scripts/db/seed-content.ts";
 
@@ -26,4 +26,17 @@ Deno.test("content seed rejects invalid content before database access", async (
   }
 
   assertEquals(message.includes("invalid fallback content"), true);
+});
+
+Deno.test("content seed rejects Windows PowerShell UTF-8 mojibake", async () => {
+  const corrupted = structuredClone(fallback) as typeof fallback;
+  corrupted.stages[0]!.scene = new TextDecoder("windows-1251").decode(
+    new TextEncoder().encode(corrupted.stages[0]!.scene),
+  );
+
+  await assertRejects(
+    () => buildContentSeedRecord(corrupted, "2026-07-13"),
+    Error,
+    "invalid fallback content: suspicious_mojibake",
+  );
 });
