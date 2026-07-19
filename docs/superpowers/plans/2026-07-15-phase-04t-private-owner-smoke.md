@@ -270,21 +270,22 @@ or dashboard and never through the conversation.
 
 ### Task 5: Provision isolated staging and deploy with evidence
 
-- [ ] Run preflight against exact app/recovery refs; capture only redacted statuses and migration
+- [x] Run preflight against exact app/recovery refs; capture only redacted statuses and migration
       versions.
-- [ ] Apply migration 014, 015 then 016 with `tutorial_starter_enabled` initially disabled.
+- [x] Apply migration 014, 015 then 016 with `tutorial_starter_enabled` initially disabled.
 - [ ] Provision recovery sink and perform isolated backup-restore/tombstone replay smoke.
 - [ ] Create the approved disposable restore target only for the isolated replay drill and destroy
       it after aggregate evidence is recorded.
-- [ ] The owner/operator sets bot/webhook/internal/owner secrets through secret storage without
-      Codex reading `.env`, the outside-repository file or command environment.
-- [ ] Deploy internal functions first, verify JWT/internal-secret rejection, then deploy webhook.
-- [ ] Register webhook with Telegram secret token, enable the owner cohort and verify a non-owner
+- [x] The owner/operator sets bot/webhook/internal/owner secrets through secret storage. The owner
+      later explicitly authorized a one-time `.env` token/chat-ID read; values stayed in process
+      memory and were never printed or committed.
+- [x] Deploy internal functions first, verify JWT/internal-secret rejection, then deploy webhook.
+- [x] Register webhook with Telegram secret token, enable the owner cohort and verify a non-owner
       update creates no identity.
 
 ### Task 6: Complete and close the owner-only Telegram smoke
 
-- [ ] Start the local no-cron runner and keep the machine on for the session.
+- [x] Start the local no-cron runner and keep the machine on for the session.
 - [ ] Complete `/start → tutorial 1 → stat/defer → tutorial 2 → item → ring` as the owner.
 - [ ] Verify restart/resume, one stale callback, one retryable edit and one controlled
       `delivery_unknown` drill.
