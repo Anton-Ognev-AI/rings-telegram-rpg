@@ -66,6 +66,12 @@ RECOVERY_SUPABASE_URL
 RECOVERY_SUPABASE_SERVICE_ROLE_KEY
 ```
 
+Creating or filling this outside-repository file does **not** install the values in Supabase. The
+owner must also complete the later `supabase secrets set --env-file ...` command against app
+staging and verify `7/7` required names before reporting the secret-storage checkpoint complete.
+Never point `secrets set` at recovery staging, and never use the general project `.env` as the
+Edge env file because it may contain unrelated variables.
+
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are supplied by the app Edge environment. The local
 runner additionally needs `STAGING_SUPABASE_ANON_KEY` and the same `INTERNAL_FUNCTION_SECRET` in its
 process environment; neither belongs in Git.
@@ -157,6 +163,36 @@ registration drops this queued update. Do not use a third-party identity bot for
 ```powershell
 $edgeSecretsPath = "<OUTSIDE_REPO_EDGE_ENV_PATH>"
 supabase secrets set --project-ref $appRef --env-file $edgeSecretsPath
+
+if ($LASTEXITCODE -ne 0) { throw "edge_secret_storage_failed" }
+
+$secretResponse = supabase secrets list --project-ref $appRef `
+  --output-format json --log-level error | ConvertFrom-Json
+
+# Current CLI releases wrap rows in `secrets`; retain array compatibility for older releases.
+# Check the root property explicitly: PowerShell's array property projection can otherwise make
+# `$secretResponse.secrets` look present for an unwrapped legacy array.
+$hasSecretsWrapper = @($secretResponse.PSObject.Properties.Name) -contains "secrets"
+$secretRows = if ($hasSecretsWrapper) {
+  @($secretResponse.secrets)
+} else {
+  @($secretResponse)
+}
+$secretNames = @($secretRows | ForEach-Object { $_.name } | Where-Object { $_ })
+$requiredSecretNames = @(
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_WEBHOOK_SECRET",
+  "TELEGRAM_OWNER_EXTERNAL_ID",
+  "TELEGRAM_CALLBACK_HMAC_KEY",
+  "INTERNAL_FUNCTION_SECRET",
+  "RECOVERY_SUPABASE_URL",
+  "RECOVERY_SUPABASE_SERVICE_ROLE_KEY"
+)
+$missingSecretNames = @($requiredSecretNames | Where-Object { $_ -notin $secretNames })
+if ($missingSecretNames.Count -ne 0) {
+  throw "edge_secret_names_missing: $($missingSecretNames -join ',')"
+}
+Write-Host "status=ready required_edge_secrets=7/7"
 
 supabase functions deploy day-publish-reset outbox-worker --project-ref $appRef
 supabase functions deploy tg-webhook --project-ref $appRef
