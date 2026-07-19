@@ -301,7 +301,11 @@ try {
     throw "telegram_webhook_verification_failed"
   }
   $allowedUpdates = @($webhookInfo.result.allowed_updates)
-  if ("message" -notin $allowedUpdates -or "callback_query" -notin $allowedUpdates) {
+  if (
+    $allowedUpdates.Count -ne 2 -or
+    "message" -notin $allowedUpdates -or
+    "callback_query" -notin $allowedUpdates
+  ) {
     throw "telegram_allowed_updates_mismatch"
   }
 
@@ -336,8 +340,22 @@ try {
   Write-Host "status=ready webhook_registered=true synthetic_non_owner=403"
 } finally {
   $operatorSecrets.Clear()
-  Remove-Variable operatorSecrets, telegramBase, webhookBody, registration, webhookInfo, `
-    syntheticUpdate -ErrorAction SilentlyContinue
+  Remove-Variable -Name @(
+    "operatorSecrets",
+    "telegramBase",
+    "webhookBody",
+    "registration",
+    "webhookInfo",
+    "syntheticUpdate",
+    "ownerId",
+    "syntheticNonOwner",
+    "nonOwnerStatus",
+    "allowedUpdates",
+    "response",
+    "line",
+    "value",
+    "Matches"
+  ) -ErrorAction SilentlyContinue
 }
 ```
 
