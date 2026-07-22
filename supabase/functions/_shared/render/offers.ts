@@ -32,6 +32,35 @@ export function renderItemOfferCard(input: ItemOfferCardInput): RenderedCard {
   );
 }
 
+export interface FieldItemOfferCardInput extends ItemOfferCardInput {
+  readonly resolvedText: string;
+  readonly nextStage: number;
+}
+
+export function renderFieldItemOfferCard(input: FieldItemOfferCardInput): RenderedCard {
+  const current = input.currentItemLabel
+    ? `Зараз у слоті: ${input.currentItemLabel}. Нова знахідка замінить його.`
+    : `Слот «${input.slotLabel}» порожній; якщо вдягнути знахідку, вона одразу займе цей слот.`;
+  return renderCard(
+    [
+      input.resolvedText,
+      "",
+      "Знахідка між етапами",
+      "",
+      input.itemLabel,
+      `${input.slotLabel} · ${input.bonusText}`,
+      "",
+      current,
+      "У грі інвентарю немає: предмет треба вдягнути зараз або викинути.",
+      `Якщо вдягнути, бонус діятиме вже на наступному етапі ${input.nextStage}.`,
+    ].join("\n"),
+    [[
+      { text: "Вдягнути", callbackData: input.acceptCallbackData },
+      { text: "Викинути", callbackData: input.discardCallbackData },
+    ]],
+  );
+}
+
 export interface RingOfferChoice {
   readonly label: string;
   readonly technique: string;

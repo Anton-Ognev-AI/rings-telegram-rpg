@@ -47,7 +47,7 @@ Deno.test("profile actions cross the application boundary through two narrow RPC
       },
     },
     {
-      rpc: "resolve_player_action_v1",
+      rpc: "resolve_player_action_v2",
       args: {
         p_token_sha256: "a".repeat(64),
         p_telegram_update_id: "900000000000000001",

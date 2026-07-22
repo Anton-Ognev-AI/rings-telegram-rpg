@@ -326,7 +326,7 @@ Deno.test("hero management navigation acknowledges first and binds the source me
 Deno.test("hero management actions use existing identity and generic rejection", async () => {
   const appliedDatabase = new ScriptedDatabase({
     telegram_identity_v2: [identity],
-    resolve_player_action_v1: [{ status: "applied" }],
+    resolve_player_action_v2: [{ status: "applied" }],
     player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
   });
   const applied = await handleTelegramUpdate(
@@ -336,7 +336,7 @@ Deno.test("hero management actions use existing identity and generic rejection",
   assertEquals(applied.route, "hero_management_applied");
   assertEquals(appliedDatabase.calls.map((call) => call.rpc), [
     "telegram_identity_v2",
-    "resolve_player_action_v1",
+    "resolve_player_action_v2",
     "player_home_v1",
   ]);
   assertEquals(appliedDatabase.calls[0].args.p_create_if_missing, false);
@@ -396,7 +396,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
     const events: string[] = [];
     const responses: Record<string, readonly unknown[]> = {
       telegram_identity_v2: [identity],
-      resolve_choice_v2: [{
+      resolve_choice_v3: [{
         status,
         reason: status === "rejected" ? "invalid_token" : undefined,
         result: status === "cached" ? { projection: { run: { id: "run-1" } } } : undefined,
@@ -417,9 +417,9 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
     assertEquals(result.route, `choice_${status}`);
     assertEquals(
       database.calls.map((call) => call.rpc),
-      status === "rejected" ? ["telegram_identity_v2", "resolve_choice_v2"] : [
+      status === "rejected" ? ["telegram_identity_v2", "resolve_choice_v3"] : [
         "telegram_identity_v2",
-        "resolve_choice_v2",
+        "resolve_choice_v3",
         "player_home_v1",
         "request_run_render_v2",
       ],
@@ -430,7 +430,7 @@ Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rej
 Deno.test("callback acknowledgement failure does not block the durable choice mutation", async () => {
   const database = new ScriptedDatabase({
     telegram_identity_v2: [identity],
-    resolve_choice_v2: [{ status: "applied" }],
+    resolve_choice_v3: [{ status: "applied" }],
   });
   const result = await handleTelegramUpdate(
     dependencies(database, new FailingAnswerTelegram()),
@@ -440,14 +440,14 @@ Deno.test("callback acknowledgement failure does not block the durable choice mu
   assertEquals(result.route, "choice_applied");
   assertEquals(database.calls.map((call) => call.rpc), [
     "telegram_identity_v2",
-    "resolve_choice_v2",
+    "resolve_choice_v3",
   ]);
 });
 
 Deno.test("terminal stale callback repairs the latest owner-bound summary", async () => {
   const database = new ScriptedDatabase({
     telegram_identity_v2: [identity],
-    resolve_choice_v2: [{ status: "stale" }],
+    resolve_choice_v3: [{ status: "stale" }],
     player_home_v1: [home({ lastTerminalRunId: "terminal-run" })],
     request_run_render_v2: [{ status: "applied" }],
   });
@@ -459,7 +459,7 @@ Deno.test("terminal stale callback repairs the latest owner-bound summary", asyn
   assertEquals(result.route, "choice_stale");
   assertEquals(database.calls.map((call) => call.rpc), [
     "telegram_identity_v2",
-    "resolve_choice_v2",
+    "resolve_choice_v3",
     "player_home_v1",
     "request_run_render_v2",
   ]);

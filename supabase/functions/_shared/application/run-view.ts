@@ -6,7 +6,7 @@ export interface RunViewInput {
 }
 
 export function getRunView(database: DatabasePort, input: RunViewInput): Promise<CommandResult> {
-  return database.call<CommandResult>("run_view_v2", {
+  return database.call<CommandResult>("run_view_v3", {
     p_player_id: input.playerId,
     p_run_id: input.runId,
   });

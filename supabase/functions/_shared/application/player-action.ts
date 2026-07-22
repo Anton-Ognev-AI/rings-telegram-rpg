@@ -52,7 +52,7 @@ export function resolvePlayerAction(
   database: DatabasePort,
   input: ResolvePlayerActionInput,
 ): Promise<CommandResult> {
-  return database.call<CommandResult>("resolve_player_action_v1", {
+  return database.call<CommandResult>("resolve_player_action_v2", {
     p_token_sha256: input.tokenSha256,
     p_telegram_update_id: input.telegramUpdateId.toString(),
     p_actor_player_id: input.actorPlayerId,

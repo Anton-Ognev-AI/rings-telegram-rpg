@@ -19,7 +19,7 @@ export function prepareAction(
   database: DatabasePort,
   input: PrepareActionInput,
 ): Promise<CommandResult> {
-  return database.call<CommandResult>("prepare_action_v2", {
+  return database.call<CommandResult>("prepare_action_v3", {
     p_player_id: input.playerId,
     p_run_id: input.runId,
     p_token_sha256: input.tokenSha256,

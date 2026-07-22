@@ -128,8 +128,22 @@ async function playUntilProfileDecision(
 
   for (let step = 0; step < 12; step += 1) {
     const buttons = card.input.buttons?.flat() ?? [];
-    if (!buttons.some((button) => button.callbackData.startsWith("cb_"))) return card;
-    const view = await database.call<TelegramRunView>("run_view_v2", {
+    if (!buttons.some((button) => button.callbackData.startsWith("cb_"))) {
+      if (!card.input.text.includes("Знахідка між етапами")) return card;
+      assertStringIncludes(card.input.text, "інвентарю немає");
+      const accept = buttons.find((button) => button.callbackData.startsWith("pa_"));
+      if (!accept) throw new Error("missing_field_accept_button");
+      const handled = await handle(
+        sql,
+        callback(scenario, accept.callbackData, at, messageId),
+      );
+      assertEquals(handled.result.route, "profile_applied");
+      worked = await nextWorker(scenario, sql, at, messageId);
+      assertEquals(worked.result.sent, 1);
+      card = delivery(worked.telegram.calls);
+      continue;
+    }
+    const view = await database.call<TelegramRunView>("run_view_v3", {
       p_player_id: playerId,
       p_run_id: runId,
     });
@@ -374,20 +388,20 @@ async function runTwoDayScenario(
   assertEquals(durable, {
     tutorial_completed: 2,
     academy_rank: "novice",
-    profile_version: 3,
+    profile_version: 4,
     first_purchased_stat: "physical",
     physical: 6,
     credited_runs: 2,
-    offers: 2,
-    accepted_offers: itemDecision === "accept" ? 2 : 1,
+    offers: 3,
+    accepted_offers: itemDecision === "accept" ? 3 : 2,
     discarded_offers: itemDecision === "discard" ? 1 : 0,
     tutorial_grants: 1,
     tutorial_grant_xp: 20,
-    equipment: itemDecision === "accept" ? 2 : 1,
+    equipment: itemDecision === "accept" ? 3 : 2,
     main_item: "training_sword",
     ring_kind: "weapon",
     rings: 1,
-    profile_actions: 3,
+    profile_actions: 4,
     cards: 2,
     pending_outbox: 0,
   });

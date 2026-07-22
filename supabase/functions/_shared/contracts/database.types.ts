@@ -1,4 +1,4 @@
-// Generated locally from the public RPC contract through migration 202607150016.
+// Generated locally from the public RPC contract through migration 202607190017.
 // The private `game` schema is intentionally absent from the Data API surface.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -120,6 +120,23 @@ export type Database = {
         };
         Returns: Json;
       };
+      prepare_action_v3: {
+        Args: {
+          p_choice_id: string;
+          p_context_sha256: string;
+          p_exchange: number;
+          p_expected_state_version: number;
+          p_expires_at: string;
+          p_player_id: string;
+          p_prepared_resolution: Json;
+          p_resolution_sha256: string;
+          p_run_id: string;
+          p_stage: number;
+          p_token_sha256: string;
+          p_tutorial_adapter?: Json | null;
+        };
+        Returns: Json;
+      };
       prepare_player_action_v1: {
         Args: {
           p_action: Json;
@@ -176,7 +193,26 @@ export type Database = {
         };
         Returns: Json;
       };
+      resolve_choice_v3: {
+        Args: {
+          p_actor_player_id: string;
+          p_context_sha256: string;
+          p_telegram_update_id: number;
+          p_token_sha256: string;
+        };
+        Returns: Json;
+      };
       resolve_player_action_v1: {
+        Args: {
+          p_actor_player_id: string;
+          p_callback_message_id: number;
+          p_context_sha256: string;
+          p_telegram_update_id: number;
+          p_token_sha256: string;
+        };
+        Returns: Json;
+      };
+      resolve_player_action_v2: {
         Args: {
           p_actor_player_id: string;
           p_callback_message_id: number;
@@ -195,6 +231,10 @@ export type Database = {
         Returns: Json;
       };
       run_view_v2: {
+        Args: { p_player_id: string; p_run_id?: string | null };
+        Returns: Json;
+      };
+      run_view_v3: {
         Args: { p_player_id: string; p_run_id?: string | null };
         Returns: Json;
       };

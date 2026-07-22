@@ -131,6 +131,14 @@ async function renderCanonicalCard(
 ): Promise<RenderedCard> {
   const lastResolution = view.lastResolution as ResolutionV1 | null;
   if (view.run.status === "active") {
+    if (view.run.phase === "blocked_by_offer") {
+      const progressionCard = await renderCanonicalProgressionCard(dependencies, {
+        home: await getPlayerHome(dependencies.database, view.run.playerId),
+        view,
+      });
+      if (progressionCard === null) throw new Error("blocked_offer_card_unavailable");
+      return progressionCard;
+    }
     const prepared = await prepareRunCard(dependencies.database, view, dependencies.callbackKey);
     return lastResolution
       ? renderResolvedCard({ resolution: lastResolution, next: prepared, content: view.content })

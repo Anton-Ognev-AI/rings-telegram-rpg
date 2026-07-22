@@ -68,7 +68,7 @@ Deno.test("prepareRunCard resolves and persists every visible choice", async () 
 
   assertEquals(prepared.choices.length, stageChoices.length);
   assertEquals(database.calls.length, prepared.choices.length);
-  assertEquals(database.calls.every((call) => call.rpc === "prepare_action_v2"), true);
+  assertEquals(database.calls.every((call) => call.rpc === "prepare_action_v3"), true);
   assertEquals(prepared.state.stage, 1);
   assertEquals(prepared.party.mode, "solo");
 

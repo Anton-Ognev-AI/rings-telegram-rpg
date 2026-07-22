@@ -5,6 +5,7 @@ import {
   resolvePlayerAction,
 } from "../application/player-action.ts";
 import type { TelegramRunView } from "../application/prepare-run-card.ts";
+import type { ResolutionV1 } from "../contracts/domain.ts";
 import { requestProfileRunRender, requestRunRender } from "../application/request-run-render.ts";
 import type { CommandResult, DatabasePort } from "../application/database-port.ts";
 import type { Clock } from "../infrastructure/clock.ts";
@@ -18,7 +19,12 @@ import { renderAcademyCard } from "../render/academy.ts";
 import { renderHelpCard } from "../render/help.ts";
 import { renderHeroCard, renderHeroManagementCard } from "../render/hero.ts";
 import { renderMenuCard } from "../render/menu.ts";
-import { renderItemOfferCard, renderRingOfferCard } from "../render/offers.ts";
+import {
+  renderFieldItemOfferCard,
+  renderItemOfferCard,
+  renderRingOfferCard,
+} from "../render/offers.ts";
+import { renderResolvedCard } from "../render/stage-card.ts";
 import { renderTrainingChoiceCard, renderTutorialCard } from "../render/tutorial.ts";
 import { renderCard, type RenderedCard, staticButton } from "../render/types.ts";
 import {
@@ -48,7 +54,7 @@ interface TrainingForecast {
 
 interface PendingOffer {
   readonly id: string;
-  readonly kind: "tutorial_item" | "starter_ring";
+  readonly kind: "field_item" | "tutorial_item" | "starter_ring";
   readonly sequence: number;
   readonly sourceRunId: string;
   readonly payload: Readonly<Record<string, unknown>>;
@@ -116,7 +122,8 @@ function parseOffer(value: unknown): PendingOffer | null {
   if (value === null) return null;
   if (
     !isRecord(value) || typeof value.id !== "string" ||
-    (value.kind !== "tutorial_item" && value.kind !== "starter_ring") ||
+    (value.kind !== "field_item" && value.kind !== "tutorial_item" &&
+      value.kind !== "starter_ring") ||
     !safeInteger(value.sequence, 1) || typeof value.sourceRunId !== "string" ||
     !isRecord(value.payload)
   ) throw new Error("invalid_player_home");
@@ -172,6 +179,7 @@ async function sendCard(
 }
 
 function runToRender(home: CanonicalPlayerHome, includeTerminal: boolean): string | null {
+  if (home.pendingOffer?.kind === "field_item") return home.activeRunId;
   if (home.pendingOffer !== null) return home.lastTerminalRunId;
   if (home.activeRunId !== null) return home.activeRunId;
   if (!home.initialTrainingResolved) return home.lastTerminalRunId;
@@ -550,8 +558,45 @@ export async function renderCanonicalProgressionCard(
   input: { readonly home: CommandResult; readonly view: TelegramRunView },
 ): Promise<RenderedCard | null> {
   const home = parseHome(input.home);
-  if (home.playerId !== input.view.run.playerId || input.view.run.status === "active") return null;
+  if (home.playerId !== input.view.run.playerId) return null;
   const messageId = parseMessageId(input.view);
+
+  if (input.view.run.status === "active") {
+    const offer = home.pendingOffer;
+    if (
+      input.view.run.phase !== "blocked_by_offer" || offer?.kind !== "field_item" ||
+      offer.sourceRunId !== input.view.run.id || input.view.lastResolution === null
+    ) return null;
+    const item = itemOfferPayload(offer);
+    const catalog = STARTER_ITEM_CATALOG[item.itemKey];
+    const build = parseCanonicalBuildView(home.build);
+    const current = build.loadoutSnapshot.items.find((entry) => entry.slot === item.slot) ?? null;
+    const resolved = renderResolvedCard({
+      resolution: input.view.lastResolution as unknown as ResolutionV1,
+      next: null,
+      content: input.view.content,
+    });
+    return renderFieldItemOfferCard({
+      resolvedText: resolved.text,
+      itemLabel: catalog.label,
+      slotLabel: item.slot === "main"
+        ? "Основний предмет"
+        : item.slot === "armor"
+        ? "Обладунок"
+        : "Талісман",
+      bonusText: bonusText(catalog.bonuses),
+      currentItemLabel: current?.label ?? null,
+      nextStage: input.view.run.stage,
+      acceptCallbackData: await prepareProfileAction(dependencies, home, messageId, {
+        kind: "accept_item",
+        offerId: offer.id,
+      }),
+      discardCallbackData: await prepareProfileAction(dependencies, home, messageId, {
+        kind: "discard_item",
+        offerId: offer.id,
+      }),
+    });
+  }
 
   if (home.tutorialCompleted >= 1 && !home.initialTrainingResolved) {
     const options = [];

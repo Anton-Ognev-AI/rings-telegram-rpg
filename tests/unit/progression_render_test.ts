@@ -12,6 +12,7 @@ import {
 } from "../../supabase/functions/_shared/render/hero.ts";
 import { renderMenuCard } from "../../supabase/functions/_shared/render/menu.ts";
 import {
+  renderFieldItemOfferCard,
   renderItemOfferCard,
   renderRingOfferCard,
 } from "../../supabase/functions/_shared/render/offers.ts";
@@ -177,6 +178,30 @@ Deno.test("item and ring offers explain replacement and four distinct play style
   assertNotMatch(ring.text, /вампір/u);
   assertEquals(ring.buttons.length, 4);
   assertTelegramSafe([item, ring]);
+});
+
+Deno.test("field discovery joins the resolved stage to an immediate equipment decision", () => {
+  const card = renderFieldItemOfferCard({
+    resolvedText: "Результат етапу 3: Успіх\nПеревірка — Магічна сила",
+    itemLabel: "Навчальний обладунок",
+    slotLabel: "Обладунок",
+    bonusText: "Захист +2",
+    currentItemLabel: null,
+    nextStage: 4,
+    acceptCallbackData: pa("field-accept"),
+    discardCallbackData: pa("field-discard"),
+  });
+
+  assertStringIncludes(card.text, "Результат етапу 3: Успіх");
+  assertStringIncludes(card.text, "Знахідка між етапами");
+  assertStringIncludes(card.text, "Навчальний обладунок");
+  assertStringIncludes(card.text, "інвентарю немає");
+  assertStringIncludes(card.text, "наступному етапі 4");
+  assertEquals(card.buttons.flat().map((button) => button.callbackData), [
+    pa("field-accept"),
+    pa("field-discard"),
+  ]);
+  assertTelegramSafe([card]);
 });
 
 const heroBuild: CanonicalBuildView = {

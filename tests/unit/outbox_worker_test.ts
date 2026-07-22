@@ -102,8 +102,8 @@ class WorkerDatabase implements DatabasePort {
     if (rpc === "lease_outbox_v3") {
       return Promise.resolve({ status: "ok", messages: [this.message] } as T);
     }
-    if (rpc === "run_view_v2") return Promise.resolve(this.view as T);
-    if (rpc === "prepare_action_v2") return Promise.resolve({ status: "ok" } as T);
+    if (rpc === "run_view_v3") return Promise.resolve(this.view as T);
+    if (rpc === "prepare_action_v3") return Promise.resolve({ status: "ok" } as T);
     if (rpc === "player_home_v1" && this.playerHome !== null) {
       return Promise.resolve(this.playerHome as T);
     }
@@ -214,6 +214,59 @@ function tutorialHome(): CommandResult {
   };
 }
 
+function blockedFieldView(): TelegramRunView {
+  const view = runView(4, "9001", 3);
+  const stage = fallback.stages[2];
+  const choice = stage.choices?.[0];
+  if (!choice) throw new Error("missing_field_test_choice");
+  return {
+    ...view,
+    run: { ...view.run, phase: "blocked_by_offer", stage: 4, hp: 45, maxHp: 45, xpEarned: 25 },
+    content: fallback,
+    lastResolution: {
+      resolverVersion: "v1",
+      stage: 3,
+      exchange: null,
+      choiceId: choice.id,
+      outcome: "success",
+      clue: stage.clues[0],
+      rationale: "Влучний підхід відкрив приховану схованку.",
+      check: {
+        stat: "magical",
+        selfPower: 5,
+        companionPower: 4,
+        totalPower: 9,
+        threshold: 4,
+      },
+      hp: { before: 45, damage: 0, vampHeal: 0, postHeal: 0, after: 45 },
+      bossHp: null,
+      xp: { before: 10, delta: 15, after: 25 },
+      terminal: null,
+      nextStage: 4,
+      nextExchange: null,
+    } as never,
+    tutorial: { ordinal: 1, guidance: "full", rescueUsed: false, resultCount: 3 },
+  };
+}
+
+function fieldHome(): CommandResult {
+  const view = blockedFieldView();
+  return {
+    ...tutorialHome(),
+    tutorialCompleted: 0,
+    initialTrainingResolved: false,
+    pendingOffer: {
+      id: "30000000-0000-4000-8000-000000000003",
+      kind: "field_item",
+      sequence: 1,
+      sourceRunId: view.run.id,
+      payload: { itemKey: "training_armor", slot: "armor", bonuses: { defense: 2 } },
+    },
+    activeRunId: view.run.id,
+    lastTerminalRunId: null,
+  };
+}
+
 function deps(database: DatabasePort, telegram: RecordingTelegramPort): ProcessOutboxDependencies {
   return {
     database,
@@ -254,7 +307,7 @@ Deno.test("outbox worker sends the first canonical card and completes its lease"
   assertEquals(authorization?.args.p_transport_seconds, 15);
   assertEquals(completion(database).p_result, "sent");
   assertEquals(completion(database).p_telegram_message_id, "8123");
-  assertEquals(database.calls.filter((call) => call.rpc === "prepare_action_v2").length, 3);
+  assertEquals(database.calls.filter((call) => call.rpc === "prepare_action_v3").length, 3);
 });
 
 Deno.test("outbox worker edits the existing run card", async () => {
@@ -314,6 +367,34 @@ Deno.test("terminal tutorial repair edits one card and reuses its binding for pr
   const prepared = database.calls.filter((call) => call.rpc === "prepare_player_action_v1");
   assertEquals(prepared.length, 5);
   assertEquals(prepared.every((call) => call.args.p_expected_message_id === "9001"), true);
+});
+
+Deno.test("blocked field discovery edits the run card without preparing the next stage", async () => {
+  const database = new WorkerDatabase(
+    leasedMessage("9001", 4),
+    blockedFieldView(),
+    {
+      status: "ok",
+      telegramExternalId: "700000001",
+      deliveryDeadline: "2026-08-25T07:00:30.000Z",
+    },
+    { status: "applied" },
+    fieldHome(),
+  );
+  const telegram = new RecordingTelegramPort();
+  const result = await processOutboxBatch(deps(database, telegram), {
+    workerId: "50000000-0000-4000-8000-000000000001",
+    limit: 1,
+    leaseSeconds: 30,
+  });
+
+  assertEquals(result.sent, 1);
+  const delivered = telegram.calls[0];
+  if (!delivered || delivered.operation !== "editMessage") throw new Error("missing_field_edit");
+  assertMatch(delivered.input.text, /Знахідка між етапами/u);
+  assertMatch(delivered.input.text, /наступному етапі 4/u);
+  assertEquals(database.calls.filter((call) => call.rpc === "prepare_action_v3").length, 0);
+  assertEquals(database.calls.filter((call) => call.rpc === "prepare_player_action_v1").length, 2);
 });
 
 Deno.test("repair intent without a known card is dead and never blind-sends", async () => {

@@ -1,9 +1,11 @@
 import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19";
+import fallbackJson from "../../content/fallback/case-001/day-01.json" with { type: "json" };
 import type {
   CommandResult,
   DatabasePort,
 } from "../../supabase/functions/_shared/application/database-port.ts";
 import type { TelegramRunView } from "../../supabase/functions/_shared/application/prepare-run-card.ts";
+import type { DungeonContentV1 } from "../../supabase/functions/_shared/contracts/content.ts";
 import { FixedClock } from "../../supabase/functions/_shared/infrastructure/clock.ts";
 import { RecordingTelegramPort } from "../../supabase/functions/_shared/telegram/fake.ts";
 import {
@@ -18,6 +20,7 @@ import type { NormalizedCallbackUpdate } from "../../supabase/functions/_shared/
 
 const playerId = "10000000-0000-4000-8000-000000000001";
 const callbackKey = new TextEncoder().encode("0123456789abcdef0123456789abcdef");
+const fallback = fallbackJson as DungeonContentV1;
 
 class ScriptedDatabase implements DatabasePort {
   readonly calls: Array<{ rpc: string; args: Readonly<Record<string, unknown>> }> = [];
@@ -392,7 +395,7 @@ Deno.test("hero management prepares affordable ring mastery from the canonical b
 Deno.test("hero management callbacks refresh canonical state without touching run cards", async () => {
   for (const status of ["applied", "cached", "stale"] as const) {
     const database = new ScriptedDatabase({
-      resolve_player_action_v1: [{ status }],
+      resolve_player_action_v2: [{ status }],
       player_home_v1: [home({ profileVersion: 1, freeXp: 0, activeRunId: "active-run" })],
     });
     const telegram = new RecordingTelegramPort();
@@ -411,7 +414,7 @@ Deno.test("hero management callbacks refresh canonical state without touching ru
 
     assertEquals(result.route, `hero_management_${status}`);
     assertEquals(database.calls.map((call) => call.rpc), [
-      "resolve_player_action_v1",
+      "resolve_player_action_v2",
       "player_home_v1",
     ]);
     assertEquals(database.calls[0].args.p_telegram_update_id, "1010");
@@ -432,7 +435,7 @@ Deno.test("invalid or rejected hero management callbacks use one generic recover
       ["hm_", {}],
       [
         "hm_0123456789abcdef0123456789abcdef",
-        { resolve_player_action_v1: [{ status: "rejected", reason: "invalid_token" }] },
+        { resolve_player_action_v2: [{ status: "rejected", reason: "invalid_token" }] },
       ],
     ] as const
   ) {
@@ -470,7 +473,7 @@ Deno.test("hero management edit failure is recoverable through a cached Telegram
     data: "hm_0123456789abcdef0123456789abcdef",
   };
   const failedDatabase = new ScriptedDatabase({
-    resolve_player_action_v1: [{ status: "applied" }],
+    resolve_player_action_v2: [{ status: "applied" }],
     player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
   });
   await assertRejects(() =>
@@ -484,7 +487,7 @@ Deno.test("hero management edit failure is recoverable through a cached Telegram
   );
 
   const retryDatabase = new ScriptedDatabase({
-    resolve_player_action_v1: [{ status: "cached" }],
+    resolve_player_action_v2: [{ status: "cached" }],
     player_home_v1: [home({ profileVersion: 1, freeXp: 0 })],
   });
   const retryTelegram = new RecordingTelegramPort();
@@ -498,7 +501,7 @@ Deno.test("hero management edit failure is recoverable through a cached Telegram
 
 Deno.test("profile callback binds actor, Telegram update and canonical message before rerender", async () => {
   const database = new ScriptedDatabase({
-    resolve_player_action_v1: [{ status: "applied" }],
+    resolve_player_action_v2: [{ status: "applied" }],
     player_home_v1: [home({ profileVersion: 1, lastTerminalRunId: "terminal-run" })],
     request_profile_run_render_v1: [{ status: "applied" }],
   });
@@ -517,7 +520,7 @@ Deno.test("profile callback binds actor, Telegram update and canonical message b
   });
   assertEquals(result.route, "profile_applied");
   assertEquals(database.calls.map((call) => call.rpc), [
-    "resolve_player_action_v1",
+    "resolve_player_action_v2",
     "player_home_v1",
     "request_profile_run_render_v1",
   ]);
@@ -533,10 +536,10 @@ Deno.test("profile callback binds actor, Telegram update and canonical message b
 Deno.test("rejected profile callbacks give one generic visible recovery path", async () => {
   for (
     const [data, responses] of [
-      ["pa_bad", { resolve_player_action_v1: [{ status: "rejected", reason: "invalid_token" }] }],
+      ["pa_bad", { resolve_player_action_v2: [{ status: "rejected", reason: "invalid_token" }] }],
       [
         "pa_0123456789abcdef0123456789abcdef",
-        { resolve_player_action_v1: [{ status: "rejected", reason: "stale_profile" }] },
+        { resolve_player_action_v2: [{ status: "rejected", reason: "stale_profile" }] },
       ],
     ] as const
   ) {
@@ -594,6 +597,92 @@ function terminalView(): TelegramRunView {
     tutorial: { ordinal: 1, guidance: "full", rescueUsed: false, resultCount: 4 },
   };
 }
+
+function blockedFieldView(): TelegramRunView {
+  const stage = fallback.stages[2];
+  const choice = stage.choices?.[0];
+  if (!choice) throw new Error("missing_field_test_choice");
+  return {
+    ...terminalView(),
+    run: {
+      ...terminalView().run,
+      status: "active",
+      phase: "blocked_by_offer",
+      stateVersion: 3,
+      stage: 4,
+      hp: 45,
+      xpEarned: 25,
+    },
+    content: fallback,
+    lastResolution: {
+      resolverVersion: "v1",
+      stage: 3,
+      exchange: null,
+      choiceId: choice.id,
+      outcome: "success",
+      clue: stage.clues[0],
+      rationale: "Влучний підхід відкрив приховану схованку.",
+      check: {
+        stat: "magical",
+        selfPower: 5,
+        companionPower: 4,
+        totalPower: 9,
+        threshold: 4,
+      },
+      hp: { before: 45, damage: 0, vampHeal: 0, postHeal: 0, after: 45 },
+      bossHp: null,
+      xp: { before: 10, delta: 15, after: 25 },
+      terminal: null,
+      nextStage: 4,
+      nextExchange: null,
+    } as never,
+    card: { messageId: "9001", lastStateVersion: 3 },
+    tutorial: { ordinal: 1, guidance: "full", rescueUsed: false, resultCount: 3 },
+  };
+}
+
+Deno.test("active field discovery prepares only accept or discard for the bound run card", async () => {
+  const view = blockedFieldView();
+  const offerId = "30000000-0000-4000-8000-000000000003";
+  const database = new ScriptedDatabase({
+    prepare_player_action_v1: [{ status: "ok" }, { status: "ok" }],
+  });
+  const card = await renderCanonicalProgressionCard(
+    {
+      database,
+      clock: new FixedClock("2026-08-25T07:00:00.000Z"),
+      callbackKey,
+    },
+    {
+      home: home({
+        activeRunId: view.run.id,
+        pendingOffer: {
+          id: offerId,
+          kind: "field_item",
+          sequence: 1,
+          sourceRunId: view.run.id,
+          payload: { itemKey: "training_armor", slot: "armor", bonuses: { defense: 2 } },
+        },
+      }),
+      view,
+    },
+  );
+
+  if (!card) throw new Error("missing_field_offer_card");
+  assertStringIncludes(card.text, "Результат етапу 3");
+  assertStringIncludes(card.text, "Знахідка між етапами");
+  assertStringIncludes(card.text, "Навчальний обладунок");
+  assertStringIncludes(card.text, "наступному етапі 4");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "prepare_player_action_v1",
+    "prepare_player_action_v1",
+  ]);
+  assertEquals(database.calls.map((call) => call.args.p_action), [
+    { kind: "accept_item", offerId },
+    { kind: "discard_item", offerId },
+  ]);
+  assertEquals(card.buttons.flat().every((button) => button.callbackData.startsWith("pa_")), true);
+});
 
 Deno.test("canonical terminal card prepares every training action for its existing message", async () => {
   const database = new ScriptedDatabase({
