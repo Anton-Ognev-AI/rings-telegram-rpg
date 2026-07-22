@@ -1,4 +1,9 @@
-import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19";
+import {
+  assertEquals,
+  assertNotMatch,
+  assertRejects,
+  assertStringIncludes,
+} from "jsr:@std/assert@1.0.19";
 import fallbackJson from "../../content/fallback/case-001/day-01.json" with { type: "json" };
 import type {
   CommandResult,
@@ -411,6 +416,8 @@ Deno.test("hero management prepares only affordable canonical forecasts for its 
   if (!edited || edited.operation !== "editMessage") throw new Error("missing_management_edit");
   assertEquals(edited.input.messageId, 9001n);
   assertStringIncludes(edited.input.text, "Поточна експедиція не зміниться");
+  assertStringIncludes(edited.input.text, "Максимум HP: 40 → 44");
+  assertNotMatch(edited.input.text, /\b(?:physical|magical|agility|vitality) \+\d/u);
   assertEquals(
     edited.input.buttons?.flat().filter((button) => button.callbackData.startsWith("hm_")).length,
     2,
@@ -765,6 +772,8 @@ Deno.test("canonical terminal card prepares every training action for its existi
   );
   if (!card) throw new Error("missing_training_card");
   assertStringIncludes(card.text, "Перше тренування");
+  assertStringIncludes(card.text, "Максимум HP: 40 → 44");
+  assertNotMatch(card.text, /\b(?:physical|magical|agility|vitality) \+\d/u);
   assertEquals(database.calls.length, 5);
   assertEquals(database.calls.every((call) => call.rpc === "prepare_player_action_v1"), true);
   assertEquals(database.calls.every((call) => call.args.p_expected_message_id === "9001"), true);

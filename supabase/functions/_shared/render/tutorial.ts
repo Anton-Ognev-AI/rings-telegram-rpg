@@ -1,5 +1,6 @@
 import type { Stat } from "../contracts/content.ts";
 import { renderCard, type RenderedCard, staticButton } from "./types.ts";
+import { renderUpgradeTotals, type UpgradeTotals } from "./upgrade-totals.ts";
 
 const STAT_LABELS: Readonly<Record<Stat, string>> = {
   physical: "Фізична сила",
@@ -48,7 +49,7 @@ export interface TrainingChoiceOption {
   readonly current: number;
   readonly next: number;
   readonly cost: number;
-  readonly effect: string;
+  readonly totals?: UpgradeTotals;
   readonly callbackData: string;
 }
 
@@ -71,7 +72,7 @@ export function renderTrainingChoiceCard(input: TrainingChoiceCardInput): Render
       `${
         STAT_LABELS[option.stat]
       }: ${option.current} → ${option.next} · ${option.cost} XP · залишиться ${remainingXp} XP`,
-      `  ${option.effect}`,
+      ...renderUpgradeTotals(option.totals).map((line) => `  ${line}`),
     );
   }
   lines.push("", "Рішення можна відкласти без втрати XP.");

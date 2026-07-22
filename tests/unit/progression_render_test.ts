@@ -89,7 +89,6 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
         current: 5,
         next: 6,
         cost: 20,
-        effect: "Фізична сила +1",
         callbackData: pa("physical"),
       },
       {
@@ -97,7 +96,6 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
         current: 5,
         next: 6,
         cost: 20,
-        effect: "Магічна сила +1",
         callbackData: pa("magical"),
       },
       {
@@ -105,7 +103,6 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
         current: 5,
         next: 6,
         cost: 20,
-        effect: "Спритність +1",
         callbackData: pa("agility"),
       },
       {
@@ -113,7 +110,7 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
         current: 5,
         next: 6,
         cost: 20,
-        effect: "Живучість +1 · максимум HP +4",
+        totals: { maxHp: { current: 40, next: 44 } },
         callbackData: pa("vitality"),
       },
     ],
@@ -122,7 +119,8 @@ Deno.test("training card shows exact server forecast and no hidden arithmetic", 
   assertStringIncludes(card.text, "Доступно: 63 XP");
   assertStringIncludes(card.text, "Фізична сила: 5 → 6 · 20 XP · залишиться 43 XP");
   assertStringIncludes(card.text, "Живучість: 5 → 6 · 20 XP · залишиться 43 XP");
-  assertStringIncludes(card.text, "максимум HP +4");
+  assertStringIncludes(card.text, "Максимум HP: 40 → 44");
+  assertNotMatch(card.text, /\b(?:physical|magical|agility|vitality) \+\d/u);
   assertEquals(card.buttons.length, 5);
   assertTelegramSafe([card]);
 });
@@ -411,7 +409,6 @@ Deno.test("hero management shows exact goals but enables only affordable actions
         current: 6,
         next: 7,
         cost: 28,
-        effect: "physical +1",
         callbackData: hm("physical"),
       },
       {
@@ -419,7 +416,6 @@ Deno.test("hero management shows exact goals but enables only affordable actions
         current: 7,
         next: 8,
         cost: 50,
-        effect: "magical +1",
       },
     ],
     mastery: { current: 2, cost: 20, callbackData: hm("mastery") },

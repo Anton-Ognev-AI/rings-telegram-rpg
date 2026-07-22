@@ -9,7 +9,7 @@ import type { ResolutionV1 } from "../contracts/domain.ts";
 import { requestProfileRunRender, requestRunRender } from "../application/request-run-render.ts";
 import type { CommandResult, DatabasePort } from "../application/database-port.ts";
 import type { Clock } from "../infrastructure/clock.ts";
-import { parseCanonicalBuildView } from "../progression/build-view.ts";
+import { type CanonicalBuildView, parseCanonicalBuildView } from "../progression/build-view.ts";
 import {
   STARTER_ITEM_CATALOG,
   type StarterItemKey,
@@ -27,6 +27,7 @@ import {
 import { renderResolvedCard } from "../render/stage-card.ts";
 import { renderTrainingChoiceCard, renderTutorialCard } from "../render/tutorial.ts";
 import { renderCard, type RenderedCard, staticButton } from "../render/types.ts";
+import type { UpgradeTotals } from "../render/upgrade-totals.ts";
 import {
   deriveHeroManagementCallbackToken,
   derivePlayerCallbackToken,
@@ -371,11 +372,23 @@ export async function handleCanonicalProfileCallback(
   return { route: `profile_${result.status}` };
 }
 
-function effectText(option: TrainingForecast["options"][number]): string {
-  const effects = [`${option.stat} +${option.statDelta}`];
-  if (option.maxHpDelta > 0) effects.push(`максимум HP +${option.maxHpDelta}`);
-  if (option.defenseDelta > 0) effects.push(`захист +${option.defenseDelta}`);
-  return effects.join(" · ");
+function upgradeTotals(
+  option: TrainingForecast["options"][number],
+  build: CanonicalBuildView,
+): UpgradeTotals | undefined {
+  const maxHp = option.maxHpDelta > 0
+    ? {
+      current: build.selfSnapshot.maxHp,
+      next: build.selfSnapshot.maxHp + option.maxHpDelta,
+    }
+    : undefined;
+  const defense = option.defenseDelta > 0
+    ? {
+      current: build.selfSnapshot.defense,
+      next: build.selfSnapshot.defense + option.defenseDelta,
+    }
+    : undefined;
+  return maxHp || defense ? { maxHp, defense } : undefined;
 }
 
 async function prepareProfileAction(
@@ -442,6 +455,7 @@ async function refreshHeroManagement(
   input: { readonly chatId: bigint; readonly messageId: bigint },
 ): Promise<void> {
   const options = [];
+  const build = parseCanonicalBuildView(home.build);
   for (const option of home.training.options) {
     const callbackData = option.cost <= home.freeXp
       ? await prepareHeroManagementAction(dependencies, home, input.messageId, {
@@ -449,9 +463,8 @@ async function refreshHeroManagement(
         stat: option.stat,
       })
       : undefined;
-    options.push({ ...option, effect: effectText(option), callbackData });
+    options.push({ ...option, totals: upgradeTotals(option, build), callbackData });
   }
-  const build = parseCanonicalBuildView(home.build);
   const ring = build.loadoutSnapshot.rings[0];
   const mastery = ring && ring.masteryPercent < 100
     ? {
@@ -630,10 +643,11 @@ export async function renderCanonicalProgressionCard(
 
   if (home.tutorialCompleted >= 1 && !home.initialTrainingResolved) {
     const options = [];
+    const build = parseCanonicalBuildView(home.build);
     for (const option of home.training.options) {
       options.push({
         ...option,
-        effect: effectText(option),
+        totals: upgradeTotals(option, build),
         callbackData: await prepareProfileAction(dependencies, home, messageId, {
           kind: "buy_stat",
           stat: option.stat,

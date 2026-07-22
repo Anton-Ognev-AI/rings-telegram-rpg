@@ -1,5 +1,6 @@
 import type { BuildContribution, CanonicalBuildView } from "../progression/build-view.ts";
 import { renderCard, type RenderedCard, staticButton } from "./types.ts";
+import { renderUpgradeTotals, type UpgradeTotals } from "./upgrade-totals.ts";
 
 const DISPLAY_STATS = [
   ["physical", "Фізична сила"],
@@ -88,7 +89,7 @@ export interface HeroUpgradeOption {
   readonly current: number;
   readonly next: number;
   readonly cost: number;
-  readonly effect: string;
+  readonly totals?: UpgradeTotals;
   readonly callbackData?: string;
 }
 
@@ -121,7 +122,7 @@ export function renderHeroManagementCard(input: HeroManagementCardInput): Render
       `${label}: ${option.current} → ${option.next} · ${option.cost} XP · ${
         xpOutcome(input.freeXp, option.cost)
       }`,
-      `  ${option.effect}`,
+      ...renderUpgradeTotals(option.totals).map((line) => `  ${line}`),
     );
     if (option.callbackData) {
       buttons.push([{
