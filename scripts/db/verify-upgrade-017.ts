@@ -30,16 +30,18 @@ async function sha256File(path: string): Promise<string> {
   ).join("");
 }
 
-async function resolveSupabaseBinary(): Promise<string> {
-  const executable = Deno.build.os === "windows" ? "supabase.exe" : "supabase";
-  const platformPackage = Deno.build.os === "windows"
+export function supabaseBinaryCandidates(os: string, arch: string): readonly string[] {
+  const executables = os === "windows" ? ["supabase.exe", "supabase-go.exe"] : ["supabase"];
+  const platformPackage = os === "windows"
     ? "@supabase/cli-windows-x64/bin"
-    : `@supabase/cli-${Deno.build.os}-${Deno.build.arch}/bin`;
-  const candidates = [
-    `node_modules/${platformPackage}/${executable}`,
-    `../../node_modules/${platformPackage}/${executable}`,
-  ];
-  for (const candidate of candidates) {
+    : `@supabase/cli-${os}-${arch}/bin`;
+  return ["node_modules", "../../node_modules"].flatMap((root) =>
+    executables.map((executable) => `${root}/${platformPackage}/${executable}`)
+  );
+}
+
+async function resolveSupabaseBinary(): Promise<string> {
+  for (const candidate of supabaseBinaryCandidates(Deno.build.os, Deno.build.arch)) {
     if (await pathExists(candidate)) return candidate;
   }
   throw new Error("upgrade_017_supabase_binary_missing");

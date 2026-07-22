@@ -17,6 +17,7 @@ const REQUIRED_MIGRATIONS = [
   "202607150014_tutorial_starter.sql",
   "202607150015_owner_smoke_readiness.sql",
   "202607150016_current_card_render_cache.sql",
+  "202607190017_tutorial_field_discovery.sql",
 ] as const;
 const REQUIRED_RECOVERY_MIGRATIONS = [
   "202607130001_deletion_tombstones.sql",

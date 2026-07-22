@@ -96,11 +96,17 @@ async function sha256(value: string): Promise<string> {
 
 async function preflightDependencies(
   additions: Readonly<Record<string, string>> = {},
+  includeDiscoveryMigration = true,
 ): Promise<OwnerSmokePreflightDependencies> {
   const migrations = {
     "supabase/migrations/202607150014_tutorial_starter.sql": "tutorial_starter_enabled",
     "supabase/migrations/202607150015_owner_smoke_readiness.sql": "reconciliation-only",
     "supabase/migrations/202607150016_current_card_render_cache.sql": "card_current",
+    ...(includeDiscoveryMigration
+      ? {
+        "supabase/migrations/202607190017_tutorial_field_discovery.sql": "field_discovery",
+      }
+      : {}),
   };
   const manifest = (await Promise.all(
     Object.entries(migrations).map(async ([path, value]) =>
@@ -154,9 +160,18 @@ Deno.test("owner-smoke preflight verifies local migrations and scans tracked fil
     status: "ready",
     mode: "dry-run",
     checks: 9,
-    migrationsVerified: 5,
-    trackedFilesScanned: 10,
+    migrationsVerified: 6,
+    trackedFilesScanned: 11,
   });
+});
+
+Deno.test("owner-smoke preflight requires tutorial field discovery migration 017", async () => {
+  const dependencies = await preflightDependencies({}, false);
+  await assertRejects(
+    () => preflightOwnerSmoke(options(), dependencies),
+    Error,
+    "phase4_migrations_missing",
+  );
 });
 
 Deno.test("owner-smoke preflight rejects unsafe Edge Function JWT modes", async () => {
