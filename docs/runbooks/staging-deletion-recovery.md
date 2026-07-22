@@ -17,9 +17,12 @@ recovery project.
   service-only RPC grant is verified.
 - The app webhook has `RECOVERY_SUPABASE_URL` and the recovery project's service-role credential.
 - The runner has no `delivery_unknown` or leased owner rows.
-- Creation of a disposable restore target `<RESTORE_DRILL_REF>` is authorized and capacity is
-  available. Create it only for the drill, denylist it from normal bot use, and never attach the
-  Telegram webhook.
+- Creation of a disposable restore target `<RESTORE_DRILL_REF>` is authorized. The Free plan allows
+  only two active projects and the active app/recovery pair currently uses both slots; paused
+  projects do not count toward that limit (see
+  [Supabase billing documentation](https://supabase.com/docs/guides/platform/billing-on-supabase)).
+  Do not create the target early. Free one slot only through the post-deletion app-pause sequence
+  below, denylist the target from normal bot use, and never attach the Telegram webhook.
 
 If recovery SQL was previously applied through the dashboard while CLI history is empty, do not
 reapply it blindly. First compare a schema-only dump with the two checksum-pinned recovery
@@ -84,6 +87,28 @@ where surrogate_player_id = '<SURROGATE_PLAYER_ID>'::uuid;
 Record its `<DELETION_ID>` and `<RECORDED_AT>` in the private operator session. No Telegram ID,
 username, display name or message may exist in recovery control.
 
+## Free-Plan Restore Slot
+
+Do not pause either staging project before the deletion response and both database proofs above are
+complete. Then:
+
+1. Drain the owner outbox and require zero leased and `delivery_unknown` rows.
+2. Remove the Telegram webhook with `drop_pending_updates=true`; verify Telegram reports no active
+   webhook URL before making app staging unavailable.
+3. Re-resolve projects from authoritative Supabase metadata. Require exactly one healthy
+   `tg-game-app-staging`, one distinct healthy `tg-game-recovery-staging`, and no existing
+   `tg-game-restore-*` project. Never use a remembered ref or a linked-worktree marker.
+4. Pause **app staging** and confirm it becomes inactive. Do not pause recovery staging: it is the
+   durable deletion fence and remains the source of the tombstone used for replay.
+5. Create one disposable target named `tg-game-restore-<UTC timestamp>` with a fresh database
+   password held only in the private operator process/session. Do not write it to the repository,
+   checkpoint or shell history.
+6. Confirm the target has no Edge Functions, secrets, webhook or live Telegram traffic before
+   restoring any data.
+
+Any unexpected project count/status, active webhook, pending delivery, target-name collision or
+quota response is a hard stop. Resume app staging and re-run preflight if the drill cannot proceed.
+
 ## Isolated Restore and Tombstone Replay
 
 1. Restore the pre-deletion app backup into `<RESTORE_DRILL_REF>` only.
@@ -138,11 +163,17 @@ old surrogate and must not unlink the replacement profile.
 
 ## Closeout
 
-- Destroy the disposable restore target after recording aggregate proof.
+- Destroy the disposable restore target after recording aggregate proof and confirm it no longer
+  appears in authoritative project metadata.
 - Securely delete any data dump and private operator note containing restore parameters.
 - Keep the recovery tombstone; it is the durable deletion fence.
 - Do not delete or rewrite recovery audit data to make a test repeatable.
 - If replay fails, remove the Telegram webhook and treat restore readiness as failed.
+- If owner-only staging is retained, resume app staging only after the target is gone; revalidate
+  migration history 001–017, function/JWT modes, required secret names, recovery routing and a
+  clean bounded queue drain before registering the owner-only webhook again.
+- If staging is closed after the drill, leave app staging paused with no webhook and record that
+  decision. Never delete app or recovery staging as an implicit cleanup shortcut.
 
 Checkpoint evidence contains only backup timestamp/identifier, `1 -> 0` link counts, deletion state,
 and pass/fail status. It must not contain the surrogate/deletion UUIDs, Telegram IDs, project refs,

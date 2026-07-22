@@ -62,6 +62,22 @@ user-visible deletion/restore drill remain pending.
 6. Drain/reconcile delivery state, decide whether staging is retained, and write the final Gate 4T.1
    checkpoint.
 
+## Free-plan capacity amendment
+
+- A fresh authoritative read found five projects total: two `ACTIVE_HEALTHY` and three inactive.
+  The active pair is exactly app staging plus recovery staging; no disposable restore target exists.
+- Supabase's current Free plan permits two active projects and does not count paused projects toward
+  the limit. Therefore a third concurrent active restore target is unavailable without a temporary
+  pause.
+- Five-role review returned `APPROVE_WITH_SMALL_CHANGES`: after backup, live deletion/tombstone
+  proof, outbox drain and webhook removal, pause app staging—not recovery—then create the target.
+  Recovery stays active as the durable tombstone source.
+- After replay proof, destroy the target. Resume and fully revalidate app staging only if the owner
+  chooses to retain it; otherwise keep app staging paused with no webhook.
+- A synthetic in-memory Windows DPAPI round-trip succeeded, proving that an operator-side encrypted
+  recovery artifact is feasible. No gameplay data was read and no file was written during this
+  capability check; the actual dump remains deferred until immediately before `/delete_me`.
+
 ## File hygiene
 
 Phase-scoped review found no project deletion or archive candidates. Historical checkpoints and all
