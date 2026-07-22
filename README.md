@@ -1,70 +1,108 @@
-# Telegram Academy Game
+# RINGS — Telegram RPG про Академію магічних кілець
 
-Telegram RPG про власного учня Академії у світі книг Антона. Гравець читає підказки,
-обирає підхід до випробування, проходить детерміновані бої та розвиває стати, три слоти
-спорядження й магічні кільця.
+Портфоліо-проєкт текстової RPG, у якій гравець стає учнем Академії, щодня проходить
+10-етапну експедицію, розвиває характеристики, спорядження та магічні кільця. Гра працює
+через Telegram-бота, а механічний результат кожного вибору визначає сервер, а не LLM.
 
-Поточний статус: **Phase 4A, balance amendment і Gate 4T.0 затверджені локально**. Приватний
-Telegram owner-smoke технічно підготовлений, але remote Supabase, secrets, deploy і webhook ще не
-виконувалися.
+> Статус: активна розробка MVP. Приватний owner-only staging уже працював у реальному
+> Telegram; поточні зміни перевірені локально. Production і зовнішнє тестування не увімкнені.
 
-## Ключові документи
+## Що вже реалізовано
 
-- [As-built архітектура і карта змін](ARCHITECTURE.md)
-- [Канонічна game-design спека v1.1](docs/specs/2026-07-12-game-design-v1.1.md)
-- [Master implementation plan MVP](docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md)
-- [Поточний стан](PROJECT_STATE.md) і [активні задачі](TASKS.md)
-- [Phase 4T owner-smoke plan](docs/superpowers/plans/2026-07-15-phase-04t-private-owner-smoke.md)
-- [Локальна розробка та інциденти](docs/runbooks/local-development.md)
-- [Приватний staging owner-smoke](docs/runbooks/private-owner-smoke.md)
+- Два навчальні дні з викладачем, зрозумілими підказками та одноразовим порятунком.
+- Щоденна експедиція з 10 етапів, мінібосом на етапі 5 і фінальним босом на етапі 10.
+- Вибір підходу до сцени: влучна дія знижує вимогу перевірки, ризикована підвищує її,
+  пастка і нейтральний шлях мають окремі наслідки.
+- Фізична й магічна сила, спритність, живучість, захист, HP і вільний досвід для розвитку.
+- Три слоти спорядження без інвентарю: нову річ треба одразу вдягнути або викинути.
+- Захищені знахідки між ранніми етапами навчання: шанс залежить від результату, а на
+  третьому етапі діє гарантія. Прийнятий предмет впливає лише на наступний етап.
+- Чотири стартові стилі магічних кілець і окреме тренування майстерності кільця.
+- Кабінет героя з прозорим розкладом характеристик, предметів, кільця та вартості розвитку.
+- Серверне збереження, відновлення після перезапуску, захищені Telegram callbacks,
+  ідемпотентні команди, outbox-доставка та видалення Telegram-зв’язку.
 
-## Непорушні принципи MVP
+## Архітектура
 
-- Механічний outcome визначає лише код; основного RNG-кидка немає.
-- Pure TypeScript resolver рахує outcome; service-only SQL RPC атомарно змінюють канонічний стан.
-- Edge Functions не мають direct DML до private `game`; Telegram side effects проходять через outbox.
-- **Runtime LLM заборонений:** модель не обирає outcome й не генерує персональну сцену під час прогону.
-- LLM може допомагати лише в offline content pipeline; publish дозволяється після schema, rules, lore та safety validation із fallback-контентом.
-- Гравець — власний учень Академії, не Макс; чорне кільце та магія плоті не використовуються.
-- Інвентарю немає: три слоти спорядження, а нову річ треба одразу прийняти як заміну або викинути.
-- Секрети, Telegram identifiers, токени й локальні `.env` не комітяться.
+```mermaid
+flowchart LR
+    TG["Telegram"] --> WH["tg-webhook Edge Function"]
+    WH --> APP["TypeScript application layer"]
+    APP --> RPC["Versioned service-only RPC"]
+    RPC --> DB["Private PostgreSQL schema game"]
+    DB --> OB["Durable outbox"]
+    OB --> WK["outbox-worker Edge Function"]
+    WK --> TG
+    CONTENT["Reviewed fallback / future offline content pipeline"] --> VALIDATE["Schema, lore and safety validation"]
+    VALIDATE --> DB
+```
 
-## Швидкий старт
+Ключові межі:
 
-Передумови: Node.js 20+ та запущений Docker Desktop/сумісний runtime для локального Supabase.
+- Pure TypeScript resolver детерміновано рахує outcome, шкоду, лікування та XP.
+- SQL RPC атомарно змінюють канонічний стан; Edge Functions не пишуть напряму в приватні
+  таблиці `game`.
+- Telegram-картка є проєкцією серверного стану. Callback прив’язаний до гравця, повідомлення,
+  версії стану й HMAC-контексту.
+- LLM не бере участі у runtime-рішенні. У майбутньому він може створювати контент лише
+  офлайн, до публікації та після валідації.
+
+Детальна карта компонентів і правил зміни коду: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Технології
+
+- TypeScript і Deno
+- Telegram Bot API без стороннього bot framework
+- Supabase Edge Functions
+- PostgreSQL, приватна схема, versioned RPC та pgTAP
+- Docker Desktop для локальної Supabase
+- Unit, property, integration, concurrency та end-to-end Telegram-тести
+
+## Локальний запуск
+
+Потрібні Node.js 20+ і запущений Docker Desktop.
 
 ```powershell
 npm ci
 npm run verify
+npm run db:start
+npm run db:reset
+```
+
+Для повної локальної перевірки попередніх фаз:
+
+```powershell
 npm run verify:phase4a
 ```
 
-Повний verifier сам запускає і зупиняє stack. Для ручної локальної роботи:
+Локальний Supabase має залишатися доступним лише через loopback або у довіреній приватній
+мережі із синтетичними даними. Точні версії, команди та відновлення після інцидентів описані
+у [local development runbook](docs/runbooks/local-development.md).
 
-```powershell
-npm run db:start
-npm run supabase -- stop
-```
+## Перевірки якості
 
-Точні перевірені версії, localhost-only правила та recovery targets наведені в [local-development runbook](docs/runbooks/local-development.md).
+`npm run verify` виконує format-check, lint, type-check, unit і property tests. Окремі DB-gates
+перевіряють чисте застосування міграцій, pgTAP, upgrade paths, атомарність, конкурентні виклики,
+Telegram E2E, доставку, privacy/deletion, баланс і SHA-256 міграцій.
 
-## Що вже перевіряється
+Поточна фаза знахідок перевірена на чистій локальній базі міграціями 001–017, окремими
+accept/discard integration-сценаріями та двома повними дводенними Telegram E2E-проходженнями.
 
-`npm run verify` виконує format, lint, type-check, unit і property tests. `npm run verify:phase4a`
-додає clean DB reset, 338 pgTAP assertions, upgrade paths, integration/E2E Telegram сценарії,
-delivery/deletion faults, 6000 callbacks, balance, reconciliation, lint і checksums.
+## Документація
 
-Health endpoint повертає стабільну відповідь:
+- [Канонічна специфіка гри](docs/specs/2026-07-12-game-design-v1.1.md)
+- [Master implementation plan](docs/superpowers/plans/2026-07-12-telegram-academy-mvp.md)
+- [Поточний стан](PROJECT_STATE.md) і [активні задачі](TASKS.md)
+- [Лор-контекст](docs/lore/LORE_CONTEXT.md)
+- [Приватний owner-smoke runbook](docs/runbooks/private-owner-smoke.md)
 
-```json
-{
-  "status": "ok",
-  "service": "telegram-academy"
-}
-```
+## Безпека й приватність
 
-## Безпека
+Секрети, Telegram identifiers, токени та локальні `.env` не повинні потрапляти до Git.
+Реальні Telegram-скріншоти також не входять до репозиторію. Перед remote staging діє окремий
+fail-closed preflight, а webhook допускає лише підтвердженого власника.
 
-Локальний stack призначений лише для loopback-інтерфейсу. Не відкривайте Supabase-порти в LAN/Internet і
-не додавайте реальні Telegram credentials до репозиторію. Remote Supabase link, secrets, deploy, webhook або
-реальний Telegram smoke вимагають окремого staging-only дозволу.
+## Права
+
+Код оприлюднюється як портфоліо автора. Проєкт має статус `UNLICENSED`: копіювання,
+розповсюдження або комерційне використання не дозволені без окремої згоди автора.
