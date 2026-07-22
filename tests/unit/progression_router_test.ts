@@ -244,6 +244,70 @@ Deno.test("blocked expedition restores the pending canonical decision instead of
   ]);
 });
 
+Deno.test("cached expedition restores a safe pending-delivery card instead of going silent", async () => {
+  const database = new ScriptedDatabase({
+    start_run_v3: [{ status: "cached", projection: { run: { id: "run-1" } } }],
+    player_home_v1: [home({
+      initialTrainingResolved: true,
+      activeRunId: "run-1",
+    })],
+    request_run_render_v2: [{ status: "rejected", reason: "card_unavailable" }],
+  });
+  const telegram = new RecordingTelegramPort();
+
+  const result = await routeCanonicalHome(dependencies(database, telegram), {
+    playerId,
+    chatId: 700000001n,
+    updateId: 1006n,
+    destination: "expedition",
+  });
+
+  assertEquals(result.route, "run_delivery_pending");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "start_run_v3",
+    "player_home_v1",
+    "request_run_render_v2",
+  ]);
+  const sent = telegram.calls[0];
+  if (!sent || sent.operation !== "sendMessage") throw new Error("missing_pending_card");
+  assertEquals(
+    sent.input.buttons?.flat().map((button) => button?.callbackData),
+    ["nav:resume", "nav:hero", "nav:menu"],
+  );
+});
+
+Deno.test("resume recovers only card_unavailable and keeps other render rejections fail-closed", async () => {
+  const recoverableDatabase = new ScriptedDatabase({
+    player_home_v1: [home({ initialTrainingResolved: true, activeRunId: "run-1" })],
+    request_run_render_v2: [{ status: "rejected", reason: "card_unavailable" }],
+  });
+  const telegram = new RecordingTelegramPort();
+  const recovered = await routeCanonicalHome(dependencies(recoverableDatabase, telegram), {
+    playerId,
+    chatId: 700000001n,
+    updateId: 1007n,
+    destination: "resume",
+  });
+  assertEquals(recovered.route, "run_delivery_pending");
+  assertEquals(telegram.calls.length, 1);
+
+  const rejectedDatabase = new ScriptedDatabase({
+    player_home_v1: [home({ initialTrainingResolved: true, activeRunId: "run-1" })],
+    request_run_render_v2: [{ status: "rejected", reason: "actor_mismatch" }],
+  });
+  await assertRejects(
+    () =>
+      routeCanonicalHome(dependencies(rejectedDatabase), {
+        playerId,
+        chatId: 700000001n,
+        updateId: 1008n,
+        destination: "resume",
+      }),
+    Error,
+    "request_run_render_rejected",
+  );
+});
+
 Deno.test("hero and Academy are direct read-only projections with no prepared mutation", async () => {
   for (const destination of ["hero", "academy"] as const) {
     const database = new ScriptedDatabase({

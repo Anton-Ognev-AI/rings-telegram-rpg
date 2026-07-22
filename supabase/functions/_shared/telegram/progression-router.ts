@@ -97,6 +97,11 @@ export interface CanonicalRouteResult {
   readonly route: string;
 }
 
+type HomeRenderRequest =
+  | { readonly status: "none" }
+  | { readonly status: "requested"; readonly runId: string }
+  | { readonly status: "delivery_pending"; readonly runId: string };
+
 const PROFILE_ACTION_REJECTED_CARD = renderCard(
   "Ця дія більше недоступна. Відкрийте актуальну картку й повторіть вибір.",
   [[staticButton("До кабінету", "nav:home")]],
@@ -104,6 +109,19 @@ const PROFILE_ACTION_REJECTED_CARD = renderCard(
 const HERO_MANAGEMENT_REJECTED_CARD = renderCard(
   "Ця дія більше недоступна. Відкрийте актуальну картку героя й повторіть вибір.",
   [[staticButton("Герой", "nav:hero")]],
+);
+const RUN_DELIVERY_PENDING_CARD = renderCard(
+  [
+    "Експедицію вже відкрито",
+    "",
+    "Перша сцена ще готується до доставки. Прогрес збережено — повторно запускати експедицію не потрібно.",
+    "",
+    "Натисніть «Оновити» через кілька секунд.",
+  ].join("\n"),
+  [
+    [staticButton("Оновити", "nav:resume")],
+    [staticButton("Герой", "nav:hero"), staticButton("До меню", "nav:menu")],
+  ],
 );
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -190,14 +208,17 @@ async function requestHomeRender(
   database: DatabasePort,
   home: CanonicalPlayerHome,
   includeTerminal = false,
-): Promise<string | null> {
+): Promise<HomeRenderRequest> {
   const runId = runToRender(home, includeTerminal);
-  if (runId === null) return null;
+  if (runId === null) return { status: "none" };
   const requested = await requestRunRender(database, { playerId: home.playerId, runId });
-  if (requested.status !== "applied" && requested.status !== "cached") {
-    throw new Error("request_run_render_rejected");
+  if (requested.status === "applied" || requested.status === "cached") {
+    return { status: "requested", runId };
   }
-  return runId;
+  if (requested.status === "rejected" && requested.reason === "card_unavailable") {
+    return { status: "delivery_pending", runId };
+  }
+  throw new Error("request_run_render_rejected");
 }
 
 function masteryCost(home: CanonicalPlayerHome): number {
@@ -263,6 +284,9 @@ export async function routeCanonicalHome(
       );
       return { route: `expedition_${started.status}` };
     }
+    if (started.status === "cached") {
+      return routeCanonicalHome(dependencies, { ...input, destination: "resume" });
+    }
     return { route: "expedition_started" };
   }
 
@@ -274,17 +298,23 @@ export async function routeCanonicalHome(
     return { route: input.destination };
   }
 
-  const requestedRun = await requestHomeRender(
+  const renderRequest = await requestHomeRender(
     dependencies.database,
     home,
     input.destination === "resume",
   );
-  if (requestedRun !== null) {
+  if (renderRequest.status === "delivery_pending") {
+    await sendCard(dependencies.telegram, input.chatId, RUN_DELIVERY_PENDING_CARD);
+    return { route: "run_delivery_pending" };
+  }
+  if (renderRequest.status === "requested") {
     if (home.pendingOffer !== null) return { route: "offer_pending" };
     if (!home.initialTrainingResolved && home.activeRunId === null) {
       return { route: "training_pending" };
     }
-    return { route: home.activeRunId === requestedRun ? "run_resumed" : "terminal_resumed" };
+    return {
+      route: home.activeRunId === renderRequest.runId ? "run_resumed" : "terminal_resumed",
+    };
   }
 
   const card = home.tutorialCompleted < 2
