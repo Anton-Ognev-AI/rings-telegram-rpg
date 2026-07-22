@@ -125,6 +125,20 @@ select
 
 All three values must be `true`. Do not link the app worktree to the recovery project.
 
+Because dashboard SQL execution does not populate Supabase CLI migration history, align the
+recovery ledger before continuing. Use an isolated temporary workdir containing only the two exact
+checksum-pinned recovery migrations. First prove a linked dry run sees the history mismatch; after
+the schema/grant query above and a schema-only comparison both pass, run:
+
+```powershell
+supabase migration repair 202607130001 202607150002 --status applied
+supabase migration list --linked
+supabase db push --linked --dry-run
+```
+
+Required: remote history is exactly 001–002 and the final dry run has zero pending migrations. Do
+not use the app worktree or reapply schema SQL merely because the ledger was initially empty.
+
 ## Remote Actions — Link and Migrate App Staging
 
 ```powershell
@@ -416,7 +430,9 @@ npm run staging:owner-smoke:execute -- --staging --project-ref $appRef --recover
 ```
 
 The runner publishes/opens the fallback day once, then polls `outbox-worker` every two seconds until
-Ctrl+C. Keep the machine awake. It prints aggregate counts only.
+Ctrl+C. Keep the machine awake. It prints aggregate counts only. Confirm the newly launched process
+is still alive before telling the owner to play; a runner from an earlier operator session must be
+treated as stopped until re-verified.
 
 This is intentionally a three-cycle smoke, not three runs in one sitting. The database permits one
 run per player per Kyiv cycle, and the production-shaped webhook uses the real clock. Do not change

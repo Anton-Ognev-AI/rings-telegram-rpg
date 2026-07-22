@@ -135,3 +135,29 @@ Deno.test("Phase 4 verifier always stops the attempted stack and removes its pro
     "remove:C:/synthetic/phase4-profile",
   ]);
 });
+
+Deno.test("Phase 4 verifier resolves the packaged Windows supabase-go fallback", async () => {
+  const module = await import("../../scripts/verify-phase4a.ts");
+  const resolve = (module as unknown as {
+    resolvePackagedSupabaseCliOverride?: (
+      os: string,
+      arch: string,
+      exists: (path: string) => Promise<boolean>,
+      realPath: (path: string) => Promise<string>,
+    ) => Promise<string | undefined>;
+  }).resolvePackagedSupabaseCliOverride;
+
+  assertEquals(typeof resolve, "function");
+  if (!resolve) return;
+
+  const selected = await resolve(
+    "windows",
+    "x86_64",
+    (path) => Promise.resolve(path.endsWith("supabase-go.exe")),
+    (path) => Promise.resolve(`C:/resolved/${path}`),
+  );
+  assertEquals(
+    selected,
+    "C:/resolved/node_modules/@supabase/cli-windows-x64/bin/supabase-go.exe",
+  );
+});

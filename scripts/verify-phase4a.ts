@@ -278,6 +278,23 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
+export async function resolvePackagedSupabaseCliOverride(
+  os: string,
+  arch: string,
+  exists: (path: string) => Promise<boolean> = pathExists,
+  realPath: (path: string) => Promise<string> = Deno.realPath,
+): Promise<string | undefined> {
+  if (os !== "windows") return undefined;
+  const packageArch = arch === "aarch64" ? "arm64" : "x64";
+  for (const root of ["node_modules", "../../node_modules"]) {
+    for (const executable of ["supabase.exe", "supabase-go.exe"]) {
+      const candidate = `${root}/@supabase/cli-windows-${packageArch}/bin/${executable}`;
+      if (await exists(candidate)) return await realPath(candidate);
+    }
+  }
+  throw new Error("phase4_supabase_binary_missing");
+}
+
 async function runStep(
   step: VerificationStep,
   environment: Readonly<Record<string, string>>,
@@ -344,4 +361,9 @@ const runtime: Phase4VerifierRuntime = {
   verifyLocalPreflight,
 };
 
-if (import.meta.main) await executePhase4Verification(runtime, Deno.env.toObject());
+if (import.meta.main) {
+  const environment = Deno.env.toObject();
+  const cliOverride = await resolvePackagedSupabaseCliOverride(Deno.build.os, Deno.build.arch);
+  if (cliOverride) environment.SUPABASE_CLI_BINARY_OVERRIDE = cliOverride;
+  await executePhase4Verification(runtime, environment);
+}

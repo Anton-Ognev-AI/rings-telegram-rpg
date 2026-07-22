@@ -13,17 +13,29 @@ recovery project.
 ## Preconditions
 
 - App and recovery refs passed the owner-smoke preflight.
-- Recovery migrations 001–002 are applied and the service-only RPC grant is verified.
+- Recovery migrations 001–002 are applied, their remote migration history is exact, and the
+  service-only RPC grant is verified.
 - The app webhook has `RECOVERY_SUPABASE_URL` and the recovery project's service-role credential.
 - The runner has no `delivery_unknown` or leased owner rows.
-- A disposable restore target `<RESTORE_DRILL_REF>` is available and denylisted from normal bot use.
+- Creation of a disposable restore target `<RESTORE_DRILL_REF>` is authorized and capacity is
+  available. Create it only for the drill, denylist it from normal bot use, and never attach the
+  Telegram webhook.
+
+If recovery SQL was previously applied through the dashboard while CLI history is empty, do not
+reapply it blindly. First compare a schema-only dump with the two checksum-pinned recovery
+migrations and verify the RPC owner, fixed search path and grants. Only after an exact match may the
+operator run `supabase migration repair 202607130001 202607150002 --status applied` from an isolated
+workdir containing those exact migrations. A following linked dry run must report zero pending
+migrations. This operation aligns migration metadata only; any proposed schema/data mutation is a
+hard stop.
 
 ## Capture a Pre-Deletion Recovery Point
 
-Before `/delete_me`, create an app-staging backup through the Supabase dashboard or an approved
-encrypted dump outside the repository. Record only the backup timestamp/identifier in the operator
-note. If a data dump is used, it contains Telegram linkage and must be encrypted, access-limited and
-deleted immediately after the drill.
+Immediately before `/delete_me`, create an app-staging backup through the Supabase dashboard or an
+approved encrypted dump outside the repository. A successful backup-list API call is not proof that
+a usable restore point exists; confirm an actual backup or capture the dump. Record only the backup
+timestamp/identifier in the operator note. If a data dump is used, it contains Telegram linkage and
+must be encrypted, access-limited and deleted immediately after the drill.
 
 In the app SQL editor, record the owner's surrogate ID without selecting the external Telegram ID:
 
