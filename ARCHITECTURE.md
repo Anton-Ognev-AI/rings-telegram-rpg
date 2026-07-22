@@ -1,7 +1,8 @@
 # Telegram Academy — As-Built Architecture
 
-Status: canonical architecture map for the locally approved Phase 4A / Gate 4T.0 build. The real
-Telegram staging deployment has not been executed yet.
+Status: canonical architecture map for the Phase 4A / Gate 4T.1 owner-only staging build.
+App staging is deployed through application migration 017 with three active Edge Functions;
+production remains untouched and Gate 4T.1 closeout is still in progress.
 
 ## 1. System in one paragraph
 
@@ -80,16 +81,17 @@ The owner allowlist is a private staging boundary, not the future public authori
 
 1. The server reads the immutable content version and the run/loadout snapshot.
 2. The registered resolver prepares a deterministic resolution and canonical SHA-256 hash.
-3. `prepare_action_v2` records the expected run state, actor-bound opaque callback and prepared
+3. `prepare_action_v3` records the expected run state, actor-bound opaque callback and prepared
    resolution.
-4. `resolve_choice_v2` validates actor, context, update and state versions, applies the result once,
-   writes the XP/result records and enqueues the next render in one transaction.
+4. `resolve_choice_v3` validates actor, context, update and state versions, applies the result once,
+   writes the XP/result records, may create the bounded tutorial discovery, and enqueues the
+   canonical render in one transaction.
 5. Exact retries are cached; stale or conflicting callbacks cannot duplicate rewards.
 
 ### 4.3 Profile progression
 
 `player_home_v1` is the canonical projection for stats, equipment, rings, tutorial state and pending
-offers. `resolve_player_action_v1` owns stat spending, item accept/discard, starter-ring choice and
+offers. `resolve_player_action_v2` owns stat spending, item accept/discard, starter-ring choice and
 ring mastery. A new `profile_version` requests at most one profile-bound card edit through
 `request_profile_run_render_v1`; a current run card does not create redundant edits.
 
@@ -103,7 +105,8 @@ resends it.
 
 ### 4.5 Day lifecycle and deletion
 
-The current owner-smoke uses a local runner: publish one fallback day, then poll the worker. There is
+The current owner-smoke uses a local runner: publish one fallback day, then poll the worker. The
+runner is active only for the explicitly authorized owner-only staging session. There is
 no scheduled production cron yet. Identity deletion follows `begin → external non-PII tombstone →
 finalize`; the recovery database is a distinct trust and restore boundary.
 
@@ -136,7 +139,7 @@ finalize`; the recovery database is a distinct trust and restore boundary.
 | New story/day/teacher encounter | New file under `content/fallback/` plus schema/content tests | Never edit locked day 01 silently; no numeric thresholds in prose content |
 | Combat/check formula | New resolver version under `_shared/domain/resolvers/` | Preserve V1/golden replay; add deterministic and balance evidence |
 | Stat, XP, item or ring economy | New forward migration/config version and server projection | Do not calculate a second truth in rendering code |
-| New persistent progression feature | New migration `017+`, versioned RPC, generated type, application adapter | Existing migrations 001–016 are immutable after Gate 4T.0 |
+| New persistent progression feature | New migration `018+`, versioned RPC, generated type, application adapter | Existing migrations 001–017 are immutable after the discovery C1 checkpoint |
 | Telegram wording/layout | `_shared/render/` | Keep Telegram limits and canonical one-card UX |
 | Command or callback route | `_shared/telegram/handler.ts` or `progression-router.ts` | Callback stays opaque, actor/message/version-bound and ≤64 bytes |
 | Telegram API behavior | `telegram/port.ts` and `telegram/http.ts` | Preserve fake port and delivery-unknown semantics |
@@ -147,8 +150,8 @@ finalize`; the recovery database is a distinct trust and restore boundary.
 
 ## 7. Locked invariants
 
-- Application migrations 001–016 and recovery migrations 001–002 are checksum-pinned. Correct them
-  only with a new forward migration; the next application number is `017`.
+- Application migrations 001–017 and recovery migrations 001–002 are checksum-pinned. Correct them
+  only with a new forward migration; the next application number is `018`.
 - Resolver V1, its config and golden replay are immutable unless a deliberate new resolver version
   is approved.
 - The fallback day 01 is re-locked after its approved balance amendment.
@@ -172,6 +175,7 @@ npm run verify:phase4a
 # Focused DB paths while the local stack is running
 npm run test:db:phase4a
 npm run test:db:phase4t0
+npm run test:db:upgrade017
 
 # Offline staging policy; real refs must come from approved non-repository input
 npm run staging:preflight -- --staging --project-ref <APP_REF> --recovery-project-ref <RECOVERY_REF>
@@ -183,9 +187,9 @@ lint and checksums.
 
 ## 9. Current extension order
 
-1. Execute the separately approved Gate 4T.1 owner-only Telegram smoke.
-2. Measure the first real session for clarity, progression visibility, monotony and next-day desire.
-3. Add only the smallest content/progression changes justified by that evidence.
+1. Complete owner acceptance of discovery C1 in the live owner-only staging runner.
+2. Finish the isolated deletion/recovery/reconciliation drill and Gate 4T.1 closeout.
+3. Implement only the smallest content/progression changes justified by the recorded play evidence.
 4. Run the deferred 5–10-person core-loop validation before expanding into Phase 5+ systems.
 
 This ordering deliberately protects the project from building years of progression before proving

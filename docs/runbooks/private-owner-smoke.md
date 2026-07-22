@@ -91,7 +91,7 @@ npm run staging:preflight -- --staging --project-ref $appRef --recovery-project-
 npm run staging:owner-smoke -- --staging --project-ref $appRef --recovery-project-ref $recoveryRef
 ```
 
-Required result: `status=ready`, `mode=dry-run`, 18 verified migrations, and zero day/worker calls.
+Required result: `status=ready`, `mode=dry-run`, 19 verified migrations, and zero day/worker calls.
 The dry-run command has no network or runtime-secret permission.
 
 ## Remote Actions — Provision the Two Staging Projects
@@ -134,8 +134,8 @@ supabase db push --linked --dry-run
 ```
 
 The dry run must list only the expected application migrations through
-`202607150016_current_card_render_cache.sql`. A fresh project receives migrations 001–016; the final
-three must be 014, then 015, then 016. Do not use `--include-seed` yet.
+`202607190017_tutorial_field_discovery.sql`. A fresh project receives migrations 001–017; the final
+four must be 014, then 015, then 016, then 017. Do not use `--include-seed` yet.
 
 After manual review:
 
@@ -144,7 +144,7 @@ supabase db push --linked
 supabase migration list --linked
 ```
 
-Stop unless local and remote histories match through 016. At this point the tutorial flag is absent
+Stop unless local and remote histories match through 017. At this point the tutorial flag is absent
 or false and the owner has not sent `/start`.
 
 ## Remote Actions — Secrets and Deployment
