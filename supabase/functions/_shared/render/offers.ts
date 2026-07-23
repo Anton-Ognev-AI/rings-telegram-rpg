@@ -1,4 +1,4 @@
-import { renderCard, type RenderedCard } from "./types.ts";
+import { renderCard, type RenderedCard, staticButton } from "./types.ts";
 
 export interface ItemOfferCardInput {
   readonly itemLabel: string;
@@ -54,10 +54,13 @@ export function renderFieldItemOfferCard(input: FieldItemOfferCardInput): Render
       "У грі інвентарю немає: предмет треба вдягнути зараз або викинути.",
       `Якщо вдягнути, бонус діятиме вже на наступному етапі ${input.nextStage}.`,
     ].join("\n"),
-    [[
-      { text: "Вдягнути", callbackData: input.acceptCallbackData },
-      { text: "Викинути", callbackData: input.discardCallbackData },
-    ]],
+    [
+      [
+        { text: "Вдягнути", callbackData: input.acceptCallbackData },
+        { text: "Викинути", callbackData: input.discardCallbackData },
+      ],
+      [staticButton("Меню", "nav:menu")],
+    ],
   );
 }
 

@@ -27,6 +27,24 @@ import { renderSummaryCard } from "../../supabase/functions/_shared/render/summa
 const fallback = fallbackJson as DungeonContentV1;
 const token = "cb_0123456789abcdef0123456789abcdef";
 
+function assertSingleMenuButton(card: {
+  readonly buttons: ReadonlyArray<
+    ReadonlyArray<{
+      readonly text: string;
+      readonly callbackData: string;
+    }>
+  >;
+}): void {
+  assertEquals(card.buttons.at(-1), [{
+    text: "Меню",
+    callbackData: "nav:menu",
+  }]);
+  assertEquals(
+    card.buttons.flat().filter((button) => button.callbackData === "nav:menu").length,
+    1,
+  );
+}
+
 function preparedAt(stage: StageV1, exchange: 1 | 2 | null = null): PreparedRunCard {
   const choices = stage.number === 10
     ? stage.bossExchanges?.[(exchange ?? 1) - 1]?.choices ?? []
@@ -141,7 +159,12 @@ Deno.test("unresolved cards are Telegram-safe and reveal no answer or threshold"
   assertStringIncludes(card.text, "Розвідка Академії");
   assertStringIncludes(card.text, "Спостереження:");
   assertNotMatch(card.text, /Поріг|Успішний вибір|61|60/u);
-  assertEquals(card.buttons.length, unsafeStage.choices?.length);
+  assertEquals(card.buttons.length, (unsafeStage.choices?.length ?? 0) + 1);
+  assertEquals(
+    card.buttons.slice(0, -1).flat().every((button) => button.callbackData.startsWith("cb_")),
+    true,
+  );
+  assertSingleMenuButton(card);
   assertEquals(
     card.buttons.flat().every((button) =>
       new TextEncoder().encode(button.callbackData).byteLength <= 64
@@ -168,7 +191,8 @@ Deno.test("resolved cards explain stats, damage, healing, XP, and keep one next 
   assertStringIncludes(card.text, "Відновлення: +2");
   assertStringIncludes(card.text, "XP: +10 (40)");
   assertStringIncludes(card.text, "&lt;точно&gt;");
-  assertEquals(card.buttons.length, next.choices.length);
+  assertEquals(card.buttons.length, next.choices.length + 1);
+  assertSingleMenuButton(card);
 });
 
 Deno.test("resolved cards hide inactive effects and show a failed check shortfall", () => {
@@ -190,6 +214,7 @@ Deno.test("resolved cards hide inactive effects and show a failed check shortfal
   assertStringIncludes(card.text, "Для успіху потрібно: 60");
   assertStringIncludes(card.text, "Не вистачило: 9");
   assertNotMatch(card.text, /Вампіризм|Відновлення/u);
+  assertSingleMenuButton(card);
 });
 
 Deno.test("miniboss and boss exchanges have distinct encounter headings", () => {
@@ -214,7 +239,10 @@ Deno.test("boss outcome includes damage to both sides", () => {
   const card = renderResolvedCard({ resolution: bossResolution, next: null });
   assertStringIncludes(card.text, "Шкода босу: 60");
   assertStringIncludes(card.text, "HP боса: 75 → 15");
-  assertEquals(card.buttons, []);
+  assertEquals(card.buttons, [[{
+    text: "Меню",
+    callbackData: "nav:menu",
+  }]]);
 });
 
 Deno.test("summary is honest about result and next-day return hook", () => {

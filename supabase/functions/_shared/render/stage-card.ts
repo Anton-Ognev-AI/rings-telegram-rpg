@@ -2,7 +2,7 @@ import type { PreparedRunCard } from "../application/prepare-run-card.ts";
 import type { ChoiceV1, DungeonContentV1, EncounterType, Stat } from "../contracts/content.ts";
 import type { ResolutionV1 } from "../contracts/domain.ts";
 import type { TutorialResolutionV1 } from "../progression/contracts.ts";
-import { renderCard, type RenderedCard, truncatePlainText } from "./types.ts";
+import { renderCard, type RenderedCard, staticButton, truncatePlainText } from "./types.ts";
 
 const STAT_LABELS: Readonly<Record<Stat, string>> = {
   physical: "Фізична сила",
@@ -74,6 +74,13 @@ function choiceButtons(prepared: PreparedRunCard) {
   }]);
 }
 
+function gameplayButtons(prepared: PreparedRunCard) {
+  return [
+    ...choiceButtons(prepared),
+    [staticButton("Меню", "nav:menu")],
+  ];
+}
+
 function stageLines(prepared: PreparedRunCard, compact: boolean): string[] {
   const sceneLimit = compact ? 900 : 2200;
   const visibleBossHp = prepared.view.run.bossHp ?? prepared.state.bossHp;
@@ -100,7 +107,7 @@ function stageLines(prepared: PreparedRunCard, compact: boolean): string[] {
 }
 
 export function renderStageCard(prepared: PreparedRunCard): RenderedCard {
-  return renderCard(stageLines(prepared, false).join("\n"), choiceButtons(prepared));
+  return renderCard(stageLines(prepared, false).join("\n"), gameplayButtons(prepared));
 }
 
 const OUTCOME_LABELS: Readonly<Record<ResolutionV1["outcome"], string>> = {
@@ -206,7 +213,10 @@ export function renderResolvedCard(input: ResolvedCardInput): RenderedCard {
   const approach = input.content ? approachExplanation(input.content, resolution) : null;
   const lines = resolutionLines(resolution, copy, approach);
   if (next) lines.push("", "Далі", ...stageLines(next, true));
-  return renderCard(lines.join("\n"), next ? choiceButtons(next) : []);
+  return renderCard(
+    lines.join("\n"),
+    next ? gameplayButtons(next) : [[staticButton("Меню", "nav:menu")]],
+  );
 }
 
 export function statLabel(stat: Stat): string {

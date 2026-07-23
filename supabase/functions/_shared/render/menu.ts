@@ -7,7 +7,7 @@ export interface MenuCardInput {
 
 export function renderMenuCard(input: MenuCardInput): RenderedCard {
   const primary = input.hasActiveRun
-    ? staticButton("Продовжити експедицію", "nav:resume")
+    ? staticButton("Повернутися в експедицію", "nav:resume")
     : staticButton("Сьогоднішня експедиція", "nav:expedition");
   const tutorialCompleted = input.tutorialCompleted ?? 2;
   if (tutorialCompleted < 2) {
@@ -22,7 +22,8 @@ export function renderMenuCard(input: MenuCardInput): RenderedCard {
       ].join("\n"),
       [
         [primary],
-        [staticButton("Герой", "nav:hero"), staticButton("Допомога", "nav:help")],
+        [staticButton("Герой", "nav:hero"), staticButton("Академія", "nav:academy")],
+        [staticButton("Допомога", "nav:help")],
       ],
     );
   }

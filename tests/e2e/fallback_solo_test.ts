@@ -127,7 +127,9 @@ Deno.test("persisted fake Telegram completes the fallback dungeon through both b
 
     for (const [step, selected] of golden.choices.entries()) {
       const current = transcript.at(-1)!.input;
-      const buttons = current.buttons?.flat() ?? [];
+      const buttons = (current.buttons?.flat() ?? []).filter((button) =>
+        button.callbackData.startsWith("cb_")
+      );
       const selectedIndex = choiceIndex(
         selected.stage,
         selected.exchange as 1 | 2 | null,

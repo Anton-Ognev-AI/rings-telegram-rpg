@@ -63,6 +63,7 @@ Deno.test("tutorial and completed menus expose only useful honest actions", () =
   assertEquals(tutorialMenu.buttons.flat().map((button) => button.callbackData), [
     "nav:expedition",
     "nav:hero",
+    "nav:academy",
     "nav:help",
   ]);
   assertEquals(tutorial.buttons.flat().map((button) => button.callbackData), [
@@ -76,6 +77,7 @@ Deno.test("tutorial and completed menus expose only useful honest actions", () =
     "nav:academy",
     "nav:help",
   ]);
+  assertStringIncludes(completedMenu.buttons[0][0].text, "Повернутися в експедицію");
   assertNotMatch(completedMenu.text, /Напарник|нагадуван|прорив/u);
   assertTelegramSafe([tutorial, tutorialMenu, completedMenu]);
 });
@@ -198,7 +200,12 @@ Deno.test("field discovery joins the resolved stage to an immediate equipment de
   assertEquals(card.buttons.flat().map((button) => button.callbackData), [
     pa("field-accept"),
     pa("field-discard"),
+    "nav:menu",
   ]);
+  assertEquals(card.buttons.at(-1), [{
+    text: "Меню",
+    callbackData: "nav:menu",
+  }]);
   assertTelegramSafe([card]);
 });
 

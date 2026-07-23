@@ -712,7 +712,7 @@ function blockedFieldView(): TelegramRunView {
   };
 }
 
-Deno.test("active field discovery prepares only accept or discard for the bound run card", async () => {
+Deno.test("active field discovery prepares two mutations and one static menu route", async () => {
   const view = blockedFieldView();
   const offerId = "30000000-0000-4000-8000-000000000003";
   const database = new ScriptedDatabase({
@@ -752,7 +752,14 @@ Deno.test("active field discovery prepares only accept or discard for the bound 
     { kind: "accept_item", offerId },
     { kind: "discard_item", offerId },
   ]);
-  assertEquals(card.buttons.flat().every((button) => button.callbackData.startsWith("pa_")), true);
+  assertEquals(
+    card.buttons.flat().filter((button) => button.callbackData.startsWith("pa_")).length,
+    2,
+  );
+  assertEquals(card.buttons.at(-1), [{
+    text: "Меню",
+    callbackData: "nav:menu",
+  }]);
 });
 
 Deno.test("canonical terminal card prepares every training action for its existing message", async () => {
