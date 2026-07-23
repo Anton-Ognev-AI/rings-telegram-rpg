@@ -37,7 +37,14 @@ import {
 import type { TelegramPort } from "./port.ts";
 import type { NormalizedCallbackUpdate } from "./update.ts";
 
-type CanonicalDestination = "home" | "expedition" | "resume" | "hero" | "academy" | "help";
+type CanonicalDestination =
+  | "home"
+  | "menu"
+  | "expedition"
+  | "resume"
+  | "hero"
+  | "academy"
+  | "help";
 type TutorialProgress = 0 | 1 | 2;
 
 interface TrainingForecast {
@@ -292,6 +299,17 @@ export async function routeCanonicalHome(
   }
 
   const home = parseHome(await getPlayerHome(dependencies.database, input.playerId));
+  if (input.destination === "menu") {
+    await sendCard(
+      dependencies.telegram,
+      input.chatId,
+      renderMenuCard({
+        hasActiveRun: home.activeRunId !== null || home.pendingOffer?.kind === "field_item",
+        tutorialCompleted: home.tutorialCompleted,
+      }),
+    );
+    return { route: "menu" };
+  }
   if (
     input.destination === "hero" || input.destination === "academy" || input.destination === "help"
   ) {

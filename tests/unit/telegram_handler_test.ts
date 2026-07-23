@@ -391,6 +391,33 @@ Deno.test("resume and unknown commands route to a compact safe menu", async () =
   });
 });
 
+Deno.test("menu callback opens navigation without resuming an active expedition", async () => {
+  const database = new ScriptedDatabase({
+    telegram_identity_v2: [identity],
+    player_home_v1: [home({ tutorialCompleted: 1, activeRunId: "run-1" })],
+  });
+  const telegram = new RecordingTelegramPort();
+
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram),
+    { ...callbackBase, data: "nav:menu" },
+  );
+
+  assertEquals(result.route, "menu");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_identity_v2",
+    "player_home_v1",
+  ]);
+  const card = telegram.calls.find((call) => call.operation === "sendMessage");
+  if (!card || card.operation !== "sendMessage") throw new Error("missing_active_menu");
+  assertEquals(card.input.buttons?.flat().map((button) => button.callbackData), [
+    "nav:resume",
+    "nav:hero",
+    "nav:academy",
+    "nav:help",
+  ]);
+});
+
 Deno.test("choice callbacks acknowledge first and distinguish cached, stale, rejected", async () => {
   for (const status of ["cached", "stale", "rejected"] as const) {
     const events: string[] = [];

@@ -99,7 +99,7 @@ async function identityFor(
 async function routeProgression(
   dependencies: TelegramHandlerDependencies,
   update: NormalizedTelegramUpdate,
-  destination: "home" | "expedition" | "resume" | "hero" | "academy" | "help",
+  destination: "home" | "menu" | "expedition" | "resume" | "hero" | "academy" | "help",
 ): Promise<TelegramHandlerResult> {
   const identity = await identityFor(dependencies, update.telegramExternalId, true);
   if (deletionPending(identity)) {
@@ -333,6 +333,7 @@ export async function handleTelegramUpdate(
       case "nav:resume":
         return await routeProgression(dependencies, update, "resume");
       case "nav:menu":
+        return await routeProgression(dependencies, update, "menu");
       case "nav:training":
         return await routeProgression(dependencies, update, "home");
       case "nav:hero":

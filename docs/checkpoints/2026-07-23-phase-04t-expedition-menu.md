@@ -25,6 +25,9 @@ These destinations are also available during the two tutorial days.
   the input area or replaces the quest choices.
 - `nav:menu` is static navigation. It does not prepare a `pa_` profile action, spend XP,
   accept/discard an item, resolve a choice, or write to the database.
+- `nav:menu` has its own explicit read-only destination. It does not pass through canonical
+  home recovery, because home correctly auto-renders an active run; only
+  `Повернутися в експедицію` requests that canonical resume.
 - Canonical home routing remains the recovery authority. Returning to the expedition
   requests the current run render; a blocked field discovery is rendered again instead of
   being skipped.
@@ -38,7 +41,10 @@ These destinations are also available during the two tutorial days.
   access to Academy, and a static menu route beside exactly two field-offer mutations.
 - Focused render tests: `16 passed`.
 - Focused field-router regression: `1 passed`.
-- Full `deno task verify`: format, lint, type-check, `222` unit tests and `3` property tests
+- A pre-deploy audit found that the first implementation aliased `nav:menu` to `home`; a new
+  RED handler regression reproduced the unintended `request_run_render_v2` call, then the
+  explicit menu destination made the same regression GREEN.
+- Full `deno task verify`: format, lint, type-check, `223` unit tests and `3` property tests
   passed.
 - `deno check tests/e2e/fallback_solo_test.ts`: passed after the E2E choice selector was
   narrowed to `cb_` buttons, so navigation can never be mistaken for a gameplay choice.
