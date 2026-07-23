@@ -8,6 +8,7 @@ import { parseStagingCliArgs, type StagingCliOptions } from "./project-policy.ts
 const ANON_KEY = "STAGING_SUPABASE_ANON_KEY";
 const INTERNAL_SECRET = "INTERNAL_FUNCTION_SECRET";
 const POLL_INTERVAL_MS = 2_000;
+const MAX_CONSECUTIVE_WORKER_FAILURES = 3;
 
 interface WorkerTotals {
   readonly leased: number;
@@ -126,13 +127,22 @@ export async function runOwnerSmoke(
   }
 
   let workerPolls = 0;
+  let consecutiveWorkerFailures = 0;
   let totals = zeroTotals();
   while (!dependencies.isCancelled()) {
-    totals = addTotals(
-      totals,
-      workerTotals(await post(dependencies, `${baseUrl}/outbox-worker`, headers)),
-    );
-    workerPolls += 1;
+    try {
+      totals = addTotals(
+        totals,
+        workerTotals(await post(dependencies, `${baseUrl}/outbox-worker`, headers)),
+      );
+      workerPolls += 1;
+      consecutiveWorkerFailures = 0;
+    } catch {
+      consecutiveWorkerFailures += 1;
+      if (consecutiveWorkerFailures >= MAX_CONSECUTIVE_WORKER_FAILURES) {
+        throw new Error("owner_smoke_remote_request_failed");
+      }
+    }
     if (!dependencies.isCancelled()) await dependencies.sleep(POLL_INTERVAL_MS);
   }
   return { status: "stopped", mode: "remote", dayCalls: 1, workerPolls, totals };

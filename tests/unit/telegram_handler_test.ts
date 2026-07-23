@@ -270,6 +270,40 @@ Deno.test("/start bootstraps canonical identity and shows guided Academy home", 
   assertStringIncludes(send.input.text, "Академії");
 });
 
+Deno.test("/start shows navigation when the active expedition card is already current", async () => {
+  const database = new ScriptedDatabase({
+    telegram_identity_v2: [identity],
+    player_home_v1: [home({ tutorialCompleted: 1, activeRunId: "run-1" })],
+    request_run_render_v2: [{
+      status: "cached",
+      reason: "card_current",
+      runId: "run-1",
+      stateVersion: 0,
+    }],
+  });
+  const telegram = new RecordingTelegramPort();
+
+  const result = await handleTelegramUpdate(
+    dependencies(database, telegram),
+    { ...commandBase, command: "start" } satisfies NormalizedCommandUpdate,
+  );
+
+  assertEquals(result.route, "run_resumed");
+  assertEquals(database.calls.map((call) => call.rpc), [
+    "telegram_identity_v2",
+    "player_home_v1",
+    "request_run_render_v2",
+  ]);
+  const card = telegram.calls.find((call) => call.operation === "sendMessage");
+  if (!card || card.operation !== "sendMessage") throw new Error("missing_active_home_menu");
+  assertEquals(card.input.buttons?.flat().map((button) => button.callbackData), [
+    "nav:resume",
+    "nav:hero",
+    "nav:academy",
+    "nav:help",
+  ]);
+});
+
 Deno.test("expedition callback is acknowledged before identity and atomic start", async () => {
   const events: string[] = [];
   const database = new ScriptedDatabase({

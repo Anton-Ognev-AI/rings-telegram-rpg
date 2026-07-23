@@ -327,6 +327,22 @@ export async function routeCanonicalHome(
     return { route: "run_delivery_pending" };
   }
   if (renderRequest.status === "requested") {
+    if (
+      input.destination === "home" &&
+      (
+        (home.pendingOffer === null && home.activeRunId !== null) ||
+        home.pendingOffer?.kind === "field_item"
+      )
+    ) {
+      await sendCard(
+        dependencies.telegram,
+        input.chatId,
+        renderMenuCard({
+          hasActiveRun: true,
+          tutorialCompleted: home.tutorialCompleted,
+        }),
+      );
+    }
     if (home.pendingOffer !== null) return { route: "offer_pending" };
     if (!home.initialTrainingResolved && home.activeRunId === null) {
       return { route: "training_pending" };

@@ -107,6 +107,58 @@ Deno.test("remote owner-smoke publishes once and polls only after explicit execu
   });
 });
 
+Deno.test("remote owner-smoke survives one transient worker failure", async () => {
+  let dayCalls = 0;
+  let workerCalls = 0;
+  const sleeps: number[] = [];
+  const dependencies: OwnerSmokeRunnerDependencies = {
+    preflight: () =>
+      Promise.resolve({
+        status: "ready",
+        mode: "remote",
+        checks: 7,
+        migrationsVerified: 3,
+        trackedFilesScanned: 6,
+      }),
+    getEnvironment(name) {
+      if (name === "STAGING_SUPABASE_ANON_KEY") return "synthetic-anon-key";
+      if (name === "INTERNAL_FUNCTION_SECRET") return "synthetic-internal-secret";
+      return undefined;
+    },
+    fetch: (url) => {
+      if (String(url).endsWith("/day-publish-reset")) {
+        dayCalls += 1;
+        return Promise.resolve(response({ status: "ok" }));
+      }
+      workerCalls += 1;
+      if (workerCalls === 1) {
+        return Promise.resolve(response({ status: "temporary" }, 500));
+      }
+      return Promise.resolve(response({
+        status: "ok",
+        leased: 0,
+        sent: 0,
+        retried: 0,
+        dead: 0,
+        deliveryUnknown: 0,
+        superseded: 0,
+      }));
+    },
+    sleep: (milliseconds) => {
+      sleeps.push(milliseconds);
+      return Promise.resolve();
+    },
+    isCancelled: () => workerCalls >= 3,
+  };
+
+  const result = await runOwnerSmoke({ ...options, executeRemote: true }, dependencies);
+
+  assertEquals(dayCalls, 1);
+  assertEquals(workerCalls, 3);
+  assertEquals(sleeps, [2000, 2000]);
+  assertEquals(result.workerPolls, 2);
+});
+
 Deno.test("remote owner-smoke returns a generic failure on auth or response mismatch", async () => {
   const secret = "synthetic-internal-secret";
   const dependencies: OwnerSmokeRunnerDependencies = {
