@@ -2,7 +2,7 @@
 
 Date: 2026-07-23
 Tasks: `P4T-06F9C`, `P4T-06R5`
-Status: `approved locally; app-staging deploy and owner acceptance pending`
+Status: `deployed to owner-only app staging; acceptance pending`
 
 ## Incident evidence
 
@@ -44,3 +44,17 @@ Status: `approved locally; app-staging deploy and owner acceptance pending`
   production.
 - Repeat fail-closed app-staging preflight, webhook negative-auth and active-function checks.
 - Restart one bounded owner-only runner, then ask the owner to send `/start` once.
+
+## Deployment evidence
+
+- Fail-closed remote preflight is GREEN: 9 checks, 19 verified migrations and 297 tracked files.
+- Only `tg-webhook` source was deployed. The subsequent staging-only in-memory internal-secret
+  rotation advanced final remote versions to `day-publish-reset` 29, `outbox-worker` 34 and
+  `tg-webhook` 35; all are `ACTIVE` with JWT modes `true/true/false`.
+- Required staging secret names are 7/7. No secret value entered Git, project docs or command
+  output.
+- Unauthenticated day/worker requests and a wrong-secret webhook request returned 401 on the final
+  versions.
+- One fresh bounded owner runner is alive and its error log is empty.
+- Owner acceptance requires one new `/start`; the earlier message cannot be replayed by the bot as
+  an inbound user command.
