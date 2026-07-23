@@ -19,6 +19,7 @@
     "db:recovery:bootstrap": "deno run --allow-env --allow-net --allow-read scripts/recovery/local-recovery-database.ts",
     "load:callbacks": "deno run --allow-env --allow-net scripts/load-callbacks.ts",
     "simulate:starter": "deno run scripts/simulate-starter-builds.ts",
+    "simulate:coupled": "deno run scripts/simulate-coupled-progression.ts",
     "staging:preflight": "deno run --allow-env=TG_GAME_CONFIRMED_STAGING_APP_REF,TG_GAME_CONFIRMED_STAGING_RECOVERY_REF,TG_GAME_DENIED_PROJECT_REFS --allow-read --allow-run=git scripts/staging/preflight-owner-smoke.ts",
     "staging:owner-smoke": "deno run --allow-env=TG_GAME_CONFIRMED_STAGING_APP_REF,TG_GAME_CONFIRMED_STAGING_RECOVERY_REF,TG_GAME_DENIED_PROJECT_REFS --allow-read --allow-run=git scripts/staging/run-owner-smoke.ts",
     "staging:owner-smoke:execute": "deno run --allow-env=TG_GAME_CONFIRMED_STAGING_APP_REF,TG_GAME_CONFIRMED_STAGING_RECOVERY_REF,TG_GAME_DENIED_PROJECT_REFS,STAGING_SUPABASE_ANON_KEY,INTERNAL_FUNCTION_SECRET --allow-read --allow-run=git --allow-net scripts/staging/run-owner-smoke.ts",
