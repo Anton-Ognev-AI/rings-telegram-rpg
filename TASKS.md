@@ -128,9 +128,6 @@
   - [x] DESIGN-V11-12: Узгоджено секцію «стани дня, модель даних, надійність, аналітика та тестування MVP» (ADR 032)
   - [x] DESIGN-V11-13: Зібрати, перевірити й отримати фінальне затвердження канонічної спеки v1.1 → docs/specs/2026-07-12-game-design-v1.1.md (затверджено Антоном 2026-07-12 після self-review, 3 тематичних аудитів і project-council)
 
-## Backlog
-- [ ] ID: SKILLS-001: Create first custom skill
-
 ## Done
 - [x] ID: SETUP-001: Initialize project template structure (2026-04-29)
 - [x] ID: PROJECT-001: Define project stack and goals (2026-07-11) — рішення в DECISIONS.md 002–007
