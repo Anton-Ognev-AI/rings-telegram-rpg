@@ -2,7 +2,7 @@
 
 Date: 2026-07-23
 Task: `P4T-06F9B`
-Status: `approved locally`
+Status: `deployed to owner-only staging; acceptance pending`
 
 ## Outcome
 
@@ -32,8 +32,8 @@ These destinations are also available during the two tutorial days.
   requests the current run render; a blocked field discovery is rendered again instead of
   being skipped.
 - Existing historical inline controls retain their canonical/stale behavior.
-- No migration, resolver, mechanics config, locked content, Supabase staging, Telegram
-  webhook, recovery project or production state changed.
+- No migration, resolver, mechanics config, locked content, recovery project or production
+  state changed.
 
 ## Verification
 
@@ -49,8 +49,16 @@ These destinations are also available during the two tutorial days.
 - `deno check tests/e2e/fallback_solo_test.ts`: passed after the E2E choice selector was
   narrowed to `cb_` buttons, so navigation can never be mistaken for a gameplay choice.
 
-## Remaining boundary
+## Deployment evidence and remaining boundary
 
-The shared renderer has not been deployed in this checkpoint. Owner-only staging deployment
-and Telegram acceptance remain inside `P4T-06`; production and external testers remain out
-of scope.
+Fail-closed remote preflight returned `ready` with 9 checks, 19 verified migrations and 296
+tracked files. Only `outbox-worker`, then `tg-webhook`, were deployed to app staging; both
+are `ACTIVE` at version 31 with JWT modes `true/false`, while `day-publish-reset` remained
+internal-only. Required secret names are 7/7 and unauthenticated day/worker plus wrong-secret
+webhook probes each returned 401. A fresh staging-only internal secret was rotated in memory
+and the bounded no-cron runner is re-verified alive with an empty error log for this owner
+play window.
+
+Owner Telegram acceptance remains inside `P4T-06`. The session runner is not a persistent
+service and must not be assumed alive after this window. Production and external testers
+remain out of scope.
